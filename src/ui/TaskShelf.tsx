@@ -11,6 +11,7 @@ interface TaskShelfProps {
 const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
   const { tasks, activeTaskId, addTask, toggleTask, deleteTask, setActiveTask } = useTaskStore();
   const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskTag, setNewTaskTag] = useState(''); // Added tag state
   const [estimatedPomos, setEstimatedPomos] = useState(1);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -23,8 +24,9 @@ const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTaskTitle.trim()) return;
-    addTask(newTaskTitle.trim(), estimatedPomos);
+    addTask(newTaskTitle.trim(), estimatedPomos, newTaskTag.trim() || undefined);
     setNewTaskTitle('');
+    setNewTaskTag(''); // Reset tag
     setEstimatedPomos(1);
   };
 
@@ -143,30 +145,49 @@ const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
             <div style={{ 
               display: 'flex', 
               flexDirection: 'column', 
-              gap: '12px',
+              gap: '16px', // Increased gap for tags
               background: 'rgba(255, 255, 255, 0.03)',
-              padding: '16px',
-              borderRadius: '20px',
+              padding: '20px',
+              borderRadius: '24px',
               border: '1px solid rgba(255, 255, 255, 0.08)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
             }}>
-              <input
-                ref={inputRef}
-                type="text"
-                placeholder="What are we focusing on?"
-                value={newTaskTitle}
-                onChange={(e) => setNewTaskTitle(e.target.value)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'white',
-                  fontSize: '17px',
-                  fontWeight: '500',
-                  outline: 'none',
-                  width: '100%',
-                  fontFamily: theme.fonts.brand,
-                  letterSpacing: '-0.01em'
-                }}
-              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  placeholder="What are we focusing on?"
+                  value={newTaskTitle}
+                  onChange={(e) => setNewTaskTitle(e.target.value)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'white',
+                    fontSize: '17px',
+                    fontWeight: '600',
+                    outline: 'none',
+                    width: '100%',
+                    fontFamily: theme.fonts.brand,
+                    letterSpacing: '-0.01em'
+                  }}
+                />
+                <input
+                  type="text"
+                  placeholder="Project tag (optional)"
+                  value={newTaskTag}
+                  onChange={(e) => setNewTaskTag(e.target.value)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: theme.colors.text.muted,
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    outline: 'none',
+                    width: '100%',
+                    fontFamily: theme.fonts.brand,
+                  }}
+                />
+              </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ 
@@ -328,17 +349,33 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, isActive, onToggle, onDelete,
       </button>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        <span style={{ 
-          fontSize: '15px', 
-          fontWeight: '500', 
-          color: 'white',
-          textDecoration: task.isCompleted ? 'line-through' : 'none',
-          transition: 'all 0.3s ease',
-          letterSpacing: '-0.01em',
-          fontFamily: theme.fonts.brand
-        }}>
-          {task.title}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ 
+            fontSize: '15px', 
+            fontWeight: '600', 
+            color: 'white',
+            textDecoration: task.isCompleted ? 'line-through' : 'none',
+            transition: 'all 0.3s ease',
+            letterSpacing: '-0.01em',
+            fontFamily: theme.fonts.brand
+          }}>
+            {task.title}
+          </span>
+          {task.tag && (
+            <span style={{ 
+              fontSize: '10px', 
+              fontWeight: '700', 
+              color: theme.colors.focus.primary,
+              background: theme.colors.focus.glow,
+              padding: '2px 6px',
+              borderRadius: '4px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}>
+              {task.tag}
+            </span>
+          )}
+        </div>
         
         <div style={{ display: 'flex', gap: '4px' }}>
           {Array.from({ length: task.estimatedPomos }).map((_, i) => (

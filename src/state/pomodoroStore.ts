@@ -3,6 +3,9 @@ import { TimerEngine, TimerState } from '../core/timerEngine';
 import { SessionManager, SessionState, SessionConfig } from '../core/sessionManager';
 import { NativeBridge } from '../services/nativeBridge';
 import { useTaskStore } from './taskStore';
+import { useStatsStore } from './statsStore';
+
+const LOG_INTERVAL_SECONDS = 60; // Log every minute
 
 const DEFAULT_CONFIG: SessionConfig = {
   focusDuration: 25 * 60,
@@ -48,6 +51,7 @@ interface PomodoroStore {
   config: SessionConfig;
   dailyGoal: number;
   taskName: string;
+  lastLoggedSeconds: number; // Seconds remaining at last log
 
   // Actions
   startTimer: () => void;
@@ -78,6 +82,7 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
   config: DEFAULT_CONFIG,
   dailyGoal: 8,
   taskName: '',
+  lastLoggedSeconds: DEFAULT_CONFIG.focusDuration,
 
   startTimer: () => {
     set((state) => ({
@@ -86,9 +91,30 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
   },
 
   pauseTimer: () => {
-    set((state) => ({
-      timer: TimerEngine.pause(state.timer, Date.now()),
-    }));
+    const { timer, lastLoggedSeconds, session } = get();
+    const now = Date.now();
+    const nextTimer = TimerEngine.pause(timer, now);
+
+    // Log time on pause during focus
+    if (session.type === 'focus') {
+      const elapsedSinceLastLog = lastLoggedSeconds - nextTimer.remainingSeconds;
+      if (elapsedSinceLastLog > 0) {
+        const { tasks, activeTaskId } = useTaskStore.getState();
+        const activeTask = tasks.find(t => t.id === activeTaskId);
+        
+        useStatsStore.getState().logActivity(
+          elapsedSinceLastLog, 
+          activeTaskId, 
+          activeTask?.title || null,
+          activeTask?.tag || null
+        );
+      }
+    }
+
+    set({ 
+      timer: nextTimer,
+      lastLoggedSeconds: nextTimer.remainingSeconds
+    });
   },
 
   resetTimer: () => {
@@ -99,17 +125,36 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     
     set({
       timer: TimerEngine.reset(duration),
+      lastLoggedSeconds: duration,
     });
   },
 
   tick: () => {
-    const { timer } = get();
+    const { timer, lastLoggedSeconds, session } = get();
     if (timer.status !== 'running') return;
 
     const now = Date.now();
     const nextTimer = TimerEngine.tick(timer, now);
     
     if (nextTimer === timer) return;
+
+    // Log stats if 60 seconds have passed during a focus session
+    if (session.type === 'focus') {
+      const elapsedSinceLastLog = lastLoggedSeconds - nextTimer.remainingSeconds;
+      if (elapsedSinceLastLog >= LOG_INTERVAL_SECONDS) {
+        const { tasks, activeTaskId } = useTaskStore.getState();
+        const activeTask = tasks.find(t => t.id === activeTaskId);
+        
+        useStatsStore.getState().logActivity(
+          LOG_INTERVAL_SECONDS, 
+          activeTaskId, 
+          activeTask?.title || null,
+          activeTask?.tag || null
+        );
+        
+        set({ lastLoggedSeconds: nextTimer.remainingSeconds });
+      }
+    }
 
     if (nextTimer.status === 'completed') {
       get().completeSession();
@@ -149,7 +194,21 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     
     // Increment task if it was a focus session
     if (currentType === 'focus') {
-      const { activeTaskId, incrementCompletedPomos } = useTaskStore.getState();
+      const { timer, lastLoggedSeconds } = get();
+      const { tasks, activeTaskId, incrementCompletedPomos } = useTaskStore.getState();
+      
+      // Log remaining time
+      const remainingToLog = lastLoggedSeconds - timer.remainingSeconds;
+      if (remainingToLog > 0) {
+        const activeTask = tasks.find(t => t.id === activeTaskId);
+        useStatsStore.getState().logActivity(
+          remainingToLog, 
+          activeTaskId, 
+          activeTask?.title || null,
+          activeTask?.tag || null
+        );
+      }
+
       if (activeTaskId) {
         console.log(`pomodoroStore: Incrementing pomo for task: ${activeTaskId}`);
         incrementCompletedPomos(activeTaskId);
@@ -204,6 +263,7 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
         ...state,
         ...saved,
         timer,
+        lastLoggedSeconds: saved.lastLoggedSeconds ?? timer.remainingSeconds,
       };
     });
 

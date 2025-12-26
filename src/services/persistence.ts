@@ -1,5 +1,6 @@
 import { usePomodoroStore } from '../state/pomodoroStore';
 import { useTaskStore } from '../state/taskStore';
+import { useStatsStore } from '../state/statsStore';
 import { NativeBridge } from './nativeBridge';
 
 let saveTimeout: any = null;
@@ -21,6 +22,7 @@ export const PersistenceService = {
       try {
         const pomodoroState = usePomodoroStore.getState();
         const taskState = useTaskStore.getState();
+        const statsState = useStatsStore.getState();
 
         const combinedState = {
           pomodoro: {
@@ -33,6 +35,9 @@ export const PersistenceService = {
           tasks: {
             tasks: taskState.tasks,
             activeTaskId: taskState.activeTaskId,
+          },
+          stats: {
+            logs: statsState.logs,
           }
         };
 
@@ -59,6 +64,7 @@ export const PersistenceService = {
 export const initPersistence = () => {
   const pomodoroStore = usePomodoroStore.getState();
   const taskStore = useTaskStore.getState();
+  const statsStore = useStatsStore.getState();
   
   // 1. Listen for the state coming back from Swift
   window.addEventListener('native:loadedState', (event: any) => {
@@ -68,9 +74,10 @@ export const initPersistence = () => {
         const savedData = JSON.parse(state);
         
         // Handle legacy format (flat) vs new format (nested)
-        if (savedData.pomodoro || savedData.tasks) {
+        if (savedData.pomodoro || savedData.tasks || savedData.stats) {
           if (savedData.pomodoro) pomodoroStore.hydrate(savedData.pomodoro);
           if (savedData.tasks) taskStore.hydrate(savedData.tasks);
+          if (savedData.stats) statsStore.hydrate(savedData.stats);
         } else {
           // Legacy flat format
           pomodoroStore.hydrate(savedData);
@@ -87,4 +94,5 @@ export const initPersistence = () => {
   // 3. Continuous synchronization
   usePomodoroStore.subscribe(() => PersistenceService.save());
   useTaskStore.subscribe(() => PersistenceService.save());
+  useStatsStore.subscribe(() => PersistenceService.save());
 };

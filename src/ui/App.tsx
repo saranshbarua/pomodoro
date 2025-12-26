@@ -6,6 +6,7 @@ import { NativeBridge } from '../services/nativeBridge';
 import TimerView from './TimerView';
 import Controls from './Controls';
 import SettingsView from './SettingsView';
+import ReportsView from './ReportsView';
 import TaskShelf from './TaskShelf';
 import { theme } from './theme';
 
@@ -106,6 +107,7 @@ const App: React.FC = () => {
   const activeTask = tasks.find(t => t.id === activeTaskId);
 
   const [showSettings, setShowSettings] = useState(false);
+  const [showReports, setShowReports] = useState(false);
   const [showTasks, setShowTasks] = useState(false);
   const [isCelebrating, setIsCelebrating] = useState(false);
 
@@ -187,6 +189,19 @@ const App: React.FC = () => {
         color={getThemeColor()} 
         isBreak={sessionType !== 'focus'} 
       />
+
+      {/* Top Navigation */}
+      <button 
+        onClick={() => setShowReports(true)}
+        style={reportsButtonStyle}
+        title="Reports"
+        onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+        onMouseLeave={(e) => e.currentTarget.style.opacity = '0.3'}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+      </button>
 
       {/* Settings Button */}
       <button 
@@ -298,8 +313,28 @@ const App: React.FC = () => {
 
       <TaskShelf isOpen={showTasks} onClose={handleCloseTasks} />
       {showSettings && <SettingsView onClose={() => setShowSettings(false)} />}
+      {showReports && <ReportsView onClose={() => setShowReports(false)} />}
     </div>
   );
+};
+
+const reportsButtonStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '24px',
+  left: '24px',
+  zIndex: 10,
+  width: '32px',
+  height: '32px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: '50%',
+  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  color: 'white',
+  opacity: 0.3,
+  cursor: 'pointer',
+  transition: 'all 0.2s ease-out',
+  border: 'none',
 };
 
 const settingsButtonStyle: React.CSSProperties = {

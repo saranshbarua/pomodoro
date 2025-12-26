@@ -4,6 +4,7 @@ import { NativeBridge } from '../services/nativeBridge';
 export interface Task {
   id: string;
   title: string;
+  tag?: string; // Project level tag
   estimatedPomos: number;
   completedPomos: number;
   isCompleted: boolean;
@@ -15,7 +16,7 @@ interface TaskStore {
   activeTaskId: string | null;
   
   // Actions
-  addTask: (title: string, estimatedPomos: number) => void;
+  addTask: (title: string, estimatedPomos: number, tag?: string) => void;
   toggleTask: (id: string) => void;
   deleteTask: (id: string) => void;
   setActiveTask: (id: string | null) => void;
@@ -30,10 +31,11 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   tasks: [],
   activeTaskId: null,
 
-  addTask: (title: string, estimatedPomos: number = 1) => {
+  addTask: (title: string, estimatedPomos: number = 1, tag?: string) => {
     const newTask: Task = {
       id: crypto.randomUUID(),
       title,
+      tag,
       estimatedPomos,
       completedPomos: 0,
       isCompleted: false,

@@ -1,0 +1,136 @@
+import React, { useEffect, useState, useRef } from 'react';
+import { usePomodoroStore } from '../state/pomodoroStore';
+import { theme } from './theme';
+import CircularProgress from './CircularProgress';
+import { NativeBridge } from '../services/nativeBridge';
+
+/**
+ * Award-Winning TimerView with 60fps smooth progress animation.
+ * Using "Inter" with tabular-nums for a rock-solid, high-fidelity aesthetic.
+ */
+const TimerView: React.FC = () => {
+  const timer = usePomodoroStore((state) => state.timer);
+  const session = usePomodoroStore((state) => state.session);
+  const config = usePomodoroStore((state) => state.config);
+
+  const [smoothProgress, setSmoothProgress] = useState(timer.remainingSeconds / timer.totalDuration);
+  const requestRef = useRef<number | null>(null);
+
+  const animate = () => {
+    if (timer.status === 'running' && timer.lastStartedAt !== null) {
+      const now = Date.now();
+      const elapsedSinceTick = (now - timer.lastStartedAt) / 1000;
+      const exactRemaining = Math.max(0, timer.remainingSeconds - elapsedSinceTick);
+      setSmoothProgress(exactRemaining / timer.totalDuration);
+    } else {
+      setSmoothProgress(timer.remainingSeconds / timer.totalDuration);
+    }
+    requestRef.current = requestAnimationFrame(animate);
+  };
+
+  useEffect(() => {
+    requestRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+    };
+  }, [timer.status, timer.remainingSeconds, timer.lastStartedAt]);
+
+  // Update native menu bar title
+  useEffect(() => {
+    const timeStr = formatTime(timer.remainingSeconds);
+    NativeBridge.updateMenuBar(timeStr);
+  }, [timer.remainingSeconds]);
+
+  const formatTime = (seconds: number) => {
+    const totalSeconds = Math.ceil(seconds);
+    const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+    const secs = (totalSeconds % 60).toString().padStart(2, '0');
+    return `${mins}:${secs}`;
+  };
+
+  const getThemeColor = () => {
+    switch (session.type) {
+      case 'focus': return theme.colors.focus.primary;
+      case 'shortBreak': return theme.colors.shortBreak.primary;
+      case 'longBreak': return theme.colors.longBreak.primary;
+    }
+  };
+
+  const getIcon = () => {
+    const strokeWidth = 1.2;
+    switch (session.type) {
+      case 'focus': return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="12" cy="12" r="2" fill="currentColor" fillOpacity="0.2" />
+        </svg>
+      );
+      case 'shortBreak':
+      case 'longBreak': return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
+          <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
+          <line x1="6" y1="1" x2="6" y2="4" />
+          <line x1="10" y1="1" x2="10" y2="4" />
+          <line x1="14" y1="1" x2="14" y2="4" />
+        </svg>
+      );
+    }
+  };
+
+  return (
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      position: 'relative'
+    }}>
+      <CircularProgress 
+        progress={smoothProgress} 
+        color={getThemeColor()} 
+        size={300} 
+        strokeWidth={3} 
+      />
+
+      <div style={{ 
+        position: 'absolute', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{ color: theme.colors.text.primary, marginBottom: '12px', opacity: 0.5 }}>
+          {getIcon()}
+        </div>
+        
+        <div style={{ 
+          fontSize: '5.5rem', 
+          fontWeight: '600', // Semibold looks incredible in Inter
+          fontFamily: theme.fonts.display,
+          fontVariantNumeric: 'tabular-nums', // Native support for equal-width digits
+          letterSpacing: '-0.04em', // Tight spacing for Display feel
+          lineHeight: 1,
+          color: theme.colors.text.primary,
+          marginBottom: '16px',
+        }}>
+          {formatTime(timer.remainingSeconds)}
+        </div>
+
+        <div style={{ 
+          fontSize: '0.7rem', 
+          fontWeight: '600', 
+          fontFamily: theme.fonts.display,
+          color: theme.colors.text.muted,
+          letterSpacing: '0.3em',
+          textTransform: 'uppercase',
+          opacity: 0.6
+        }}>
+          {session.type === 'focus' ? 'FOCUS' : 'BREAK'}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TimerView;

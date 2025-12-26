@@ -1,0 +1,40 @@
+# --- Frontend / Node.js ---
+node_modules/
+dist/
+dist-ssr/
+*.local
+.env
+.env.*
+!.env.example
+
+# --- Build Artifacts ---
+*.app/
+*.zip
+*.dmg
+
+# --- macOS System ---
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# --- Swift / Native ---
+macos/Pomodoro/.build/
+macos/Pomodoro/.swiftpm/
+macos/Pomodoro/DerivedData/
+Packages/
+Package.resolved
+
+# --- IDEs ---
+.vscode/
+.idea/
+*.swp
+*.swo
+.cursor/
+
+# --- Vite / TypeScript ---
+*.tsbuildinfo
+

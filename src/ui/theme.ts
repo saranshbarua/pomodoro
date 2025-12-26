@@ -31,10 +31,10 @@ export const theme = {
   },
   
   fonts: {
-    // Inter is the industry standard for polished, precise UIs.
-    // It has built-in tabular numerals which solve our layout shift issue.
+    // Inter for precision and tabular numerals
     display: '"Inter", system-ui, -apple-system, sans-serif',
-    rounded: '"Inter", system-ui, -apple-system, sans-serif', 
+    // DM Sans for boutique, award-winning branding feel
+    brand: '"DM Sans", "Inter", sans-serif',
     mono: '"SF Mono", "JetBrains Mono", monospace',
   },
   

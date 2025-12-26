@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { TimerEngine, TimerState } from '../core/timerEngine';
 import { SessionManager, SessionState, SessionConfig } from '../core/sessionManager';
 import { NativeBridge } from '../services/nativeBridge';
+import { useTaskStore } from './taskStore';
 
 const DEFAULT_CONFIG: SessionConfig = {
   focusDuration: 25 * 60,
@@ -146,6 +147,15 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     
     console.log(`pomodoroStore: Completing session type: ${currentType}`);
     
+    // Increment task if it was a focus session
+    if (currentType === 'focus') {
+      const { activeTaskId, incrementCompletedPomos } = useTaskStore.getState();
+      if (activeTaskId) {
+        console.log(`pomodoroStore: Incrementing pomo for task: ${activeTaskId}`);
+        incrementCompletedPomos(activeTaskId);
+      }
+    }
+
     // Trigger engaging notification
     const title = currentType === 'focus' ? "Focus Session Complete" : "Break Over";
     const body = getRandomMessage(currentType as keyof typeof MESSAGES);

@@ -60,7 +60,14 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h3 style={{ fontSize: '1.2rem', fontWeight: '600', margin: 0, color: 'white', letterSpacing: '-0.02em' }}>Settings</h3>
+        <h3 style={{ 
+          fontSize: '1.2rem', 
+          fontWeight: '700', 
+          margin: 0, 
+          color: 'white', 
+          letterSpacing: '-0.02em',
+          fontFamily: theme.fonts.brand 
+        }}>Settings</h3>
         <button 
           onClick={onClose}
           style={{ 
@@ -98,7 +105,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
             <div key={item.key} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.85rem', fontWeight: '500', color: theme.colors.text.secondary }}>{item.label}</span>
-                <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'white', fontFamily: theme.fonts.rounded }}>{Math.floor(item.value / 60)}m</span>
+                <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'white', fontFamily: theme.fonts.display }}>{Math.floor(item.value / 60)}m</span>
               </div>
               
               <div style={{ display: 'flex', gap: '10px' }}>

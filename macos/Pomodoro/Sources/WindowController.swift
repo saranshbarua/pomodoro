@@ -1,6 +1,15 @@
 import AppKit
 import WebKit
 
+class PomodoroPanel: NSPanel {
+    override var canBecomeKey: Bool {
+        return true
+    }
+    override var canBecomeMain: Bool {
+        return true
+    }
+}
+
 class WindowController: NSWindowController {
     var panel: NSPanel!
     var webView: WKWebView!
@@ -9,9 +18,9 @@ class WindowController: NSWindowController {
     private var eventMonitor: Any?
 
     init() {
-        // Create the panel
-        let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 340, height: 480),
+        // Use PomodoroPanel to allow it to become key (necessary for text input)
+        let panel = PomodoroPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 340, height: 520), // Increased height from 480 to 520
             styleMask: [.nonactivatingPanel, .fullSizeContentView],
             backing: .buffered,
             defer: false

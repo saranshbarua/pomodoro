@@ -89,7 +89,7 @@ const TimerView: React.FC = () => {
       <CircularProgress 
         progress={smoothProgress} 
         color={getThemeColor()} 
-        size={300} 
+        size={270} // Increased from 240
         strokeWidth={3} 
       />
 
@@ -98,31 +98,38 @@ const TimerView: React.FC = () => {
         display: 'flex', 
         flexDirection: 'column', 
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        top: '48%', // Precise centering
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '100%',
       }}>
-        <div style={{ color: theme.colors.text.primary, marginBottom: '12px', opacity: 0.5 }}>
+        <div style={{ color: theme.colors.text.primary, marginBottom: '10px', opacity: 0.5 }}>
           {getIcon()}
         </div>
         
         <div style={{ 
-          fontSize: '5.5rem', 
-          fontWeight: '600', // Semibold looks incredible in Inter
+          fontSize: '4.8rem', // Increased from 4.2rem
+          fontWeight: '600', 
           fontFamily: theme.fonts.display,
-          fontVariantNumeric: 'tabular-nums', // Native support for equal-width digits
-          letterSpacing: '-0.04em', // Tight spacing for Display feel
+          fontVariantNumeric: 'tabular-nums', 
+          letterSpacing: '-0.04em', 
           lineHeight: 1,
           color: theme.colors.text.primary,
-          marginBottom: '16px',
+          marginBottom: '14px',
+          display: 'flex',
+          justifyContent: 'center',
+          width: '100%',
         }}>
           {formatTime(timer.remainingSeconds)}
         </div>
 
         <div style={{ 
-          fontSize: '0.7rem', 
+          fontSize: '0.65rem', 
           fontWeight: '600', 
           fontFamily: theme.fonts.display,
           color: theme.colors.text.muted,
-          letterSpacing: '0.3em',
+          letterSpacing: '0.25em',
           textTransform: 'uppercase',
           opacity: 0.6
         }}>

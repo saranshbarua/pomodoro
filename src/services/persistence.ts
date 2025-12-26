@@ -1,4 +1,5 @@
 import { usePomodoroStore } from '../state/pomodoroStore';
+import { useTaskStore } from '../state/taskStore';
 import { NativeBridge } from './nativeBridge';
 
 let saveTimeout: any = null;
@@ -11,20 +12,37 @@ export const PersistenceService = {
   /**
    * Saves relevant parts of the state to native storage with debouncing.
    */
-  save(state: any) {
+  save() {
     if (saveTimeout) {
       clearTimeout(saveTimeout);
     }
 
     saveTimeout = setTimeout(() => {
       try {
-        const stateString = JSON.stringify(state);
+        const pomodoroState = usePomodoroStore.getState();
+        const taskState = useTaskStore.getState();
+
+        const combinedState = {
+          pomodoro: {
+            timer: pomodoroState.timer,
+            session: pomodoroState.session,
+            config: pomodoroState.config,
+            dailyGoal: pomodoroState.dailyGoal,
+            taskName: pomodoroState.taskName,
+          },
+          tasks: {
+            tasks: taskState.tasks,
+            activeTaskId: taskState.activeTaskId,
+          }
+        };
+
+        const stateString = JSON.stringify(combinedState);
         NativeBridge.saveState(stateString);
       } catch (e) {
         console.error('PersistenceService: Failed to save state:', e);
       }
       saveTimeout = null;
-    }, 1000); // Increased debounce to 1s for better stability
+    }, 1000);
   },
 
   /**
@@ -39,7 +57,8 @@ export const PersistenceService = {
  * Initializes the persistence layer.
  */
 export const initPersistence = () => {
-  const store = usePomodoroStore.getState();
+  const pomodoroStore = usePomodoroStore.getState();
+  const taskStore = useTaskStore.getState();
   
   // 1. Listen for the state coming back from Swift
   window.addEventListener('native:loadedState', (event: any) => {
@@ -47,7 +66,15 @@ export const initPersistence = () => {
     if (state) {
       try {
         const savedData = JSON.parse(state);
-        store.hydrate(savedData);
+        
+        // Handle legacy format (flat) vs new format (nested)
+        if (savedData.pomodoro || savedData.tasks) {
+          if (savedData.pomodoro) pomodoroStore.hydrate(savedData.pomodoro);
+          if (savedData.tasks) taskStore.hydrate(savedData.tasks);
+        } else {
+          // Legacy flat format
+          pomodoroStore.hydrate(savedData);
+        }
       } catch (e) {
         console.error('PersistenceService: Failed to parse saved state:', e);
       }
@@ -58,13 +85,6 @@ export const initPersistence = () => {
   PersistenceService.load();
 
   // 3. Continuous synchronization
-  usePomodoroStore.subscribe((state) => {
-    PersistenceService.save({
-      timer: state.timer,
-      session: state.session,
-      config: state.config,
-      dailyGoal: state.dailyGoal,
-      taskName: state.taskName,
-    });
-  });
+  usePomodoroStore.subscribe(() => PersistenceService.save());
+  useTaskStore.subscribe(() => PersistenceService.save());
 };

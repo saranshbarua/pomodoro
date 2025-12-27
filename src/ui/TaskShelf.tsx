@@ -48,80 +48,52 @@ const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
 
   const shelfStyle: React.CSSProperties = {
     position: 'absolute',
-    bottom: 0,
+    top: 0,
     left: 0,
-    right: 0,
-    height: '88%', // Slightly taller for better scroll area
-    background: '#0F0F0F', // Solid premium black
-    backdropFilter: 'blur(40px)',
-    WebkitBackdropFilter: 'blur(40px)',
-    borderTop: `1px solid rgba(255, 255, 255, 0.1)`,
-    borderRadius: `32px 32px 0 0`,
+    width: '100%',
+    height: '100%',
+    background: '#0A0A0A', // Match Settings/Reports deep black
+    borderRadius: '28px',
     zIndex: 2000,
     transform: isOpen ? 'translateY(0)' : 'translateY(100%)',
-    transition: 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+    transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
     display: 'flex',
     flexDirection: 'column',
-    overflow: 'hidden', // Contain the children
-    boxShadow: '0 -20px 80px rgba(0,0,0,0.8)',
+    overflow: 'hidden',
     pointerEvents: isOpen ? 'auto' : 'none',
     visibility: isOpen ? 'visible' : 'hidden',
   };
 
   const backdropStyle: React.CSSProperties = {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'rgba(0, 0, 0, 0.6)',
-    zIndex: 1999,
-    opacity: isOpen ? 1 : 0,
-    pointerEvents: isOpen ? 'auto' : 'none',
-    transition: 'opacity 0.4s ease',
+    display: 'none', // Removed for full-screen panel consistency
   };
 
   return (
     <>
-      <div style={backdropStyle} onClick={() => handleClose()} />
       <div style={shelfStyle} onClick={(e) => e.stopPropagation()}>
-        {/* Grab Handle Area */}
-        <div 
-          onClick={() => handleClose()}
-          style={{ 
-            width: '100%', 
-            padding: '12px 0 4px 0',
-            display: 'flex', 
-            justifyContent: 'center',
-            cursor: 'pointer',
-            flexShrink: 0,
-          }}
-        >
-          <div style={{ width: '32px', height: '4px', borderRadius: '2px', background: 'rgba(255, 255, 255, 0.15)' }} />
-        </div>
-
         {/* Content Container */}
         <div style={{ 
           flex: 1, 
           display: 'flex', 
           flexDirection: 'column', 
           minHeight: 0, // Critical for scrolling
-          padding: '0 24px 24px 24px',
+          padding: '24px', // Standard padding
         }}>
           {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexShrink: 0 }}>
             <h2 style={{ 
-              fontSize: '22px', 
+              fontSize: '1.2rem', 
               fontWeight: '700', 
               color: 'white', 
               margin: 0, 
-              letterSpacing: '-0.03em',
+              letterSpacing: '-0.02em',
               fontFamily: theme.fonts.brand 
             }}>Tasks</h2>
             <button 
               onClick={(e) => handleClose(e)}
+              aria-label="Close Tasks"
               style={{ 
-                background: 'rgba(255, 255, 255, 0.08)', 
+                background: 'rgba(255, 255, 255, 0.05)', 
                 border: 'none', 
                 borderRadius: '50%', 
                 width: '32px', 
@@ -134,8 +106,9 @@ const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
                 transition: 'background 0.2s ease'
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 6 6 18M6 6l12 12"/>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
             </button>
           </div>

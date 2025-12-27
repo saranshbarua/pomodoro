@@ -103,26 +103,43 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
       }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {settingsItems.map((item) => (
-            <div key={item.key} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: '500', color: theme.colors.text.secondary }}>{item.label}</span>
-                <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'white', fontFamily: theme.fonts.display }}>{Math.floor(item.value / 60)}m</span>
-              </div>
+            <div key={item.key} style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              padding: '4px 0'
+            }}>
+              <span style={{ fontSize: '0.9rem', fontWeight: '500', color: 'white' }}>{item.label}</span>
               
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <button 
                   onClick={() => adjustDuration(item.key, -60)}
-                  style={adjustButtonStyle}
+                  style={miniAdjustButtonStyle}
+                  aria-label={`Decrease ${item.label}`}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                   </svg>
                 </button>
+                
+                <span style={{ 
+                  fontSize: '1rem', 
+                  fontWeight: '700', 
+                  color: 'white', 
+                  minWidth: '40px', 
+                  textAlign: 'center',
+                  fontVariantNumeric: 'tabular-nums',
+                  fontFamily: theme.fonts.display
+                }}>
+                  {Math.floor(item.value / 60)}m
+                </span>
+
                 <button 
                   onClick={() => adjustDuration(item.key, 60)}
-                  style={adjustButtonStyle}
+                  style={miniAdjustButtonStyle}
+                  aria-label={`Increase ${item.label}`}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="12" y1="5" x2="12" y2="19"></line>
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                   </svg>
@@ -139,10 +156,39 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
               <span style={{ fontSize: '0.85rem', fontWeight: '500', color: 'white' }}>Long Break Interval</span>
               <span style={{ fontSize: '0.7rem', color: theme.colors.text.muted }}>Focus sessions until long break</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <button onClick={() => adjustLongBreakInterval(-1)} style={miniAdjustButtonStyle}>-</button>
-              <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'white', width: '20px', textAlign: 'center' }}>{config.sessionsUntilLongBreak}</span>
-              <button onClick={() => adjustLongBreakInterval(1)} style={miniAdjustButtonStyle}>+</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button 
+                onClick={() => adjustLongBreakInterval(-1)} 
+                style={miniAdjustButtonStyle}
+                aria-label="Decrease Long Break Interval"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
+              
+              <span style={{ 
+                fontSize: '1rem', 
+                fontWeight: '700', 
+                color: 'white', 
+                minWidth: '40px', 
+                textAlign: 'center',
+                fontVariantNumeric: 'tabular-nums',
+                fontFamily: theme.fonts.display
+              }}>
+                {config.sessionsUntilLongBreak}
+              </span>
+
+              <button 
+                onClick={() => adjustLongBreakInterval(1)} 
+                style={miniAdjustButtonStyle}
+                aria-label="Increase Long Break Interval"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -225,33 +271,19 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
   );
 };
 
-const adjustButtonStyle: React.CSSProperties = {
-  flex: 1,
-  height: '48px',
-  backgroundColor: 'rgba(255, 255, 255, 0.03)',
-  border: '1px solid rgba(255, 255, 255, 0.08)',
-  borderRadius: '14px',
-  color: 'white',
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  transition: 'all 0.3s ease',
-};
-
 const miniAdjustButtonStyle: React.CSSProperties = {
   width: '32px',
   height: '32px',
   backgroundColor: 'rgba(255, 255, 255, 0.05)',
   border: '1px solid rgba(255, 255, 255, 0.1)',
-  borderRadius: '8px',
+  borderRadius: '10px',
   color: 'white',
   cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  fontSize: '1.1rem',
   transition: 'all 0.2s ease',
+  padding: 0,
 };
 
 const toggleButtonStyle = (enabled: boolean): React.CSSProperties => ({

@@ -17,7 +17,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
     updateConfig({ [key]: newValue });
   };
 
-  const toggleAutoPilot = (key: 'autoStartFocus' | 'autoStartBreaks' | 'soundEnabled') => {
+  const toggleAutoPilot = (key: 'autoStartFocus' | 'autoStartBreaks' | 'soundEnabled' | 'globalHotKeyEnabled') => {
     updateConfig({ [key]: !config[key] });
   };
 
@@ -144,6 +144,19 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
               <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'white', width: '20px', textAlign: 'center' }}>{config.sessionsUntilLongBreak}</span>
               <button onClick={() => adjustLongBreakInterval(1)} style={miniAdjustButtonStyle}>+</button>
             </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: '500', color: 'white' }}>Global Shortcut</span>
+              <span style={{ fontSize: '0.7rem', color: theme.colors.text.muted }}>Toggle app with ⌥ + ⇧ + P</span>
+            </div>
+            <button 
+              onClick={() => toggleAutoPilot('globalHotKeyEnabled')}
+              style={toggleButtonStyle(config.globalHotKeyEnabled)}
+            >
+              <div style={toggleKnobStyle(config.globalHotKeyEnabled)} />
+            </button>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

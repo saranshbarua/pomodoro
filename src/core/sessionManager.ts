@@ -8,6 +8,7 @@ export interface SessionConfig {
   autoStartFocus: boolean;
   autoStartBreaks: boolean;
   soundEnabled: boolean;
+  globalHotKeyEnabled: boolean;
 }
 
 export interface SessionState {

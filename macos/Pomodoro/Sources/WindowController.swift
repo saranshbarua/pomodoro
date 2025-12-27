@@ -16,6 +16,7 @@ class WindowController: NSWindowController {
     var bridge: Bridge!
     weak var statusBarController: StatusBarController?
     private var eventMonitor: Any?
+    private var localEventMonitor: Any?
 
     init() {
         // Use PomodoroPanel to allow it to become key (necessary for text input)
@@ -132,12 +133,33 @@ class WindowController: NSWindowController {
         eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             self?.hide()
         }
+        
+        localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            // Space key to toggle timer
+            if event.keyCode == 49 { // Space key
+                self?.bridge.sendToJS(action: "menuAction", data: ["type": "toggle"])
+                return nil // Consume the event
+            }
+            
+            // Escape key to hide window
+            if event.keyCode == 53 { // Escape key
+                self?.hide()
+                return nil
+            }
+            
+            return event
+        }
     }
 
     private func stopMonitoring() {
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
             eventMonitor = nil
+        }
+        
+        if let monitor = localEventMonitor {
+            NSEvent.removeMonitor(monitor)
+            localEventMonitor = nil
         }
     }
 }

@@ -15,6 +15,7 @@ const DEFAULT_CONFIG: SessionConfig = {
   autoStartFocus: false,
   autoStartBreaks: false,
   soundEnabled: true,
+  globalHotKeyEnabled: false,
 };
 
 const MESSAGES = {

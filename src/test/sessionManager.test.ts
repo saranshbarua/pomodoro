@@ -10,6 +10,7 @@ describe('SessionManager', () => {
     autoStartFocus: false,
     autoStartBreaks: false,
     soundEnabled: true,
+    globalHotKeyEnabled: false,
   };
 
   it('should transition from focus to short break', () => {

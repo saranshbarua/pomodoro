@@ -77,6 +77,13 @@ class StatusBarController {
         }
     }
     
+    func getAnchorRect() -> NSRect {
+        if let button = statusItem.button {
+            return button.window?.convertToScreen(button.frame) ?? .zero
+        }
+        return .zero
+    }
+
     func updateTitle(_ title: String) {
         DispatchQueue.main.async { [weak self] in
             self?.statusItem.button?.title = title

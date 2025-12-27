@@ -6,34 +6,45 @@
 
 set -e
 
+# --- Configuration ---
 APP_NAME="Pomodoro"
+VERSION=$(grep '"version":' package.json | cut -d'"' -f4)
 APP_BUNDLE="$APP_NAME.app"
 CONTENTS_DIR="$APP_BUNDLE/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
+ZIP_NAME="${APP_NAME}_v${VERSION}_macOS_Universal.zip"
 
-echo "🚀 Starting full build for $APP_NAME..."
+echo "🚀 Starting Production Build for $APP_NAME v$VERSION..."
+
+# 0. Clean up previous builds
+echo "🧹 Cleaning workspace..."
+rm -rf "$APP_BUNDLE"
+rm -f "$ZIP_NAME"
+rm -rf dist
 
 # 1. Build the React frontend
 echo "📦 Building React frontend..."
-npm install
-npm run build
+npm install --silent
+npm run build -- --logLevel error
 
-# 2. Build the Swift binary
-echo "🍎 Building Swift native binary (Release)..."
+# 2. Build the Swift binary (Universal)
+echo "🍎 Building Swift native binary (Intel + Apple Silicon)..."
 cd macos/Pomodoro
-swift build -c release --arch arm64 --arch x86_64 # Universal binary
+# We force a clean build of the native code to ensure fresh architecture slices
+rm -rf .build
+swift build -c release --arch arm64 --arch x86_64
+BINARY_PATH=$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/Pomodoro
+cd ../../
 
 # 3. Create the .app structure
 echo "📂 Creating .app bundle structure..."
-cd ../../
-rm -rf "$APP_BUNDLE"
 mkdir -p "$MACOS_DIR"
 mkdir -p "$RESOURCES_DIR"
 
-# 4. Copy the binary
-echo "📄 Copying binary..."
-cp "macos/Pomodoro/.build/apple/Products/Release/Pomodoro" "$MACOS_DIR/$APP_NAME"
+# 4. Copy the universal binary
+echo "📄 Copying Universal binary..."
+cp "$BINARY_PATH" "$MACOS_DIR/$APP_NAME"
 chmod +x "$MACOS_DIR/$APP_NAME"
 
 # 5. Copy Info.plist and Icon
@@ -41,25 +52,30 @@ echo "📄 Copying Info.plist and Icon..."
 cp "macos/Pomodoro/Info.plist" "$CONTENTS_DIR/"
 cp "macos/Pomodoro/Sources/AppIcon.icns" "$RESOURCES_DIR/"
 
-# 6. Copy bundled React files
-echo "📂 Copying React bundle..."
-rm -rf "$RESOURCES_DIR/dist"
+# 6. Copy bundled React files and assets
+echo "📂 Copying React bundle and audio..."
 mkdir -p "$RESOURCES_DIR/dist"
 cp -R dist/* "$RESOURCES_DIR/dist/"
 cp src/assets/click.mp3 "$RESOURCES_DIR/"
 
-# 7. Ad-hoc Sign the bundle (Required for notifications on ARM Macs)
+# 7. Ad-hoc Sign the bundle (Required for notifications/haptics on modern macOS)
 echo "🔐 Ad-hoc signing the app..."
 codesign --force --deep --sign - "$APP_BUNDLE"
 
-# 8. Finalize
+# 8. Create ZIP archive for distribution
+echo "📦 Creating distribution archive..."
+zip -q -r "$ZIP_NAME" "$APP_BUNDLE"
+
+# 9. Finalize
 echo ""
-echo "✅ SUCCESS! $APP_BUNDLE has been created in the project root."
+echo "✅ SUCCESS! Build complete."
 echo "-----------------------------------------------------------"
-echo "🚀 To share with friends:"
-echo "1. Right-click '$APP_BUNDLE' and select 'Compress \"$APP_NAME\"'."
-echo "2. Send the resulting .zip file to your friends."
+echo "📂 App Bundle: $APP_BUNDLE"
+echo "📦 Dist Zip:   $ZIP_NAME"
+echo "-----------------------------------------------------------"
+echo "🚀 To Distribute:"
+echo "Upload $ZIP_NAME to GitHub Releases or Product Hunt."
 echo ""
-echo "Note: Since the app is not signed, your friends must:"
-echo "Right-Click > Open the app the first time to bypass macOS security."
-echo "If you renamed the app, make sure to keep the internal executable named 'Pomodoro'."
+echo "⚠️  Reminder for Users:"
+echo "Since the app is ad-hoc signed, users must Right-Click > Open"
+echo "the first time to bypass the 'Unidentified Developer' warning."

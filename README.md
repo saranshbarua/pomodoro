@@ -32,12 +32,21 @@ An "Award-Winning" high-fidelity Pomodoro timer for macOS. Built with React, Typ
    ```
 3. Open the project in Xcode (optional) or use the build script.
 
-### Building & Running
-To bundle the app into a native macOS `.app` file:
+### Building & Distribution
+To bundle the app into a native macOS `.app` file and create a distribution ZIP:
 ```bash
 sh build_app.sh
 ```
-This will create `Pomodoro.app` in the root directory. You can move this to your `/Applications` folder.
+This will create:
+1. `Pomodoro.app`: The macOS application bundle.
+2. `Pomodoro_v1.0.0_macOS_Universal.zip`: A universal binary archive (Intel + Apple Silicon) ready for distribution.
+
+### Note for Users
+Since the app is not signed with a paid Apple Developer certificate, users must:
+1. **Right-Click** `Pomodoro.app`.
+2. Select **Open**.
+3. Click **Open** again in the security dialog.
+This is only required for the first launch.
 
 ### Testing
 We use Vitest for automated testing:

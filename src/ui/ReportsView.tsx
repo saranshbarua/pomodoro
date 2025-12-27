@@ -84,6 +84,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
         }}>Reports</h3>
         <button 
           onClick={onClose}
+          aria-label="Close Reports"
           style={{ 
             background: 'rgba(255, 255, 255, 0.08)', 
             border: 'none', 

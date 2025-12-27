@@ -6,6 +6,13 @@ export default defineConfig(async () => ({
   plugins: [react()],
   base: './', // Use relative paths for local file loading in WKWebView
 
+  // Vitest configuration
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
+  },
+
   // Vite options tailored for development
   clearScreen: false,
   server: {

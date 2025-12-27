@@ -70,6 +70,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
         }}>Settings</h3>
         <button 
           onClick={onClose}
+          aria-label="Close Settings"
           style={{ 
             background: 'rgba(255, 255, 255, 0.05)', 
             border: 'none', 

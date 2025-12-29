@@ -1,32 +1,57 @@
-# Contributing to Pomodoro macOS
+# Contributing to Pomodoro
 
-Thank you for your interest in improving the Pomodoro macOS app! We welcome contributions from developers of all skill levels.
+First off, thank you for considering contributing to Pomodoro! It's people like you that make Pomodoro such a great tool.
 
-## How to Contribute
+## Commit Message Convention
 
-### 1. Report Bugs
-If you find a bug, please open an issue on GitHub with a detailed description, steps to reproduce, and your macOS version.
+We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification for our commit messages. This allows us to automatically generate changelogs and manage versions.
 
-### 2. Suggest Features
-Have an idea to make Pomodoro better? Open an issue with the "feature request" tag.
+Commit messages should be formatted as follows:
 
-### 3. Submit Pull Requests
-1. **Fork the repository**.
-2. **Create a branch** for your feature or fix: `git checkout -b feature/my-new-feature`.
-3. **Write tests** if you're adding new logic or fixing a bug.
-4. **Follow the Design System**: We use a base-8 grid and specific typography (Inter/DM Sans). Check `docs/CODEBASE.md` for details.
-5. **Lint your code**: Ensure there are no TypeScript or Swift errors.
-6. **Submit the PR**: Provide a clear description of what your changes do.
+```
+<type>(<scope>): <description>
 
-## Development Setup
+[optional body]
 
-See the [README](../README.md) for full setup instructions.
+[optional footer(s)]
+```
 
-### Coding Standards
-- **React**: Functional components, hooks, and Zustand for state.
-- **Swift**: Clean, modular code using standard AppKit patterns.
-- **Documentation**: Keep `docs/` updated if you change architecture or features.
+### Types
 
-## License
-By contributing, you agree that your contributions will be licensed under the MIT License.
+- `feat`: A new feature
+- `fix`: A bug fix
+- `docs`: Documentation only changes
+- `style`: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)
+- `refactor`: A code change that neither fixes a bug nor adds a feature
+- `perf`: A code change that improves performance
+- `test`: Adding missing tests or correcting existing tests
+- `chore`: Changes to the build process or auxiliary tools and libraries such as documentation generation
 
+### Example
+
+`feat(ui): add smooth scroll to task shelf`
+
+## Development Workflow
+
+1. **Fork the repository** and create your branch from `main`.
+2. **Install dependencies**: `npm install`.
+3. **Make your changes**.
+4. **Ensure tests pass**: `npm test`.
+5. **Commit your changes**: We recommend using the interactive CLI to ensure your commit messages follow the convention:
+   ```bash
+   npm run commit
+   ```
+   Alternatively, standard `git commit` messages will be validated by pre-commit hooks.
+6. **Push to your fork** and submit a Pull Request.
+
+## Release Process
+
+Releases are automated using `release-it`. When a maintainer runs `npm run release`, the following happens:
+1. Version is bumped in `package.json`.
+2. `CHANGELOG.md` is updated.
+3. A new Git tag is created and pushed.
+4. GitHub Actions builds the Universal Binary and attaches it to a new GitHub Release.
+
+---
+
+Built with ❤️ for deep thinkers.

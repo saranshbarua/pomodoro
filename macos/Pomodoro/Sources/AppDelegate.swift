@@ -1,7 +1,7 @@
 import AppKit
 import UserNotifications
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     var statusBarController: StatusBarController?
     var windowController: WindowController?
 
@@ -14,13 +14,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupMainMenu()
         setupHotKeys()
         
+        // Fix for notifications not showing banners
+        UNUserNotificationCenter.current().delegate = self
+        
         // Safety check to prevent the "bundleProxyForCurrentProcess is nil" crash
-        // This occurs if the binary is run directly instead of as a .app bundle
         if Bundle.main.bundleIdentifier != nil {
             requestNotificationPermission()
-        } else {
-            print("AppDelegate: Running outside of a proper .app bundle. Notifications disabled to prevent crash.")
         }
+    }
+    
+    // Explicitly allow banners even when the app is active
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound, .list])
+    }
+    
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        completionHandler()
     }
     
     private func setupMainMenu() {

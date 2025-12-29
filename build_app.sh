@@ -14,6 +14,7 @@ CONTENTS_DIR="$APP_BUNDLE/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
 ZIP_NAME="${APP_NAME}_v${VERSION}_macOS_Universal.zip"
+LATEST_ZIP_NAME="${APP_NAME}_macOS_Universal.zip"
 
 echo "🚀 Starting Production Build for $APP_NAME v$VERSION..."
 
@@ -62,9 +63,12 @@ cp src/assets/click.mp3 "$RESOURCES_DIR/"
 echo "🔐 Ad-hoc signing the app..."
 codesign --force --deep --sign - "$APP_BUNDLE"
 
-# 8. Create ZIP archive for distribution
-echo "📦 Creating distribution archive..."
+# 8. Create ZIP archives for distribution
+echo "📦 Creating distribution archives..."
+# Refresh Launch Services cache so the system sees the new icon immediately
+touch "$APP_BUNDLE"
 zip -q -r "$ZIP_NAME" "$APP_BUNDLE"
+zip -q -r "$LATEST_ZIP_NAME" "$APP_BUNDLE"
 
 # 9. Finalize
 echo ""
@@ -72,6 +76,7 @@ echo "✅ SUCCESS! Build complete."
 echo "-----------------------------------------------------------"
 echo "📂 App Bundle: $APP_BUNDLE"
 echo "📦 Dist Zip:   $ZIP_NAME"
+echo "📦 Latest Zip: $LATEST_ZIP_NAME"
 echo "-----------------------------------------------------------"
 echo "🚀 To Distribute:"
 echo "Upload $ZIP_NAME to GitHub Releases or Product Hunt."

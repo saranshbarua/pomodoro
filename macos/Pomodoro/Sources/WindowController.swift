@@ -8,6 +8,32 @@ class PomodoroPanel: NSPanel {
     override var canBecomeMain: Bool {
         return true
     }
+    
+    // Explicitly handle standard edit shortcuts to ensure they work in the WKWebView
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if event.modifierFlags.contains(.command) {
+            let key = event.charactersIgnoringModifiers?.lowercased()
+            switch key {
+            case "x":
+                if NSApp.sendAction(#selector(NSText.cut(_:)), to: nil, from: self) { return true }
+            case "c":
+                if NSApp.sendAction(#selector(NSText.copy(_:)), to: nil, from: self) { return true }
+            case "v":
+                if NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: self) { return true }
+            case "a":
+                if NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: self) { return true }
+            case "z":
+                if event.modifierFlags.contains(.shift) {
+                    if NSApp.sendAction(#selector(UndoManager.redo), to: nil, from: self) { return true }
+                } else {
+                    if NSApp.sendAction(#selector(UndoManager.undo), to: nil, from: self) { return true }
+                }
+            default:
+                break
+            }
+        }
+        return super.performKeyEquivalent(with: event)
+    }
 }
 
 class WindowController: NSWindowController {
@@ -16,12 +42,11 @@ class WindowController: NSWindowController {
     var bridge: Bridge!
     weak var statusBarController: StatusBarController?
     private var eventMonitor: Any?
-    private var localEventMonitor: Any?
 
     init() {
         // Use PomodoroPanel to allow it to become key (necessary for text input)
         let panel = PomodoroPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 340, height: 520), // Increased height from 480 to 520
+            contentRect: NSRect(x: 0, y: 0, width: 340, height: 520), // Reduced from 540 to 520 for a tighter fit
             styleMask: [.nonactivatingPanel, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -112,6 +137,7 @@ class WindowController: NSWindowController {
         
         panel.setFrameOrigin(NSPoint(x: x, y: y))
         panel.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
         
         startMonitoring()
     }
@@ -119,6 +145,7 @@ class WindowController: NSWindowController {
     func hide() {
         panel.orderOut(nil)
         stopMonitoring()
+        bridge.sendToJS(action: "windowHidden", data: [:])
     }
     
     func toggle(relativeTo rect: NSRect) {
@@ -134,32 +161,14 @@ class WindowController: NSWindowController {
             self?.hide()
         }
         
-        localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            // Space key to toggle timer
-            if event.keyCode == 49 { // Space key
-                self?.bridge.sendToJS(action: "menuAction", data: ["type": "toggle"])
-                return nil // Consume the event
-            }
-            
-            // Escape key to hide window
-            if event.keyCode == 53 { // Escape key
-                self?.hide()
-                return nil
-            }
-            
-            return event
-        }
+        // Remove localEventMonitor for Space/Escape. 
+        // These are now handled in React (App.tsx) to avoid interfering with text inputs.
     }
 
     private func stopMonitoring() {
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
             eventMonitor = nil
-        }
-        
-        if let monitor = localEventMonitor {
-            NSEvent.removeMonitor(monitor)
-            localEventMonitor = nil
         }
     }
 }

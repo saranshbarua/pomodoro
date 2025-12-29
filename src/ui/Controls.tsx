@@ -30,7 +30,7 @@ const Controls: React.FC<ControlsProps> = () => {
       alignItems: 'center', 
       justifyContent: 'center',
       width: '100%',
-      padding: '0 24px 48px 24px',
+      padding: '0 24px', // Removed bottom padding (48px -> 0)
       boxSizing: 'border-box',
       gap: '32px'
     }}>

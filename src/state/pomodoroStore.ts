@@ -170,7 +170,6 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
    * Manually skips the current timer and moves to the next session.
    */
   skipTimer: () => {
-    console.log('pomodoroStore: Skipping timer...');
     get().completeSession();
   },
 
@@ -191,8 +190,6 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     const { session, config } = get();
     const currentType = session.type;
     
-    console.log(`pomodoroStore: Completing session type: ${currentType}`);
-    
     // Increment task if it was a focus session
     if (currentType === 'focus') {
       const { timer, lastLoggedSeconds } = get();
@@ -211,7 +208,6 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
       }
 
       if (activeTaskId) {
-        console.log(`pomodoroStore: Incrementing pomo for task: ${activeTaskId}`);
         incrementCompletedPomos(activeTaskId);
       }
     }
@@ -250,8 +246,6 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
 
   hydrate: (saved: Partial<PomodoroStore>) => {
     if (!saved) return;
-    
-    console.log('pomodoroStore: Hydrating from saved state...');
     
     set((state) => {
       let timer = saved.timer ? { ...saved.timer } : state.timer;

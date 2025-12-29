@@ -198,46 +198,55 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
         </div>
 
         {/* Task Breakdown Table */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', flexShrink: 0 }}>
-          <h4 style={sectionHeaderStyle}>Task Breakdown</h4>
-          <div style={{ 
-            background: 'rgba(255,255,255,0.02)', 
-            borderRadius: '20px', 
-            border: '1px solid rgba(255,255,255,0.05)',
-            overflow: 'hidden'
-          }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                  <th style={thStyle}>Task</th>
-                  <th style={thStyle}>Project</th>
-                  <th style={{ ...thStyle, textAlign: 'right' }}>Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {taskData.length > 0 ? (
-                  taskData.map((task, i) => (
-                    <tr key={i} style={{ borderBottom: i === taskData.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.03)' }}>
-                      <td style={tdStyle}>{task.title}</td>
-                      <td style={tdStyle}>
-                        <span style={{ 
-                          fontSize: '10px', 
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', flexShrink: 0 }}>
+        <h4 style={sectionHeaderStyle}>Task Breakdown</h4>
+        <div style={{ 
+          background: 'rgba(255,255,255,0.02)', 
+          borderRadius: '20px', 
+          border: '1px solid rgba(255,255,255,0.05)',
+          overflow: 'hidden'
+        }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', tableLayout: 'fixed' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <th style={{ ...thStyle, width: '45%' }}>Task</th>
+                <th style={{ ...thStyle, width: '30%' }}>Project</th>
+                <th style={{ ...thStyle, width: '25%', textAlign: 'right' }}>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {taskData.length > 0 ? (
+                taskData.map((task, i) => (
+                  <tr key={i} style={{ borderBottom: i === taskData.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.03)' }}>
+                    <td style={tdStyle} title={task.title}>{task.title}</td>
+                    <td style={tdStyle}>
+                      <span 
+                        title={task.tag}
+                        style={{ 
+                          fontSize: '9px', 
                           color: theme.colors.focus.primary, 
                           background: theme.colors.focus.glow, 
-                          padding: '2px 6px', 
-                          borderRadius: '4px',
+                          padding: '2px 8px', 
+                          borderRadius: '5px',
                           textTransform: 'uppercase',
-                          fontWeight: '700'
-                        }}>
-                          {task.tag}
-                        </span>
-                      </td>
-                      <td style={{ ...tdStyle, textAlign: 'right', fontWeight: '600', fontFamily: theme.fonts.display }}>
-                        {formatHours(task.duration / 3600)}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
+                          fontWeight: '800',
+                          letterSpacing: '0.08em',
+                          display: 'inline-block',
+                          maxWidth: '100%',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          lineHeight: '1.2'
+                        }}
+                      >
+                        {task.tag}
+                      </span>
+                    </td>
+                    <td style={{ ...tdStyle, textAlign: 'right', fontWeight: '600', fontFamily: theme.fonts.display, width: 'auto' }}>
+                      {formatHours(task.duration / 3600)}
+                    </td>
+                  </tr>
+                ))
+              ) : (
                   <tr>
                     <td colSpan={3} style={{ ...tdStyle, textAlign: 'center', color: theme.colors.text.muted, padding: '24px' }}>
                       No tasks logged yet
@@ -293,7 +302,6 @@ const thStyle: React.CSSProperties = {
 const tdStyle: React.CSSProperties = {
   padding: '12px 16px',
   color: 'rgba(255,255,255,0.8)',
-  maxWidth: '120px',
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis'

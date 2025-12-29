@@ -111,13 +111,7 @@ const App: React.FC = () => {
   const [showTasks, setShowTasks] = useState(false);
   const [isCelebrating, setIsCelebrating] = useState(false);
 
-  // Debugging state
-  useEffect(() => {
-    console.log('App: showTasks state:', showTasks);
-  }, [showTasks]);
-
   const handleCloseTasks = () => {
-    console.log('App: Setting showTasks to false');
     setShowTasks(false);
   };
 
@@ -131,7 +125,6 @@ const App: React.FC = () => {
   useEffect(() => {
     const handleMenuAction = (event: any) => {
       const { type } = event.detail;
-      console.log('App: Received native menu action:', type);
       
       switch (type) {
         case 'toggle':
@@ -156,14 +149,50 @@ const App: React.FC = () => {
       setTimeout(() => setIsCelebrating(false), 2000);
     };
 
+    const handleWindowHidden = () => {
+      setShowSettings(false);
+      setShowReports(false);
+      setShowTasks(false);
+    };
+
     window.addEventListener('native:menuAction' as any, handleMenuAction);
     window.addEventListener('task-completed' as any, handleTaskCompletion);
+    window.addEventListener('native:windowHidden' as any, handleWindowHidden);
     
     return () => {
       window.removeEventListener('native:menuAction' as any, handleMenuAction);
       window.removeEventListener('task-completed' as any, handleTaskCompletion);
+      window.removeEventListener('native:windowHidden' as any, handleWindowHidden);
     };
   }, [timerStatus, startTimer, pauseTimer, skipTimer, resetTimer, config.soundEnabled]);
+
+  // Local keyboard shortcuts (Space for start/pause, Esc for hide)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input or textarea
+      const target = event.target as HTMLElement;
+      const isInput = target.tagName === 'INPUT' || 
+                      target.tagName === 'TEXTAREA' || 
+                      target.isContentEditable;
+      
+      if (isInput) return;
+
+      if (event.code === 'Space') {
+        event.preventDefault(); // Prevent page scroll
+        if (timerStatus === 'running') {
+          pauseTimer();
+        } else {
+          if (config.soundEnabled) NativeBridge.playClickSound();
+          startTimer();
+        }
+      } else if (event.code === 'Escape') {
+        NativeBridge.hideWindow();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [timerStatus, startTimer, pauseTimer, config.soundEnabled]);
 
   const getThemeColor = () => {
     if (isCelebrating) return '#FFD700'; // Gold celebration glow
@@ -195,8 +224,8 @@ const App: React.FC = () => {
         onClick={() => setShowReports(true)}
         style={reportsButtonStyle}
         title="Reports"
-        onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-        onMouseLeave={(e) => e.currentTarget.style.opacity = '0.3'}
+        onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+        onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.3')}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
@@ -208,8 +237,8 @@ const App: React.FC = () => {
         onClick={() => setShowSettings(true)}
         style={settingsButtonStyle}
         title="Settings"
-        onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-        onMouseLeave={(e) => e.currentTarget.style.opacity = '0.4'}
+        onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+        onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.4')}
       >
         <svg width="18" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="3" />
@@ -222,18 +251,20 @@ const App: React.FC = () => {
         display: 'flex', 
         flexDirection: 'column', 
         alignItems: 'center',
-        justifyContent: 'center', 
+        justifyContent: 'flex-start', 
         width: '100%',
         zIndex: 1,
-        padding: '32px 0 20px 0', // Slightly reduced top padding
+        padding: '40px 0 12px 0', // Bottom padding for session indicators
+        minHeight: 0, 
+        overflowY: 'auto',
       }}>
         {/* Timer Section */}
-        <div style={{ marginBottom: '28px' }}> {/* Slightly reduced gap */}
+        <div style={{ marginBottom: '16px' }}>
           <TimerView />
         </div>
         
         {/* Task & Controls Stack */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '20px' }}> {/* Slightly reduced gap */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '16px' }}>
           {/* Active Task Label */}
           <button 
             onClick={() => !showTasks && setShowTasks(true)}
@@ -244,70 +275,134 @@ const App: React.FC = () => {
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: '8px', 
+              gap: '8px',
               transition: 'all 0.2s ease',
               pointerEvents: showTasks ? 'none' : 'auto',
               opacity: showTasks ? 0 : 1,
+              width: '100%',
+              maxWidth: '300px',
+              padding: '0 24px',
+              boxSizing: 'border-box'
             }}
-            onMouseEnter={(e) => !showTasks && (e.currentTarget.style.transform = 'translateY(-2px)')}
-            onMouseLeave={(e) => !showTasks && (e.currentTarget.style.transform = 'translateY(0)')}
+            onMouseEnter={e => { if (!showTasks) e.currentTarget.style.transform = 'translateY(-2px)' }}
+            onMouseLeave={e => { if (!showTasks) e.currentTarget.style.transform = 'translateY(0)' }}
           >
-            <span style={{ 
-              fontSize: '0.95rem', 
-              fontWeight: '600', 
-              color: activeTask ? 'white' : 'rgba(255, 255, 255, 0.25)',
-              textAlign: 'center',
-              maxWidth: '220px',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              letterSpacing: '-0.01em'
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'row',
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: '8px',
+              width: '100%',
+              minWidth: 0,
+              flexWrap: 'wrap'
             }}>
-              {activeTask ? activeTask.title : 'Select a focus task'}
-            </span>
-            {activeTask && (
-              <div style={{ display: 'flex', gap: '5px' }}>
-                {Array.from({ length: activeTask.estimatedPomos }).map((_, i) => (
+              <span 
+                title={activeTask?.title || ''}
+                style={{ 
+                  fontSize: '15px', 
+                  fontWeight: '600', 
+                  color: activeTask ? 'white' : 'rgba(255, 255, 255, 0.25)',
+                  textAlign: 'center',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  letterSpacing: '-0.01em',
+                  flexShrink: 1,
+                  minWidth: '50px',
+                  lineHeight: '1.4'
+                }}
+              >
+                {activeTask ? activeTask.title : 'Select a focus task'}
+              </span>
+              {activeTask?.tag && (
+                <span 
+                  title={activeTask.tag}
+                  style={{ 
+                    fontSize: '9px', 
+                    fontWeight: '800', 
+                    color: theme.colors.focus.primary,
+                    background: theme.colors.focus.glow,
+                    padding: '2px 8px',
+                    borderRadius: '5px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: '120px',
+                    flexShrink: 0,
+                    lineHeight: '1.4',
+                    marginTop: '1px'
+                  }}
+                >
+                  {activeTask.tag}
+                </span>
+              )}
+            </div>
+          {activeTask && (
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '240px' }}>
+                {Array.from({ length: Math.min(Math.max(activeTask.estimatedPomos, activeTask.completedPomos), 20) }).map((_, i) => (
                   <div 
                     key={i}
                     style={{
                       width: '5px',
                       height: '5px',
                       borderRadius: '50%',
-                      background: i < activeTask.completedPomos ? 'white' : 'rgba(255, 255, 255, 0.12)',
+                      background: i < activeTask.completedPomos 
+                        ? (i >= activeTask.estimatedPomos ? '#FF9500' : 'white') 
+                        : 'rgba(255, 255, 255, 0.12)',
                       transition: 'all 0.3s ease'
                     }}
                   />
                 ))}
+                {Math.max(activeTask.estimatedPomos, activeTask.completedPomos) > 20 && (
+                  <span style={{ fontSize: '8px', color: 'rgba(255,255,255,0.3)', fontWeight: '700' }}>+</span>
+                )}
               </div>
-            )}
+              <span style={{ 
+                fontSize: '10px', 
+                fontWeight: '700', 
+                color: 'white', 
+                opacity: 0.3, 
+                fontFamily: theme.fonts.display,
+                fontVariantNumeric: 'tabular-nums'
+              }}>
+                {activeTask.completedPomos}/{activeTask.estimatedPomos}
+              </span>
+            </div>
+          )}
           </button>
 
-          <div>
-            <Controls />
-          </div>
-          
-          {/* Subtle Session Indicators at the bottom */}
-          <div style={{ 
-            display: 'flex', 
-            gap: '6px', 
-            opacity: 0.3
-          }}>
-            {Array.from({ length: config.sessionsUntilLongBreak }).map((_, i) => (
-              <div 
-                key={i}
-                style={{
-                  width: '10px',
-                  height: '2px',
-                  borderRadius: '1px',
-                  backgroundColor: i < focusInCycleCount 
-                    ? 'rgba(255, 255, 255, 0.8)' 
-                    : 'rgba(255, 255, 255, 0.1)',
-                  transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
-                }}
-              />
-            ))}
-          </div>
+          <Controls />
+        </div>
+
+        {/* Subtle Session Indicators at the absolute bottom */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center',
+          gap: '6px', 
+          opacity: 0.3,
+          marginTop: 'auto', // Pushes only this element to the bottom
+          marginBottom: '8px'
+        }}>
+          {Array.from({ length: config.sessionsUntilLongBreak }).map((_, i) => (
+            <div 
+              key={i}
+              style={{
+                width: '10px',
+                height: '2px',
+                borderRadius: '1px',
+                backgroundColor: i < focusInCycleCount 
+                  ? 'rgba(255, 255, 255, 0.8)' 
+                  : 'rgba(255, 255, 255, 0.1)',
+                transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
+            />
+          ))}
         </div>
       </main>
 

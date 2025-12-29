@@ -11,6 +11,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         windowController?.statusBarController = statusBarController
         NSApp.setActivationPolicy(.accessory)
         
+        setupMainMenu()
         setupHotKeys()
         
         // Safety check to prevent the "bundleProxyForCurrentProcess is nil" crash
@@ -20,6 +21,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             print("AppDelegate: Running outside of a proper .app bundle. Notifications disabled to prevent crash.")
         }
+    }
+    
+    private func setupMainMenu() {
+        let mainMenu = NSMenu()
+        
+        // Application Menu
+        let appMenu = NSMenu()
+        let appMenuItem = NSMenuItem()
+        appMenuItem.submenu = appMenu
+        appMenu.addItem(withTitle: "Quit Pomodoro", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        mainMenu.addItem(appMenuItem)
+        
+        // Edit Menu (Essential for Copy/Paste)
+        let editMenu = NSMenu(title: "Edit")
+        let editMenuItem = NSMenuItem()
+        editMenuItem.submenu = editMenu
+        
+        editMenu.addItem(withTitle: "Undo", action: #selector(UndoManager.undo), keyEquivalent: "z")
+        editMenu.addItem(withTitle: "Redo", action: #selector(UndoManager.redo), keyEquivalent: "Z")
+        editMenu.addItem(.separator())
+        editMenu.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        
+        mainMenu.addItem(editMenuItem)
+        
+        NSApp.mainMenu = mainMenu
     }
     
     private func setupHotKeys() {

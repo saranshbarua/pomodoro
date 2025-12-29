@@ -16,7 +16,7 @@ interface TaskStore {
   activeTaskId: string | null;
   
   // Actions
-  addTask: (title: string, estimatedPomos: number, tag?: string) => void;
+  addTask: (title: string, estimatedPomos: number, tag?: string) => string;
   toggleTask: (id: string) => void;
   deleteTask: (id: string) => void;
   setActiveTask: (id: string | null) => void;
@@ -32,8 +32,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   activeTaskId: null,
 
   addTask: (title: string, estimatedPomos: number = 1, tag?: string) => {
+    const id = crypto.randomUUID();
     const newTask: Task = {
-      id: crypto.randomUUID(),
+      id,
       title,
       tag,
       estimatedPomos,
@@ -47,6 +48,8 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       // Auto-set as active if no active task
       activeTaskId: state.activeTaskId || newTask.id,
     }));
+
+    return id;
   },
 
   toggleTask: (id: string) => {

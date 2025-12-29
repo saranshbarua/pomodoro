@@ -16,7 +16,7 @@ This is the initial public release of Pomodoro for macOS. We are currently in be
 
 ## 💾 Download
 
-### [Download Latest Release (.zip)](https://github.com/saranshbarua/pomodoro/releases/latest)
+### [Download Latest Release (.zip)](https://github.com/saranshbarua/pomodoro/releases/latest/download/Pomodoro_v1.0.1_macOS_Universal.zip)
 
 To install and run the app:
 1. Download the `Pomodoro_macOS_Universal.zip` from the link above.

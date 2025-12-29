@@ -2,8 +2,11 @@ name: Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
+  workflow_dispatch: # Allows manual triggering from the Actions tab
 
 jobs:
   build:
@@ -30,7 +33,7 @@ jobs:
         run: sh build_app.sh
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2 # Updated to v2
         with:
           files: |
             Pomodoro_v*_macOS_Universal.zip
@@ -39,4 +42,3 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-

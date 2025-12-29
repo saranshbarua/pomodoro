@@ -6,7 +6,7 @@ on:
       - main
     tags:
       - 'v*'
-  workflow_dispatch: # Allows manual triggering from the Actions tab
+  workflow_dispatch:
 
 jobs:
   build:
@@ -33,7 +33,8 @@ jobs:
         run: sh build_app.sh
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2 # Updated to v2
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             Pomodoro_v*_macOS_Universal.zip

@@ -18,6 +18,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          # Explicitly check out the ref that triggered the event (the tag)
+          ref: ${{ github.ref }}
           fetch-depth: 0
 
       - name: Set up Node.js
@@ -30,12 +32,15 @@ jobs:
         run: npm install
 
       - name: Build App
-        run: sh build_app.sh
+        run: |
+          chmod +x build_app.sh
+          ./build_app.sh
 
       - name: Setup Sparkle Tools
         run: |
           mkdir -p sparkle_tools
-          curl -L https://github.com/sparkle-project/Sparkle/releases/download/2.6.4/Sparkle-2.6.4.tar.xz | tar -xJ -C sparkle_tools
+          # We use the same Sparkle version as in Package.resolved (2.8.1)
+          curl -L https://github.com/sparkle-project/Sparkle/releases/download/2.8.1/Sparkle-2.8.1.tar.xz | tar -xJ -C sparkle_tools
           echo "$(pwd)/sparkle_tools/bin" >> $GITHUB_PATH
 
       - name: Sign and Generate Appcast
@@ -50,7 +55,6 @@ jobs:
           fi
 
           # 2. Securely create the key file
-          # We use printf to avoid trailing newlines or escape character issues
           printf "%s" "$SPARKLE_PRIVATE_KEY" > sparkle_key.priv
           chmod 600 sparkle_key.priv
           
@@ -59,7 +63,6 @@ jobs:
           cp Pomodoro_macOS_Universal.zip appcast_work/
 
           # 4. Generate the signed appcast.xml
-          # BOTH tools need the --ed-key-file to avoid looking in the Keychain
           echo "🌐 Generating signed appcast..."
           REPO_URL="https://github.com/${{ github.repository }}/releases/latest/download"
           
@@ -86,11 +89,9 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          # Fetch main to ensure we can push to it
           git fetch origin main:main
           git add appcast.xml
           git commit -m "chore: update appcast.xml [skip ci]" || echo "No changes to appcast"
-          # Push the commit to the main branch
           git push origin HEAD:main
 
       - name: Create Release
@@ -98,7 +99,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            Pomodoro_v*_macOS_Universal.zip
             Pomodoro_macOS_Universal.zip
             appcast.xml
           draft: false

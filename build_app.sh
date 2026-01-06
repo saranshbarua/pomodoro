@@ -13,8 +13,7 @@ APP_BUNDLE="$APP_NAME.app"
 CONTENTS_DIR="$APP_BUNDLE/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
-ZIP_NAME="${APP_NAME}_v${VERSION}_macOS_Universal.zip"
-LATEST_ZIP_NAME="${APP_NAME}_macOS_Universal.zip"
+ZIP_NAME="${APP_NAME}_macOS_Universal.zip"
 
 echo "🚀 Starting Production Build for $APP_NAME v$VERSION..."
 
@@ -42,11 +41,30 @@ cd ../../
 echo "📂 Creating .app bundle structure..."
 mkdir -p "$MACOS_DIR"
 mkdir -p "$RESOURCES_DIR"
+mkdir -p "$CONTENTS_DIR/Frameworks"
 
 # 4. Copy the universal binary
 echo "📄 Copying Universal binary..."
 cp "$BINARY_PATH" "$MACOS_DIR/$APP_NAME"
 chmod +x "$MACOS_DIR/$APP_NAME"
+
+# 4.0.1 Set RPATH for Sparkle
+# This tells the binary to look in the Frameworks folder for Sparkle
+echo "🛠️  Setting RPATH for Sparkle..."
+install_name_tool -add_rpath "@executable_path/../Frameworks" "$MACOS_DIR/$APP_NAME" || true
+
+# 4.1 Bundle Sparkle Framework
+# Since we use SPM, we need to find and copy the Sparkle framework
+echo "📦 Bundling Sparkle framework..."
+# We search for the built Sparkle.framework in the build directory
+SPARKLE_FRAMEWORK_PATH=$(find macos/Pomodoro/.build -name "Sparkle.framework" -type d | head -n 1)
+if [ -n "$SPARKLE_FRAMEWORK_PATH" ]; then
+    echo "  -> Found Sparkle at: $SPARKLE_FRAMEWORK_PATH"
+    cp -R "$SPARKLE_FRAMEWORK_PATH" "$CONTENTS_DIR/Frameworks/"
+else
+    echo "  ⚠️ Warning: Sparkle.framework not found in .build folder."
+    echo "  This might cause the app to fail at launch if not linked statically."
+fi
 
 # 5. Copy Info.plist and Icon
 echo "📄 Copying Info.plist and Icon..."
@@ -68,15 +86,22 @@ cp -R dist/* "$RESOURCES_DIR/dist/"
 cp src/assets/click.mp3 "$RESOURCES_DIR/"
 
 # 7. Ad-hoc Sign the bundle (Required for notifications/haptics on modern macOS)
-echo "🔐 Ad-hoc signing the app..."
+echo "🔐 Ad-hoc signing the app components..."
+# First, sign any bundled frameworks
+if [ -d "$CONTENTS_DIR/Frameworks/Sparkle.framework" ]; then
+    echo "  -> Signing Sparkle.framework..."
+    codesign --force --sign - "$CONTENTS_DIR/Frameworks/Sparkle.framework"
+fi
+
+# Then sign the main bundle
+echo "  -> Signing $APP_BUNDLE..."
 codesign --force --deep --sign - "$APP_BUNDLE"
 
-# 8. Create ZIP archives for distribution
-echo "📦 Creating distribution archives..."
+# 8. Create ZIP archive for distribution
+echo "📦 Creating distribution archive..."
 # Refresh Launch Services cache so the system sees the new icon immediately
 touch "$APP_BUNDLE"
 zip -q -r "$ZIP_NAME" "$APP_BUNDLE"
-zip -q -r "$LATEST_ZIP_NAME" "$APP_BUNDLE"
 
 # 9. Finalize
 echo ""
@@ -84,7 +109,6 @@ echo "✅ SUCCESS! Build complete."
 echo "-----------------------------------------------------------"
 echo "📂 App Bundle: $APP_BUNDLE"
 echo "📦 Dist Zip:   $ZIP_NAME"
-echo "📦 Latest Zip: $LATEST_ZIP_NAME"
 echo "-----------------------------------------------------------"
 echo "🚀 To Distribute:"
 echo "Upload $ZIP_NAME to GitHub Releases or Product Hunt."

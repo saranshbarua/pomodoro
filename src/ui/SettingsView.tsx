@@ -2,6 +2,7 @@ import React from 'react';
 import { usePomodoroStore } from '../state/pomodoroStore';
 import { theme } from './theme';
 import { NativeBridge } from '../services/nativeBridge';
+import pkg from '../../package.json';
 
 interface SettingsViewProps {
   onClose: () => void;
@@ -265,7 +266,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
         >
           Quit Pomodoro
         </button>
-        <p style={{ fontSize: '0.55rem', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.08, margin: 0 }}>v1.1.0</p>
+        <p style={{ fontSize: '0.55rem', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.08, margin: 0 }}>v{pkg.version}</p>
       </div>
     </div>
   );

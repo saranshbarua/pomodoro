@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.4](https://github.com/saranshbarua/pomodoro/compare/v1.1.3...v1.1.4) (2026-01-06)
+
+
+### Bug Fixes
+
+* **settings:** fix app version in settings view ([c4a01cc](https://github.com/saranshbarua/pomodoro/commit/c4a01ccb5aed9b1cf2584fd1fccb7dfc4459149b))
+
 ## [1.1.3](https://github.com/saranshbarua/pomodoro/compare/v1.1.2...v1.1.3) (2026-01-06)
 
 ## [1.1.2](https://github.com/saranshbarua/pomodoro/compare/v1.1.1...v1.1.2) (2026-01-06)

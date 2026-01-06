@@ -53,6 +53,14 @@ echo "📄 Copying Info.plist and Icon..."
 cp "macos/Pomodoro/Info.plist" "$CONTENTS_DIR/"
 cp "macos/Pomodoro/Sources/AppIcon.icns" "$RESOURCES_DIR/"
 
+# 5.1 Inject Version into Info.plist
+# This ensures CFBundleShortVersionString always matches package.json
+echo "💉 Injecting version $VERSION into Info.plist..."
+plutil -replace CFBundleShortVersionString -string "$VERSION" "$CONTENTS_DIR/Info.plist"
+# Also set a unique build number based on current timestamp
+BUILD_NUMBER=$(date +%Y%m%d.%H%M%S)
+plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$CONTENTS_DIR/Info.plist"
+
 # 6. Copy bundled React files and assets
 echo "📂 Copying React bundle and audio..."
 mkdir -p "$RESOURCES_DIR/dist"

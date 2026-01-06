@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/saranshbarua/pomodoro/compare/v1.1.0...v1.1.1) (2026-01-06)
+
+
+### Bug Fixes
+
+* **ci:** provide private key to appcast generator ([a58f17c](https://github.com/saranshbarua/pomodoro/commit/a58f17c7df523b83f8b12fd76b4528f6cadc7e9f))
+
 # [1.1.0](https://github.com/saranshbarua/pomodoro/compare/v1.0.4...v1.1.0) (2026-01-06)
 
 

@@ -147,7 +147,7 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
         const activeTask = tasks.find(t => t.id === activeTaskId);
         
         useStatsStore.getState().logActivity(
-          LOG_INTERVAL_SECONDS, 
+          elapsedSinceLastLog, 
           activeTaskId, 
           activeTask?.title || null,
           activeTask?.tag || null
@@ -195,7 +195,7 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
       const { timer, lastLoggedSeconds } = get();
       const { tasks, activeTaskId, incrementCompletedPomos } = useTaskStore.getState();
       
-      // Log remaining time
+      // Log remaining time and mark as completion
       const remainingToLog = lastLoggedSeconds - timer.remainingSeconds;
       if (remainingToLog > 0) {
         const activeTask = tasks.find(t => t.id === activeTaskId);
@@ -203,7 +203,18 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
           remainingToLog, 
           activeTaskId, 
           activeTask?.title || null,
-          activeTask?.tag || null
+          activeTask?.tag || null,
+          true // Mark as completion
+        );
+      } else {
+        // Even if 0 seconds to log, if it's a focus session completion, log it
+        const activeTask = tasks.find(t => t.id === activeTaskId);
+        useStatsStore.getState().logActivity(
+          0, 
+          activeTaskId, 
+          activeTask?.title || null,
+          activeTask?.tag || null,
+          true // Mark as completion
         );
       }
 
@@ -229,6 +240,7 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
           lastCompletedDate: SessionManager.getTodayString(),
         },
         timer: TimerEngine.reset(next.duration),
+        lastLoggedSeconds: next.duration, // Fix: Reset the logging anchor
       });
 
       // Auto-pilot logic
@@ -263,6 +275,11 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     });
 
     const current = get();
+    // After hydration, if the timer is idle, ensure the anchor is reset to duration
+    if (current.timer.status === 'idle') {
+      set({ lastLoggedSeconds: current.timer.totalDuration });
+    }
+
     if (current.timer.status === 'completed') {
       get().completeSession();
     }

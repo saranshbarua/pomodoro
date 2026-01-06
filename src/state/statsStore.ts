@@ -7,13 +7,14 @@ export interface SessionLog {
   taskId: string | null;
   taskTitle: string | null;
   tag: string | null;
+  isCompletion?: boolean;
 }
 
 interface StatsStore {
   logs: SessionLog[];
   
   // Actions
-  logActivity: (duration: number, taskId: string | null, taskTitle: string | null, tag: string | null) => void;
+  logActivity: (duration: number, taskId: string | null, taskTitle: string | null, tag: string | null, isCompletion?: boolean) => void;
   
   // Persistence
   hydrate: (saved: Partial<StatsStore>) => void;
@@ -22,7 +23,7 @@ interface StatsStore {
 export const useStatsStore = create<StatsStore>((set, get) => ({
   logs: [],
 
-  logActivity: (duration, taskId, taskTitle, tag) => {
+  logActivity: (duration, taskId, taskTitle, tag, isCompletion = false) => {
     const newLog: SessionLog = {
       id: crypto.randomUUID(),
       timestamp: Date.now(),
@@ -30,6 +31,7 @@ export const useStatsStore = create<StatsStore>((set, get) => ({
       taskId,
       taskTitle,
       tag,
+      isCompletion,
     };
 
     set((state) => ({
@@ -71,6 +73,10 @@ export const selectProjectDistribution = (state: StatsStore) => {
 
 export const selectTotalFocusTime = (state: StatsStore) => {
   return state.logs.reduce((acc, log) => acc + log.durationSeconds, 0);
+};
+
+export const selectTotalSessions = (state: StatsStore) => {
+  return state.logs.filter(log => log.isCompletion).length;
 };
 
 export const selectTaskBreakdown = (state: StatsStore) => {

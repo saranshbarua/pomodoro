@@ -14,12 +14,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         setupMainMenu()
         setupHotKeys()
         
-        // Fix for notifications not showing banners
-        UNUserNotificationCenter.current().delegate = self
-        
         // Safety check to prevent the "bundleProxyForCurrentProcess is nil" crash
         if Bundle.main.bundleIdentifier != nil {
+            // Fix for notifications not showing banners
+            UNUserNotificationCenter.current().delegate = self
             requestNotificationPermission()
+        } else {
+            print("AppDelegate: Running outside of a proper .app bundle. Notifications disabled to prevent crash.")
         }
     }
     

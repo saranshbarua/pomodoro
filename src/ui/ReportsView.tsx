@@ -9,13 +9,21 @@ import {
   selectProjectDistribution, 
   selectStreak, 
   selectTotalFocusTime,
-  selectTaskBreakdown
+  selectTaskBreakdown,
+  selectTotalSessions
 } from '../state/statsStore';
 import { theme } from './theme';
 
 interface ReportsViewProps {
   onClose: () => void;
 }
+
+export const formatDuration = (seconds: number) => {
+  if (seconds < 3600) {
+    return `${Math.round(seconds / 60)}m`;
+  }
+  return `${(seconds / 3600).toFixed(2)}h`;
+};
 
 const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
   const stats = useStatsStore();
@@ -24,7 +32,9 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
   const taskData = selectTaskBreakdown(stats);
   const streak = selectStreak(stats);
   const totalFocusSeconds = selectTotalFocusTime(stats);
-  const totalHours = (totalFocusSeconds / 3600).toFixed(2);
+  const totalSessions = selectTotalSessions(stats);
+
+  const totalTimeDisplay = formatDuration(totalFocusSeconds);
 
   const COLORS = [
     theme.colors.focus.primary, 
@@ -34,8 +44,6 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
     '#EC4899', 
     '#EAB308'
   ];
-
-  const formatHours = (hours: number) => `${Number(hours).toFixed(2)}h`;
 
   return (
     <div style={{
@@ -110,9 +118,9 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
         
         {/* Quick Stats Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', width: '100%', flexShrink: 0 }}>
-          <StatCard label="Hours" value={totalHours} />
+          <StatCard label="Time" value={totalTimeDisplay} />
           <StatCard label="Streak" value={`${streak}d`} />
-          <StatCard label="Logs" value={stats.logs.length.toString()} />
+          <StatCard label="Sessions" value={totalSessions.toString()} />
         </div>
 
         {/* Focus Hours Chart */}
@@ -134,7 +142,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
                   contentStyle={{ background: '#141414', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', fontSize: '12px', fontFamily: theme.fonts.display }}
                   itemStyle={{ color: 'white' }}
                   cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
-                  formatter={(value: any) => [`${Number(value).toFixed(2)}h`, 'Focus Time']}
+                  formatter={(value: any) => [formatDuration(Number(value) * 3600), 'Focus Time']}
                 />
                 <Bar 
                   dataKey="hours" 
@@ -151,7 +159,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', flexShrink: 0 }}>
           <h4 style={sectionHeaderStyle}>Project Mix</h4>
           <div style={{ 
-            height: '200px', 
+            height: '240px', 
             width: '100%', 
             background: 'rgba(255,255,255,0.02)', 
             borderRadius: '20px', 
@@ -163,7 +171,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
           }}>
             {projectData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+                <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                   <Pie
                     data={projectData}
                     cx="50%"
@@ -179,7 +187,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
                   </Pie>
                   <Tooltip 
                     contentStyle={{ background: '#141414', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', fontSize: '12px', fontFamily: theme.fonts.display }}
-                    formatter={(value: any) => [`${Number(value).toFixed(2)}h`, 'Time Spent']}
+                    formatter={(value: any) => [formatDuration(Number(value) * 3600), 'Time Spent']}
                   />
                   <Legend 
                     verticalAlign="bottom" 
@@ -242,7 +250,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
                       </span>
                     </td>
                     <td style={{ ...tdStyle, textAlign: 'right', fontWeight: '600', fontFamily: theme.fonts.display, width: 'auto' }}>
-                      {formatHours(task.duration / 3600)}
+                      {formatDuration(task.duration)}
                     </td>
                   </tr>
                 ))

@@ -4,11 +4,11 @@
         <title>Pomodoro</title>
         <item>
             <title>1.0.4</title>
-            <pubDate>Tue, 06 Jan 2026 17:38:15 +0000</pubDate>
-            <sparkle:version>20260106.173814</sparkle:version>
+            <pubDate>Tue, 06 Jan 2026 17:49:38 +0000</pubDate>
+            <sparkle:version>20260106.174936</sparkle:version>
             <sparkle:shortVersionString>1.0.4</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>10.13</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/saranshbarua/pomodoro/releases/latest/Pomodoro_macOS_Universal.zip" length="1533539" type="application/octet-stream" sparkle:edSignature="f+Pd3cBWBl3RW59zjCN+dhaW/Xr7FgOY2KDMEPkPfti6nNsctLkZudso9+PB2EAZoOmdg4Aq+rsxW0wpF0yMDA=="/>
+            <enclosure url="https://github.com/saranshbarua/pomodoro/releases/latest/Pomodoro_macOS_Universal.zip" length="4338365" type="application/octet-stream" sparkle:edSignature="wh+uWYKw7R4gfyY41zbbs/O23yZRBL6z49hX6VjXU35BbrD79Mr8AqU1Epf1rnunuF4+WP3CG0g7ua83tjp0BQ=="/>
         </item>
     </channel>
 </rss>

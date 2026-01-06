@@ -43,6 +43,9 @@ class StatusBarController {
         menu.addItem(NSMenuItem(title: "Skip", action: #selector(menuSkip), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Reset", action: #selector(menuReset), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "About Pomodoro", action: #selector(menuAbout), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Check for Updates...", action: #selector(menuUpdate), keyEquivalent: ""))
+        menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(menuQuit), keyEquivalent: "q"))
         
         for item in menu.items {
@@ -64,6 +67,16 @@ class StatusBarController {
 
     @objc func menuReset() {
         windowController.bridge.sendToJS(action: "menuAction", data: ["type": "reset"])
+    }
+
+    @objc func menuAbout() {
+        NSApp.orderFrontStandardAboutPanel(nil)
+    }
+
+    @objc func menuUpdate() {
+        if let appDelegate = NSApp.delegate as? AppDelegate {
+            appDelegate.updaterController?.checkForUpdates(nil)
+        }
     }
 
     @objc func menuQuit() {

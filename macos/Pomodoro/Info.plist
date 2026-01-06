@@ -9,17 +9,21 @@
     <key>CFBundleIconName</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
-    <string>com.pomodoro.app</string>
+    <string>com.saranshbarua.pomodoro</string>
     <key>CFBundleName</key>
     <string>Pomodoro</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
+    <string>1.0.4</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>LSUIElement</key>
     <true/>
+    <key>SUFeedURL</key>
+    <string>https://raw.githubusercontent.com/saranshbarua/pomodoro/main/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>PPwDyy+kFybidv5pFXMRj/7Lvxn6qfVUNDOkI469ARU=</string>
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsLocalNetworking</key>

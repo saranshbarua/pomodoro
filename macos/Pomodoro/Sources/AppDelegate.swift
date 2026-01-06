@@ -1,11 +1,16 @@
 import AppKit
 import UserNotifications
+import Sparkle
 
 class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     var statusBarController: StatusBarController?
     var windowController: WindowController?
+    var updaterController: SPUStandardUpdaterController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Initialize Sparkle Updater
+        updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+        
         windowController = WindowController()
         statusBarController = StatusBarController(windowController: windowController!)
         windowController?.statusBarController = statusBarController
@@ -40,6 +45,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         let appMenu = NSMenu()
         let appMenuItem = NSMenuItem()
         appMenuItem.submenu = appMenu
+        
+        appMenu.addItem(withTitle: "About Pomodoro", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(.separator())
+        appMenu.addItem(withTitle: "Check for Updates...", action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)), keyEquivalent: "")
+        appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Quit Pomodoro", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         mainMenu.addItem(appMenuItem)
         

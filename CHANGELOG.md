@@ -1,5 +1,12 @@
 # Changelog
 
+# [1.2.0](https://github.com/saranshbarua/pomodoro/compare/v1.1.4...v1.2.0) (2026-01-06)
+
+
+### Features
+
+* add check for updates in status bar controller ([c64c482](https://github.com/saranshbarua/pomodoro/commit/c64c4824352b5c8e93c5ae8aec51342b274a6940))
+
 ## [1.1.4](https://github.com/saranshbarua/pomodoro/compare/v1.1.3...v1.1.4) (2026-01-06)
 
 

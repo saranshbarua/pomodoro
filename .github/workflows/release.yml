@@ -64,7 +64,7 @@ jobs:
 
           # 4. Generate the signed appcast.xml
           echo "🌐 Generating signed appcast..."
-          REPO_URL="https://github.com/${{ github.repository }}/releases/latest/download"
+          REPO_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}"
           
           ./sparkle_tools/bin/generate_appcast \
             --download-url-prefix "$REPO_URL" \

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/saranshbarua/pomodoro/compare/v1.2.1...v1.2.2) (2026-01-08)
+
+
+### Bug Fixes
+
+* correct sparkle download url and ensure version sync ([a4f4ff9](https://github.com/saranshbarua/pomodoro/commit/a4f4ff9a7822eb25bbff00890746873575795006))
+
 ## [1.2.1](https://github.com/saranshbarua/pomodoro/compare/v1.2.0...v1.2.1) (2026-01-08)
 
 

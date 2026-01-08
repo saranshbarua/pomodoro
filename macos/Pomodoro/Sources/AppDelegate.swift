@@ -2,14 +2,14 @@ import AppKit
 import UserNotifications
 import Sparkle
 
-class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate, SPUUpdaterDelegate {
     var statusBarController: StatusBarController?
     var windowController: WindowController?
     var updaterController: SPUStandardUpdaterController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Initialize Sparkle Updater
-        updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+        updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: self, userDriverDelegate: nil)
         
         windowController = WindowController()
         statusBarController = StatusBarController(windowController: windowController!)
@@ -127,6 +127,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                 print("AppDelegate: Notification status: \(settings.authorizationStatus.rawValue)")
             }
         }
+    }
+
+    // Sparkle Delegate: Ensure the app can terminate and relaunch correctly
+    func updaterWillRelaunchApplication(_ updater: SPUUpdater) {
+        // Optional: Perform any cleanup before relaunch
+        print("AppDelegate: Updater will relaunch application...")
+    }
+
+    func updaterShouldRelaunchApplication(_ updater: SPUUpdater) -> Bool {
+        return true
     }
 }
  

@@ -3,12 +3,12 @@
     <channel>
         <title>Pomodoro</title>
         <item>
-            <title>1.2.5</title>
-            <pubDate>Thu, 08 Jan 2026 03:26:32 +0000</pubDate>
-            <sparkle:version>20260108.032629</sparkle:version>
-            <sparkle:shortVersionString>1.2.5</sparkle:shortVersionString>
+            <title>1.2.6</title>
+            <pubDate>Thu, 08 Jan 2026 03:33:32 +0000</pubDate>
+            <sparkle:version>20260108.033330</sparkle:version>
+            <sparkle:shortVersionString>1.2.6</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>10.13</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/saranshbarua/pomodoro/releases/download/Pomodoro_macOS_Universal.zip" length="4341732" type="application/octet-stream" sparkle:edSignature="x0W6+bW7o0PHDIEnABQxxXm6Cn+J1CRMptV4bdx0pUWX5InmcOQXLQmXb2o9+PytQ6vGSPBl5PBz2kP+ptH7Bw=="/>
+            <enclosure url="https://github.com/saranshbarua/pomodoro/releases/download/Pomodoro_macOS_Universal.zip" length="4341756" type="application/octet-stream" sparkle:edSignature="nBITlA5x+xUL2OtRvWvyGVXMCjqxPEZuBf06Q92wdkko7sdS1Zl2QpKTqXMx0nR0IIyvmha7sTFQpRMdpTNhCw=="/>
         </item>
     </channel>
 </rss>

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.8](https://github.com/saranshbarua/pomodoro/compare/v1.2.7...v1.2.8) (2026-01-08)
+
+
+### Bug Fixes
+
+* use robust CSS-only hover for production build and tighten layout ([d5016c4](https://github.com/saranshbarua/pomodoro/commit/d5016c4a4b17daa783bca2de14ed3c8b87463837))
+
 ## [1.2.7](https://github.com/saranshbarua/pomodoro/compare/v1.2.6...v1.2.7) (2026-01-08)
 
 

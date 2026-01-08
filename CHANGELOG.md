@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.5](https://github.com/saranshbarua/pomodoro/compare/v1.2.4...v1.2.5) (2026-01-08)
+
+
+### Bug Fixes
+
+* sync versions to 1.2.4 and improve Sparkle relaunch reliability ([5c6e109](https://github.com/saranshbarua/pomodoro/commit/5c6e1092afea315ea1f5e84a7d1d1981b68042ad))
+
 ## [1.2.4](https://github.com/saranshbarua/pomodoro/compare/v1.2.3...v1.2.4) (2026-01-08)
 
 

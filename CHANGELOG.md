@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/saranshbarua/pomodoro/compare/v1.2.0...v1.2.1) (2026-01-08)
+
+
+### Bug Fixes
+
+* bump version to 1.2.1 and ensure release stages version files ([afe53e8](https://github.com/saranshbarua/pomodoro/commit/afe53e83252503a470522223155ab5c3e8d1e8a5))
+
 # [1.2.0](https://github.com/saranshbarua/pomodoro/compare/v1.1.4...v1.2.0) (2026-01-06)
 
 

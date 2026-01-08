@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.6](https://github.com/saranshbarua/pomodoro/compare/v1.2.5...v1.2.6) (2026-01-08)
+
+
+### Bug Fixes
+
+* **tasks:** fix persistent delete icon and tighten header spacing ([b117c00](https://github.com/saranshbarua/pomodoro/commit/b117c00edf07139e51419b2dfb9c0747e4601ddd))
+
 ## [1.2.5](https://github.com/saranshbarua/pomodoro/compare/v1.2.4...v1.2.5) (2026-01-08)
 
 

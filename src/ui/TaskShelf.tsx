@@ -104,6 +104,18 @@ const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
             30% { border-color: ${theme.colors.focus.primary}; background: ${theme.colors.focus.glow}; }
             100% { border-color: rgba(255, 255, 255, 0.05); background: rgba(255, 255, 255, 0.02); }
           }
+          .delete-button {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            transform: translateX(4px) !important;
+            pointer-events: none !important;
+          }
+          .task-item:hover .delete-button {
+            opacity: 1 !important;
+            visibility: visible !important;
+            transform: translateX(0) !important;
+            pointer-events: auto !important;
+          }
         `}
       </style>
       <div style={shelfStyle} onClick={(e) => e.stopPropagation()}>
@@ -116,7 +128,7 @@ const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
           padding: '24px', // Standard padding
         }}>
           {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', flexShrink: 0 }}>
             <h2 style={{ 
               fontSize: '1.2rem', 
               fontWeight: '700', 
@@ -334,13 +346,10 @@ interface TaskItemProps {
 }
 
 const TaskItem: React.FC<TaskItemProps> = ({ task, isActive, isNew, onToggle, onDelete, onSelect }) => {
-  const [isHovered, setIsHovered] = useState(false);
-
   return (
     <div 
+      className="task-item"
       onClick={onSelect}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       style={{
         padding: '16px',
         borderRadius: '20px',
@@ -468,17 +477,15 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, isActive, isNew, onToggle, on
       </div>
 
       <button
+        className="delete-button"
         onClick={(e) => {
           e.stopPropagation();
           onDelete();
         }}
         style={{
-          background: 'rgba(255, 255, 255, 0.04)',
+          background: 'rgba(255, 255, 255, 0.06)',
           border: 'none',
           color: theme.colors.text.muted,
-          opacity: isHovered ? 1 : 0,
-          visibility: isHovered ? 'visible' : 'hidden',
-          pointerEvents: isHovered ? 'auto' : 'none',
           cursor: 'pointer',
           padding: '8px',
           borderRadius: '10px',

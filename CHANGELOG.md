@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.4](https://github.com/saranshbarua/pomodoro/compare/v1.2.3...v1.2.4) (2026-01-08)
+
+
+### Bug Fixes
+
+* restore npm version bumping and sync local state to v1.2.3 ([ca52a5f](https://github.com/saranshbarua/pomodoro/commit/ca52a5f5391ccb2dbd395810374c4de55a737f6c))
+
 ## [1.2.3](https://github.com/saranshbarua/pomodoro/compare/v1.2.2...v1.2.3) (2026-01-08)
 
 

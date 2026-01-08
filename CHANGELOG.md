@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.7](https://github.com/saranshbarua/pomodoro/compare/v1.2.6...v1.2.7) (2026-01-08)
+
+
+### Bug Fixes
+
+* correct sparkle download url format in CI and appcast ([9a94d79](https://github.com/saranshbarua/pomodoro/commit/9a94d7938b84a2577181cffd28c141a93bb1f6c2))
+
 ## [1.2.6](https://github.com/saranshbarua/pomodoro/compare/v1.2.5...v1.2.6) (2026-01-08)
 
 

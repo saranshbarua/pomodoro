@@ -5,7 +5,8 @@
   },
   "git": {
     "commitMessage": "chore: release v${version}",
-    "tagName": "v${version}"
+    "tagName": "v${version}",
+    "add": ["package.json", "CHANGELOG.md", "macos/Pomodoro/Info.plist"]
   },
   "npm": false,
   "plugins": {

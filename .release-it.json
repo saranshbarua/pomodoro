@@ -8,6 +8,9 @@
     "tagName": "v${version}",
     "add": ["package.json", "CHANGELOG.md", "macos/Pomodoro/Info.plist"]
   },
+  "hooks": {
+    "before:git:release": "plutil -replace CFBundleShortVersionString -string ${version} macos/Pomodoro/Info.plist"
+  },
   "npm": false,
   "plugins": {
     "@release-it/conventional-changelog": {

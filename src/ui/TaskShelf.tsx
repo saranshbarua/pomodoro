@@ -116,7 +116,7 @@ const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
           padding: '24px', // Standard padding
         }}>
           {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexShrink: 0 }}>
             <h2 style={{ 
               fontSize: '1.2rem', 
               fontWeight: '700', 
@@ -477,6 +477,8 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, isActive, isNew, onToggle, on
           border: 'none',
           color: theme.colors.text.muted,
           opacity: isHovered ? 1 : 0,
+          visibility: isHovered ? 'visible' : 'hidden',
+          pointerEvents: isHovered ? 'auto' : 'none',
           cursor: 'pointer',
           padding: '8px',
           borderRadius: '10px',

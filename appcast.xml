@@ -8,7 +8,7 @@
             <sparkle:version>20260108.033330</sparkle:version>
             <sparkle:shortVersionString>1.2.6</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>10.13</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/saranshbarua/pomodoro/releases/download/Pomodoro_macOS_Universal.zip" length="4341756" type="application/octet-stream" sparkle:edSignature="nBITlA5x+xUL2OtRvWvyGVXMCjqxPEZuBf06Q92wdkko7sdS1Zl2QpKTqXMx0nR0IIyvmha7sTFQpRMdpTNhCw=="/>
+            <enclosure url="https://github.com/saranshbarua/pomodoro/releases/download/v1.2.6/Pomodoro_macOS_Universal.zip" length="4341756" type="application/octet-stream" sparkle:edSignature="nBITlA5x+xUL2OtRvWvyGVXMCjqxPEZuBf06Q92wdkko7sdS1Zl2QpKTqXMx0nR0IIyvmha7sTFQpRMdpTNhCw=="/>
         </item>
     </channel>
 </rss>

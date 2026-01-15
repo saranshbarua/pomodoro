@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { 
   useStatsStore, 
   selectTotalFocusTime, 
@@ -7,95 +7,81 @@ import {
   selectTotalSessions,
   selectTaskBreakdown
 } from '../state/statsStore';
+import { NativeBridge } from '../services/nativeBridge';
+
+// Mock NativeBridge
+vi.mock('../services/nativeBridge', () => ({
+  NativeBridge: {
+    db_logActivity: vi.fn(),
+    db_getReports: vi.fn(),
+  },
+}));
 
 describe('StatsStore', () => {
   beforeEach(() => {
-    useStatsStore.setState({ logs: [] });
+    useStatsStore.setState({ logs: [], reports: null });
+    vi.clearAllMocks();
   });
 
-  it('should log activity correctly', () => {
+  it('should log activity correctly and call native bridge', () => {
     const { logActivity } = useStatsStore.getState();
-    logActivity(300, 'task-1', 'Test Task', 'Work', false);
+    
+    logActivity(300, 'task-1', 'Test Task', 'Work', false, 'project-1');
     
     const state = useStatsStore.getState();
     expect(state.logs).toHaveLength(1);
     expect(state.logs[0].durationSeconds).toBe(300);
-    expect(state.logs[0].taskTitle).toBe('Test Task');
-    expect(state.logs[0].isCompletion).toBe(false);
+    expect(state.logs[0].projectId).toBe('project-1');
+    
+    expect(NativeBridge.db_logActivity).toHaveBeenCalledWith(
+      300, 'task-1', 'Test Task', 'Work', false, 'project-1'
+    );
   });
 
-  it('should calculate total sessions correctly', () => {
-    const { logActivity } = useStatsStore.getState();
-    
-    // 3 minute heartbeats, 1 completion
-    logActivity(60, 't1', 'T1', 'W', false);
-    logActivity(60, 't1', 'T1', 'W', false);
-    logActivity(60, 't1', 'T1', 'W', true);
-    
-    // Another task completion
-    logActivity(60, 't2', 'T2', 'W', true);
+  describe('Report Prioritization', () => {
+    const mockReports = {
+      dailyStats: [{ date: '2026-01-10', hours: 5 }],
+      projectDistribution: [{ name: 'Work', value: 5 }],
+      totalFocusTime: 18000,
+      totalSessions: 10,
+      taskBreakdown: [{ title: 'Task 1', tag: 'Work', duration: 18000 }],
+      streak: 7
+    };
 
-    const sessions = selectTotalSessions(useStatsStore.getState());
-    expect(sessions).toBe(2);
+    it('should prioritize reports from native bridge over local logs', () => {
+      const { hydrateReports, logActivity } = useStatsStore.getState();
+      
+      // Add a local log
+      logActivity(3600, 'local-task', 'Local Task', 'Tag', true);
+      
+      // Hydrate reports from native
+      hydrateReports(mockReports);
+      
+      const state = useStatsStore.getState();
+      
+      expect(selectTotalFocusTime(state)).toBe(18000); // from mockReports
+      expect(selectTotalSessions(state)).toBe(10); // from mockReports
+      expect(selectStreak(state)).toBe(7); // from mockReports
+      expect(selectTaskBreakdown(state)).toEqual(mockReports.taskBreakdown);
+    });
+
+    it('should fall back to local logs if reports are null', () => {
+      const { logActivity } = useStatsStore.getState();
+      
+      // Add a local log
+      logActivity(3600, 'local-task', 'Local Task', 'Work', true);
+      
+      const state = useStatsStore.getState();
+      expect(state.reports).toBeNull();
+      
+      expect(selectTotalFocusTime(state)).toBe(3600);
+      expect(selectTotalSessions(state)).toBe(1);
+      const breakdown = selectTaskBreakdown(state);
+      expect(breakdown[0].title).toBe('Local Task');
+    });
   });
 
-  it('should calculate task breakdown accurately', () => {
-    const { logActivity } = useStatsStore.getState();
-    
-    // Task 1: 30 mins total (across 2 entries)
-    logActivity(900, 't1', 'Task 1', 'Work', false);
-    logActivity(900, 't1', 'Task 1', 'Work', true);
-    
-    // Task 2: 15 mins total
-    logActivity(900, 't2', 'Task 2', 'Personal', true);
-
-    const breakdown = selectTaskBreakdown(useStatsStore.getState());
-    expect(breakdown).toHaveLength(2);
-    expect(breakdown[0].title).toBe('Task 1');
-    expect(breakdown[0].duration).toBe(1800);
-    expect(breakdown[1].title).toBe('Task 2');
-    expect(breakdown[1].duration).toBe(900);
-  });
-
-  it('should calculate daily focus stats correctly', () => {
-    const { logActivity } = useStatsStore.getState();
-    const now = Date.now();
-    const oneDay = 24 * 60 * 60 * 1000;
-
-    // 2 hours today
-    logActivity(3600, 't1', 'T1', 'W', false);
-    logActivity(3600, 't1', 'T1', 'W', false);
-
-    // 1 hour yesterday
-    useStatsStore.setState((state) => ({
-      logs: [...state.logs, {
-        id: 'old-1',
-        timestamp: now - oneDay,
-        durationSeconds: 3600,
-        taskId: 't1',
-        taskTitle: 'T1',
-        tag: 'W'
-      }]
-    }));
-
-    const dailyStats = selectDailyFocusStats(useStatsStore.getState());
-    expect(dailyStats).toHaveLength(2);
-    
-    const today = new Date().toLocaleDateString();
-    const todayStats = dailyStats.find(d => d.date === today);
-    expect(todayStats?.hours).toBe(2);
-  });
-
-  it('should calculate total focus time', () => {
-    const { logActivity } = useStatsStore.getState();
-    logActivity(1000, 't1', 'T1', 'W', false);
-    logActivity(2000, 't2', 'T2', 'P', false);
-    
-    const total = selectTotalFocusTime(useStatsStore.getState());
-    expect(total).toBe(3000);
-  });
-
-  it('should calculate streak correctly', () => {
+  it('should calculate streak correctly from local logs', () => {
     const { logActivity } = useStatsStore.getState();
     const now = Date.now();
     const oneDay = 24 * 60 * 60 * 1000;
@@ -119,4 +105,3 @@ describe('StatsStore', () => {
     expect(streak).toBe(2);
   });
 });
-

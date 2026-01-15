@@ -5,14 +5,23 @@ export interface Task {
   id: string;
   title: string;
   tag?: string; // Project level tag
+  projectId?: string; // Relational project link
   estimatedPomos: number;
   completedPomos: number;
-  isCompleted: boolean;
+  isCompleted: boolean; // Computed from status === 1
+  status: number; // 0: Active, 1: Completed, 2: Archived
   createdAt: number;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  color?: string;
 }
 
 interface TaskStore {
   tasks: Task[];
+  projects: Project[];
   activeTaskId: string | null;
   
   // Actions
@@ -29,6 +38,7 @@ interface TaskStore {
 
 export const useTaskStore = create<TaskStore>((set, get) => ({
   tasks: [],
+  projects: [],
   activeTaskId: null,
 
   addTask: (title: string, estimatedPomos: number = 1, tag?: string) => {
@@ -40,9 +50,29 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       estimatedPomos,
       completedPomos: 0,
       isCompleted: false,
+      status: 0,
       createdAt: Date.now(),
     };
     
+    // Expert Fix: Ensure project exists if tag is provided
+    let projectId: string | undefined;
+    if (tag) {
+      const { projects } = get();
+      let project = projects.find(p => p.name.toLowerCase() === tag.toLowerCase());
+      if (!project) {
+        projectId = crypto.randomUUID();
+        const newProject = { id: projectId, name: tag };
+        set(state => ({ projects: [...state.projects, newProject] }));
+        NativeBridge.db_upsertProject(tag, projectId);
+      } else {
+        projectId = project.id;
+      }
+      newTask.projectId = projectId;
+    }
+
+    // Native call
+    NativeBridge.db_addTask(id, title, estimatedPomos, tag, projectId);
+
     set((state) => ({
       tasks: [...state.tasks, newTask],
       // Auto-set as active if no active task
@@ -54,18 +84,24 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   toggleTask: (id: string) => {
     set((state) => {
-      const newTasks = state.tasks.map((t) => 
-        t.id === id ? { ...t, isCompleted: !t.isCompleted } : t
-      );
+      const newTasks = state.tasks.map((t) => {
+        if (t.id === id) {
+          const nextStatus = t.status === 1 ? 0 : 1;
+          // Native call
+          NativeBridge.db_updateTaskStatus(id, nextStatus);
+          return { ...t, status: nextStatus, isCompleted: nextStatus === 1 };
+        }
+        return t;
+      });
       
       const task = newTasks.find(t => t.id === id);
       let nextActiveId = state.activeTaskId;
       
       // If we just completed the active task, auto-select next
-      if (task?.isCompleted && state.activeTaskId === id) {
-        const nextTask = newTasks.find(t => !t.isCompleted);
+      if (task?.status === 1 && state.activeTaskId === id) {
+        const nextTask = newTasks.find(t => t.status === 0);
         nextActiveId = nextTask ? nextTask.id : null;
-      } else if (!task?.isCompleted && !state.activeTaskId) {
+      } else if (task?.status === 0 && !state.activeTaskId) {
         // If we un-completed a task and nothing is active, make it active
         nextActiveId = id;
       }
@@ -78,6 +114,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   },
 
   deleteTask: (id: string) => {
+    // Native call (Expert Fix: Soft delete in DB)
+    NativeBridge.db_deleteTask(id);
+
     set((state) => ({
       tasks: state.tasks.filter((t) => t.id !== id),
       activeTaskId: state.activeTaskId === id ? null : state.activeTaskId,
@@ -89,6 +128,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   },
 
   incrementCompletedPomos: (id: string) => {
+    // Native call
+    NativeBridge.db_incrementPomos(id);
+
     set((state) => ({
       tasks: state.tasks.map((t) => 
         t.id === id ? { ...t, completedPomos: t.completedPomos + 1 } : t
@@ -100,7 +142,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     const { tasks, activeTaskId } = get();
     if (activeTaskId) return; // Already has one
 
-    const nextTask = tasks.find(t => !t.isCompleted);
+    const nextTask = tasks.find(t => t.status === 0);
     if (nextTask) {
       set({ activeTaskId: nextTask.id });
     }

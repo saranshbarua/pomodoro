@@ -53,6 +53,45 @@ export const NativeBridge = {
   },
 
   /**
+   * --- Database Actions ---
+   */
+  db_loadInitialData() {
+    this.postMessage('db_loadInitialData');
+  },
+
+  db_addTask(id: string, title: string, estimatedPomos: number, tag?: string, projectId?: string) {
+    this.postMessage('db_addTask', { id, title, estimatedPomos, tag, projectId });
+  },
+
+  db_updateTaskStatus(id: string, status: number) {
+    this.postMessage('db_updateTaskStatus', { id, status });
+  },
+
+  db_deleteTask(id: string) {
+    this.postMessage('db_deleteTask', { id });
+  },
+
+  db_incrementPomos(id: string) {
+    this.postMessage('db_incrementPomos', { id });
+  },
+
+  db_logActivity(duration: number, taskId: string | null, taskTitle: string | null, tag: string | null, isCompletion: boolean, projectId?: string | null) {
+    this.postMessage('db_logActivity', { duration, taskId, taskTitle, tag, isCompletion, projectId });
+  },
+
+  db_getReports() {
+    this.postMessage('db_getReports');
+  },
+
+  db_getProjects() {
+    this.postMessage('db_getProjects');
+  },
+
+  db_upsertProject(name: string, id?: string, color?: string) {
+    this.postMessage('db_upsertProject', { name, id, color });
+  },
+
+  /**
    * Hides the native popup window.
    */
   hideWindow() {

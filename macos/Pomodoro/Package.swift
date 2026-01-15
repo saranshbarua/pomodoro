@@ -10,13 +10,15 @@ let package = Package(
         .executable(name: "Pomodoro", targets: ["Pomodoro"])
     ],
     dependencies: [
-        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.6.4")
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.6.4"),
+        .package(url: "https://github.com/groue/GRDB.swift", from: "6.24.2")
     ],
     targets: [
         .executableTarget(
             name: "Pomodoro",
             dependencies: [
-                .product(name: "Sparkle", package: "Sparkle")
+                .product(name: "Sparkle", package: "Sparkle"),
+                .product(name: "GRDB", package: "GRDB.swift")
             ],
             path: "Sources",
             resources: [

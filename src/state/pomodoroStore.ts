@@ -52,6 +52,7 @@ interface PomodoroStore {
   config: SessionConfig;
   dailyGoal: number;
   taskName: string;
+  lockedTaskContext: { id: string, title: string, tag?: string, projectId?: string } | null;
   lastLoggedSeconds: number; // Seconds remaining at last log
 
   // Actions
@@ -83,9 +84,26 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
   config: DEFAULT_CONFIG,
   dailyGoal: 8,
   taskName: '',
+  lockedTaskContext: null,
   lastLoggedSeconds: DEFAULT_CONFIG.focusDuration,
 
   startTimer: () => {
+    const { session } = get();
+    
+    // Expert Fix: Lock in the current task metadata when a focus session starts
+    if (session.type === 'focus') {
+      const { tasks, activeTaskId } = useTaskStore.getState();
+      const activeTask = tasks.find(t => t.id === activeTaskId);
+      if (activeTask) {
+        set({ lockedTaskContext: { 
+          id: activeTask.id, 
+          title: activeTask.title, 
+          tag: activeTask.tag,
+          projectId: activeTask.projectId
+        }});
+      }
+    }
+
     set((state) => ({
       timer: TimerEngine.start(state.timer, Date.now()),
     }));
@@ -100,14 +118,28 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     if (session.type === 'focus') {
       const elapsedSinceLastLog = lastLoggedSeconds - nextTimer.remainingSeconds;
       if (elapsedSinceLastLog > 0) {
-        const { tasks, activeTaskId } = useTaskStore.getState();
-        const activeTask = tasks.find(t => t.id === activeTaskId);
-        
+        let context = get().lockedTaskContext;
+        if (!context) {
+          const { tasks, activeTaskId } = useTaskStore.getState();
+          const activeTask = tasks.find(t => t.id === activeTaskId);
+          if (activeTask) {
+            context = { 
+              id: activeTask.id, 
+              title: activeTask.title, 
+              tag: activeTask.tag,
+              projectId: activeTask.projectId
+            };
+            set({ lockedTaskContext: context });
+          }
+        }
+
         useStatsStore.getState().logActivity(
           elapsedSinceLastLog, 
-          activeTaskId, 
-          activeTask?.title || null,
-          activeTask?.tag || null
+          context?.id || null, 
+          context?.title || null,
+          context?.tag || null,
+          false,
+          context?.projectId
         );
       }
     }
@@ -127,6 +159,7 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     set({
       timer: TimerEngine.reset(duration),
       lastLoggedSeconds: duration,
+      lockedTaskContext: null, // Clear context on reset
     });
   },
 
@@ -143,14 +176,29 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     if (session.type === 'focus') {
       const elapsedSinceLastLog = lastLoggedSeconds - nextTimer.remainingSeconds;
       if (elapsedSinceLastLog >= LOG_INTERVAL_SECONDS) {
-        const { tasks, activeTaskId } = useTaskStore.getState();
-        const activeTask = tasks.find(t => t.id === activeTaskId);
-        
+        // Dynamic Context: Always try to get the latest task if context is missing
+        let context = get().lockedTaskContext;
+        if (!context) {
+          const { tasks, activeTaskId } = useTaskStore.getState();
+          const activeTask = tasks.find(t => t.id === activeTaskId);
+          if (activeTask) {
+            context = { 
+              id: activeTask.id, 
+              title: activeTask.title, 
+              tag: activeTask.tag,
+              projectId: activeTask.projectId
+            };
+            set({ lockedTaskContext: context });
+          }
+        }
+
         useStatsStore.getState().logActivity(
           elapsedSinceLastLog, 
-          activeTaskId, 
-          activeTask?.title || null,
-          activeTask?.tag || null
+          context?.id || null, 
+          context?.title || null,
+          context?.tag || null,
+          false,
+          context?.projectId
         );
         
         set({ lastLoggedSeconds: nextTimer.remainingSeconds });
@@ -193,33 +241,37 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     // Increment task if it was a focus session
     if (currentType === 'focus') {
       const { timer, lastLoggedSeconds } = get();
-      const { tasks, activeTaskId, incrementCompletedPomos } = useTaskStore.getState();
+      const { incrementCompletedPomos } = useTaskStore.getState();
       
       // Log remaining time and mark as completion
       const remainingToLog = lastLoggedSeconds - timer.remainingSeconds;
-      if (remainingToLog > 0) {
+      
+      let context = get().lockedTaskContext;
+      if (!context) {
+        const { tasks, activeTaskId } = useTaskStore.getState();
         const activeTask = tasks.find(t => t.id === activeTaskId);
-        useStatsStore.getState().logActivity(
-          remainingToLog, 
-          activeTaskId, 
-          activeTask?.title || null,
-          activeTask?.tag || null,
-          true // Mark as completion
-        );
-      } else {
-        // Even if 0 seconds to log, if it's a focus session completion, log it
-        const activeTask = tasks.find(t => t.id === activeTaskId);
-        useStatsStore.getState().logActivity(
-          0, 
-          activeTaskId, 
-          activeTask?.title || null,
-          activeTask?.tag || null,
-          true // Mark as completion
-        );
+        if (activeTask) {
+          context = { 
+            id: activeTask.id, 
+            title: activeTask.title, 
+            tag: activeTask.tag,
+            projectId: activeTask.projectId
+          };
+        }
       }
 
-      if (activeTaskId) {
-        incrementCompletedPomos(activeTaskId);
+      // Expert Fix: Always use context for session completion logs
+      useStatsStore.getState().logActivity(
+        Math.max(0, remainingToLog), 
+        context?.id || null, 
+        context?.title || null,
+        context?.tag || null,
+        true, // Mark as completion
+        context?.projectId
+      );
+
+      if (context?.id) {
+        incrementCompletedPomos(context.id);
       }
     }
 
@@ -240,7 +292,8 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
           lastCompletedDate: SessionManager.getTodayString(),
         },
         timer: TimerEngine.reset(next.duration),
-        lastLoggedSeconds: next.duration, // Fix: Reset the logging anchor
+        lastLoggedSeconds: next.duration,
+        lockedTaskContext: null, // Clear context for break
       });
 
       // Auto-pilot logic

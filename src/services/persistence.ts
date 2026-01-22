@@ -21,9 +21,8 @@ export const PersistenceService = {
     saveTimeout = setTimeout(() => {
       try {
         const pomodoroState = usePomodoroStore.getState();
-        const taskState = useTaskStore.getState();
-        const statsState = useStatsStore.getState();
 
+        // Only save transient timer/session state to UserDefaults
         const combinedState = {
           pomodoro: {
             timer: pomodoroState.timer,
@@ -31,13 +30,7 @@ export const PersistenceService = {
             config: pomodoroState.config,
             dailyGoal: pomodoroState.dailyGoal,
             taskName: pomodoroState.taskName,
-          },
-          tasks: {
-            tasks: taskState.tasks,
-            activeTaskId: taskState.activeTaskId,
-          },
-          stats: {
-            logs: statsState.logs,
+            lockedTaskContext: pomodoroState.lockedTaskContext,
           }
         };
 
@@ -55,6 +48,7 @@ export const PersistenceService = {
    */
   load() {
     NativeBridge.loadState();
+    NativeBridge.db_loadInitialData(); // Load relational data from SQLite
   }
 };
 
@@ -64,9 +58,8 @@ export const PersistenceService = {
 export const initPersistence = () => {
   const pomodoroStore = usePomodoroStore.getState();
   const taskStore = useTaskStore.getState();
-  const statsStore = useStatsStore.getState();
   
-  // 1. Listen for the state coming back from Swift
+  // 1. Listen for the state coming back from Swift (UserDefaults)
   window.addEventListener('native:loadedState', (event: any) => {
     const { state } = event.detail;
     if (state) {
@@ -74,11 +67,9 @@ export const initPersistence = () => {
         const savedData = JSON.parse(state);
         
         // Handle legacy format (flat) vs new format (nested)
-        if (savedData.pomodoro || savedData.tasks || savedData.stats) {
-          if (savedData.pomodoro) pomodoroStore.hydrate(savedData.pomodoro);
-          if (savedData.tasks) taskStore.hydrate(savedData.tasks);
-          if (savedData.stats) statsStore.hydrate(savedData.stats);
-        } else {
+        if (savedData.pomodoro) {
+          pomodoroStore.hydrate(savedData.pomodoro);
+        } else if (!savedData.tasks && !savedData.stats) {
           // Legacy flat format
           pomodoroStore.hydrate(savedData);
         }
@@ -88,11 +79,30 @@ export const initPersistence = () => {
     }
   });
 
-  // 2. Initial request for state
+  // 2. Listen for Database Initial Data (SQLite)
+  window.addEventListener('native:db_initialData', (event: any) => {
+    const { tasks } = event.detail;
+    if (tasks) {
+      taskStore.hydrate({ tasks });
+    }
+  });
+
+  // 3. Listen for Database Reports Data (SQLite)
+  window.addEventListener('native:db_reportsData', (event: any) => {
+    const { dailyStats, projectDistribution, totalFocusTime, totalSessions, taskBreakdown, streak } = event.detail;
+    useStatsStore.getState().hydrateReports({
+      dailyStats,
+      projectDistribution,
+      totalFocusTime,
+      totalSessions,
+      taskBreakdown,
+      streak
+    });
+  });
+
+  // 4. Initial request for state
   PersistenceService.load();
 
-  // 3. Continuous synchronization
+  // 4. Continuous synchronization for transient state
   usePomodoroStore.subscribe(() => PersistenceService.save());
-  useTaskStore.subscribe(() => PersistenceService.save());
-  useStatsStore.subscribe(() => PersistenceService.save());
 };

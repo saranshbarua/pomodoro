@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { 
   BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, Legend 
@@ -26,7 +26,13 @@ export const formatDuration = (seconds: number) => {
 };
 
 const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
+  const fetchReports = useStatsStore(state => state.fetchReports);
   const stats = useStatsStore();
+  
+  useEffect(() => {
+    fetchReports();
+  }, [fetchReports]);
+
   const dailyData = selectDailyFocusStats(stats);
   const projectData = selectProjectDistribution(stats);
   const taskData = selectTaskBreakdown(stats);
@@ -226,7 +232,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
               {taskData.length > 0 ? (
                 taskData.map((task, i) => (
                   <tr key={i} style={{ borderBottom: i === taskData.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.03)' }}>
-                    <td style={tdStyle} title={task.title}>{task.title}</td>
+                    <td style={{ ...tdStyle, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.4' }} title={task.title}>{task.title}</td>
                     <td style={tdStyle}>
                       <span 
                         title={task.tag}
@@ -243,7 +249,8 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
                           maxWidth: '100%',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
-                          lineHeight: '1.2'
+                          lineHeight: '1.2',
+                          whiteSpace: 'nowrap'
                         }}
                       >
                         {task.tag}
@@ -310,7 +317,6 @@ const thStyle: React.CSSProperties = {
 const tdStyle: React.CSSProperties = {
   padding: '12px 16px',
   color: 'rgba(255,255,255,0.8)',
-  whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis'
 };

@@ -1,5 +1,12 @@
 # Changelog
 
+# [1.3.0](https://github.com/saranshbarua/pomodoro/compare/v1.2.8...v1.3.0) (2026-01-22)
+
+
+### Features
+
+* **database:** integrate GRDB for SQLite persistence and implement task management features ([7fb5ba7](https://github.com/saranshbarua/pomodoro/commit/7fb5ba76a09550daa37e95e6886f7dbea266f8d9))
+
 ## [1.2.8](https://github.com/saranshbarua/pomodoro/compare/v1.2.7...v1.2.8) (2026-01-08)
 
 

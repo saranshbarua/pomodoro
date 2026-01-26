@@ -104,6 +104,14 @@ class Bridge: NSObject, WKScriptMessageHandler {
                 // Fallback to system sound if custom asset is missing
                 NSSound(named: "Tink")?.play()
             }
+        case "startTimerActivity":
+            if let appDelegate = NSApp.delegate as? AppDelegate {
+                appDelegate.startTimerActivity()
+            }
+        case "endTimerActivity":
+            if let appDelegate = NSApp.delegate as? AppDelegate {
+                appDelegate.endTimerActivity()
+            }
         default:
             print("Bridge: Unknown action: \(action)")
         }
@@ -142,10 +150,11 @@ class Bridge: NSObject, WKScriptMessageHandler {
             return
         }
         
-        let script = "window.receiveNativeMessage(\(jsonString))"
+        // Safety check: only call if the global handler is defined
+        let script = "if (window.receiveNativeMessage) { window.receiveNativeMessage(\(jsonString)); } else { console.warn('Bridge: receiveNativeMessage not ready for action: \(action)'); }"
         windowController?.webView.evaluateJavaScript(script) { result, error in
             if let error = error {
-                print("Bridge: evaluateJavaScript error: \(error.localizedDescription)")
+                print("Bridge: evaluateJavaScript error for \(action): \(error.localizedDescription)")
             }
         }
     }
@@ -160,8 +169,8 @@ class Bridge: NSObject, WKScriptMessageHandler {
                     var dict: [String: Any] = [:]
                     dict["id"] = row["id"] as String
                     dict["title"] = row["title"] as String
-                    dict["tag"] = row["tag"] as String?
-                    dict["projectId"] = row["project_id"] as String?
+                    dict["tag"] = (row["tag"] as String?) as Any
+                    dict["projectId"] = (row["project_id"] as String?) as Any
                     dict["estimatedPomos"] = row["estimated_pomos"] as Int
                     dict["completedPomos"] = row["completed_pomos"] as Int
                     dict["status"] = row["status"] as Int
@@ -178,7 +187,7 @@ class Bridge: NSObject, WKScriptMessageHandler {
                     return [
                         "id": row["id"] as String,
                         "name": row["name"] as String,
-                        "color": row["color_hex"] as String?
+                        "color": (row["color_hex"] as String?) as Any
                     ]
                 }
                 
@@ -259,7 +268,7 @@ class Bridge: NSObject, WKScriptMessageHandler {
             try DatabaseManager.shared.dbPool.read { db in
                 let rows = try Row.fetchAll(db, sql: "SELECT * FROM projects WHERE is_archived = 0")
                 let projects = rows.map { row in
-                    return ["id": row["id"] as String, "name": row["name"] as String, "color": row["color_hex"] as String?]
+                    return ["id": row["id"] as String, "name": row["name"] as String, "color": (row["color_hex"] as String?) as Any]
                 }
                 sendToJS(action: "db_projectsData", data: ["projects": projects])
             }
@@ -302,7 +311,7 @@ class Bridge: NSObject, WKScriptMessageHandler {
                            SUM(l.duration_seconds) / 3600.0 as value
                     FROM session_logs l
                     LEFT JOIN projects p ON l.project_id = p.id
-                    GROUP BY name
+                    GROUP BY COALESCE(p.name, l.tag, 'Untagged')
                     ORDER BY value DESC
                     """)
                 
@@ -314,7 +323,8 @@ class Bridge: NSObject, WKScriptMessageHandler {
                     FROM session_logs l
                     LEFT JOIN tasks t ON l.task_id = t.id
                     LEFT JOIN projects p ON l.project_id = p.id
-                    GROUP BY title, tag
+                    GROUP BY COALESCE(l.task_title, t.title, 'Unselected Activity'), 
+                             COALESCE(p.name, l.tag, 'Untagged')
                     ORDER BY duration DESC
                     """)
 

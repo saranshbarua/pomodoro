@@ -52,10 +52,15 @@ export const PersistenceService = {
   }
 };
 
+let isPersistenceInitialized = false;
+
 /**
  * Initializes the persistence layer.
  */
 export const initPersistence = () => {
+  if (isPersistenceInitialized) return;
+  isPersistenceInitialized = true;
+
   const pomodoroStore = usePomodoroStore.getState();
   const taskStore = useTaskStore.getState();
   

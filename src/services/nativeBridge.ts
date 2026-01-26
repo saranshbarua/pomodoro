@@ -103,6 +103,20 @@ export const NativeBridge = {
    */
   quitApp() {
     this.postMessage('quitApp');
+  },
+
+  /**
+   * Tells the native app to start an activity to prevent App Nap.
+   */
+  startTimerActivity() {
+    this.postMessage('startTimerActivity');
+  },
+
+  /**
+   * Tells the native app to end the activity.
+   */
+  endTimerActivity() {
+    this.postMessage('endTimerActivity');
   }
 };
 
@@ -110,7 +124,11 @@ export const NativeBridge = {
  * Global listener for messages from Swift.
  */
 (window as any).receiveNativeMessage = (payload: { action: string, data: any }) => {
-  const event = new CustomEvent(`native:${payload.action}`, { detail: payload.data });
-  window.dispatchEvent(event);
+  try {
+    const event = new CustomEvent(`native:${payload.action}`, { detail: payload.data });
+    window.dispatchEvent(event);
+  } catch (error) {
+    console.error(`NativeBridge: Error processing message ${payload.action}:`, error);
+  }
 };
 

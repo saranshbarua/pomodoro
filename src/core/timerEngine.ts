@@ -79,34 +79,45 @@ export const TimerEngine = {
    * This ensures the UI updates and accuracy is maintained.
    */
   tick(state: TimerState, now: number): TimerState {
-    if (state.status !== 'running' || state.lastStartedAt === null) return state;
+    return this.tickWithOverflow(state, now).state;
+  },
+
+  /**
+   * Ticks the timer and returns any overflow time (time spent beyond 0).
+   */
+  tickWithOverflow(state: TimerState, now: number): { state: TimerState; overflowMs: number } {
+    if (state.status !== 'running' || state.lastStartedAt === null) {
+      return { state, overflowMs: 0 };
+    }
 
     const elapsedMs = now - state.lastStartedAt;
     
-    // Only update if at least one second has elapsed to avoid sub-second drift issues
-    // and to keep remainingSeconds as an integer for the UI.
     if (elapsedMs >= 1000) {
-      const secondsToSubtract = Math.floor(elapsedMs / 1000);
-      const remaining = Math.max(0, state.remainingSeconds - secondsToSubtract);
-
-      if (remaining <= 0) {
+      const remainingMs = state.remainingSeconds * 1000;
+      
+      if (elapsedMs >= remainingMs) {
         return {
-          ...state,
-          status: 'completed',
-          remainingSeconds: 0,
-          lastStartedAt: null,
+          state: {
+            ...state,
+            status: 'completed',
+            remainingSeconds: 0,
+            lastStartedAt: null,
+          },
+          overflowMs: elapsedMs - remainingMs
         };
       }
 
+      const secondsToSubtract = Math.floor(elapsedMs / 1000);
       return {
-        ...state,
-        remainingSeconds: remaining,
-        // Advance the anchor by the exact number of seconds accounted for.
-        // This preserves any sub-second "remainder" for the next tick.
-        lastStartedAt: state.lastStartedAt + (secondsToSubtract * 1000),
+        state: {
+          ...state,
+          remainingSeconds: Math.max(0, state.remainingSeconds - secondsToSubtract),
+          lastStartedAt: state.lastStartedAt + (secondsToSubtract * 1000),
+        },
+        overflowMs: 0
       };
     }
 
-    return state;
+    return { state, overflowMs: 0 };
   }
 };

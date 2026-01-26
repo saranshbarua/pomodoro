@@ -22,6 +22,23 @@ vi.mock('recharts', () => ({
 vi.mock('../services/nativeBridge', () => ({
   NativeBridge: {
     db_getReports: vi.fn(),
+    showNotification: vi.fn(),
+    updateMenuBar: vi.fn(),
+    playClickSound: vi.fn(),
+    saveState: vi.fn(),
+    loadState: vi.fn(),
+    db_loadInitialData: vi.fn(),
+    db_addTask: vi.fn(),
+    db_updateTaskStatus: vi.fn(),
+    db_deleteTask: vi.fn(),
+    db_incrementPomos: vi.fn(),
+    db_logActivity: vi.fn(),
+    db_getProjects: vi.fn(),
+    db_upsertProject: vi.fn(),
+    hideWindow: vi.fn(),
+    quitApp: vi.fn(),
+    startTimerActivity: vi.fn(),
+    endTimerActivity: vi.fn(),
   },
 }));
 

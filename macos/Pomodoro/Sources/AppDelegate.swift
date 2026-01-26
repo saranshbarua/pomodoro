@@ -6,6 +6,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     var statusBarController: StatusBarController?
     var windowController: WindowController?
     var updaterController: SPUStandardUpdaterController?
+    private var timerActivity: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Initialize Sparkle Updater
@@ -137,6 +138,30 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     func updaterShouldRelaunchApplication(_ updater: SPUUpdater) -> Bool {
         return true
+    }
+
+    // MARK: - Background Execution & Lifecycle
+
+    func applicationDidBecomeActive(_ notification: Notification) {
+        print("AppDelegate: Application became active")
+        windowController?.bridge.sendToJS(action: "appDidBecomeActive", data: [:])
+    }
+
+    func startTimerActivity() {
+        guard timerActivity == nil else { return }
+        timerActivity = ProcessInfo.processInfo.beginActivity(
+            options: [.userInitiated, .userInitiatedAllowingIdleSystemSleep],
+            reason: "Pomodoro timer is running"
+        )
+        print("AppDelegate: Started timer activity to prevent App Nap")
+    }
+
+    func endTimerActivity() {
+        if let activity = timerActivity {
+            ProcessInfo.processInfo.endActivity(activity)
+            timerActivity = nil
+            print("AppDelegate: Ended timer activity")
+        }
     }
 }
  

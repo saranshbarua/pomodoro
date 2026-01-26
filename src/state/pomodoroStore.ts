@@ -5,7 +5,7 @@ import { NativeBridge } from '../services/nativeBridge';
 import { useTaskStore } from './taskStore';
 import { useStatsStore } from './statsStore';
 
-const LOG_INTERVAL_SECONDS = 60; // Log every minute
+const LOG_INTERVAL_SECONDS = 60; 
 
 const DEFAULT_CONFIG: SessionConfig = {
   focusDuration: 25 * 60,
@@ -56,12 +56,12 @@ interface PomodoroStore {
   lastLoggedSeconds: number; // Seconds remaining at last log
 
   // Actions
-  startTimer: () => void;
+  startTimer: (startTime?: number) => void;
   pauseTimer: () => void;
   resetTimer: () => void;
   tick: () => void;
   setTaskName: (name: string) => void;
-  completeSession: () => void;
+  completeSession: (overflowMs?: number) => void;
   skipTimer: () => void;
   updateConfig: (config: Partial<SessionConfig>) => void;
   
@@ -87,7 +87,7 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
   lockedTaskContext: null,
   lastLoggedSeconds: DEFAULT_CONFIG.focusDuration,
 
-  startTimer: () => {
+  startTimer: (startTime: number = Date.now()) => {
     const { session } = get();
     
     // Expert Fix: Lock in the current task metadata when a focus session starts
@@ -105,14 +105,16 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     }
 
     set((state) => ({
-      timer: TimerEngine.start(state.timer, Date.now()),
+      timer: TimerEngine.start(state.timer, startTime),
     }));
+    NativeBridge.startTimerActivity();
   },
 
   pauseTimer: () => {
     const { timer, lastLoggedSeconds, session } = get();
     const now = Date.now();
     const nextTimer = TimerEngine.pause(timer, now);
+    NativeBridge.endTimerActivity();
 
     // Log time on pause during focus
     if (session.type === 'focus') {
@@ -168,7 +170,7 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     if (timer.status !== 'running') return;
 
     const now = Date.now();
-    const nextTimer = TimerEngine.tick(timer, now);
+    const { state: nextTimer, overflowMs } = TimerEngine.tickWithOverflow(timer, now);
     
     if (nextTimer === timer) return;
 
@@ -206,7 +208,7 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     }
 
     if (nextTimer.status === 'completed') {
-      get().completeSession();
+      get().completeSession(overflowMs);
     } else {
       set({ timer: nextTimer });
     }
@@ -231,10 +233,7 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     }
   },
 
-  /**
-   * Handles the logic of finishing one session and starting the next.
-   */
-  completeSession: () => {
+  completeSession: (overflowMs: number = 0) => {
     const { session, config } = get();
     const currentType = session.type;
     
@@ -275,6 +274,8 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
       }
     }
 
+    NativeBridge.endTimerActivity();
+
     // Trigger engaging notification
     const title = currentType === 'focus' ? "Focus Session Complete" : "Break Over";
     const body = getRandomMessage(currentType as keyof typeof MESSAGES);
@@ -302,7 +303,13 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
         ((next.type === 'shortBreak' || next.type === 'longBreak') && config.autoStartBreaks);
 
       if (shouldAutoStart) {
-        setTimeout(() => get().startTimer(), 100);
+        // Start next session with overflow adjustment
+        get().startTimer(Date.now() - overflowMs);
+        
+        // If there was overflow, immediately trigger another tick to catch up on the next session
+        if (overflowMs > 0) {
+          setTimeout(() => get().tick(), 0);
+        }
       }
     } catch (e) {
       console.error('pomodoroStore: Failed to transition session', e);

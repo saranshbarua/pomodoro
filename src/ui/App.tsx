@@ -10,9 +10,6 @@ import ReportsView from './ReportsView';
 import TaskShelf from './TaskShelf';
 import { theme } from './theme';
 
-/**
- * Award-Winning Blob Background with organic motion and Breath Sync.
- */
 const BlobBackground: React.FC<{ color: string; isBreak: boolean }> = ({ color, isBreak }) => {
   return (
     <div style={{
@@ -159,12 +156,24 @@ const App: React.FC = () => {
     window.addEventListener('task-completed' as any, handleTaskCompletion);
     window.addEventListener('native:windowHidden' as any, handleWindowHidden);
     
+    // Expert Fix: Handle app activation to catch up on timer state
+    const handleAppActivation = () => {
+      try {
+        console.log('App: Received activation signal, ticking timer');
+        tick();
+      } catch (error) {
+        console.error('App: Error during activation tick:', error);
+      }
+    };
+    window.addEventListener('native:appDidBecomeActive' as any, handleAppActivation);
+    
     return () => {
       window.removeEventListener('native:menuAction' as any, handleMenuAction);
       window.removeEventListener('task-completed' as any, handleTaskCompletion);
       window.removeEventListener('native:windowHidden' as any, handleWindowHidden);
+      window.removeEventListener('native:appDidBecomeActive' as any, handleAppActivation);
     };
-  }, [timerStatus, startTimer, pauseTimer, skipTimer, resetTimer, config.soundEnabled]);
+  }, [timerStatus, startTimer, pauseTimer, skipTimer, resetTimer, config.soundEnabled, tick]);
 
   // Local keyboard shortcuts (Space for start/pause, Esc for hide)
   useEffect(() => {

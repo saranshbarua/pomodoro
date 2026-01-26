@@ -1,5 +1,12 @@
 # Changelog
 
+# [1.4.0](https://github.com/saranshbarua/pomodoro/compare/v1.3.0...v1.4.0) (2026-01-26)
+
+
+### Features
+
+* **timer:** implement background activity management for Pomodoro sessions ([3ab9a4d](https://github.com/saranshbarua/pomodoro/commit/3ab9a4d45471dd37e6432cfddfc4d2488e821331))
+
 # [1.3.0](https://github.com/saranshbarua/pomodoro/compare/v1.2.8...v1.3.0) (2026-01-22)
 
 

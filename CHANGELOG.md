@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/saranshbarua/pomodoro/compare/v1.4.0...v1.4.1) (2026-01-28)
+
+
+### Bug Fixes
+
+* **ui:** enhance add task button cta for better discoverability ([#9](https://github.com/saranshbarua/pomodoro/issues/9)) ([344b8b1](https://github.com/saranshbarua/pomodoro/commit/344b8b184493ca098ff9a69ab9b9fa5e66323642))
+
 # [1.4.0](https://github.com/saranshbarua/pomodoro/compare/v1.3.0...v1.4.0) (2026-01-26)
 
 

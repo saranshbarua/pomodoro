@@ -193,6 +193,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
                   </Pie>
                   <Tooltip 
                     contentStyle={{ background: '#141414', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', fontSize: '12px', fontFamily: theme.fonts.display }}
+                    itemStyle={{ color: 'white' }}
                     formatter={(value: any) => [formatDuration(Number(value) * 3600), 'Time Spent']}
                   />
                   <Legend 

@@ -32,6 +32,7 @@ const Controls: React.FC<ControlsProps> = () => {
       width: '100%',
       padding: '0 24px', // Removed bottom padding (48px -> 0)
       boxSizing: 'border-box',
+      marginTop: '12px',
       gap: '32px'
     }}>
       {/* Reset Button */}

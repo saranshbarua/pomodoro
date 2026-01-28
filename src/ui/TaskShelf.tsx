@@ -308,13 +308,15 @@ const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
                 alignItems: 'center', 
                 justifyContent: 'center',
                 color: theme.colors.text.muted,
-                gap: '12px',
-                opacity: 0.2
+                gap: '16px',
+                opacity: 0.4
               }}>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 5v14M5 12h14"/>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="16"></line>
+                  <line x1="8" y1="12" x2="16" y2="12"></line>
                 </svg>
-                <span style={{ fontSize: '14px', fontWeight: '500', fontFamily: theme.fonts.brand }}>No tasks yet</span>
+                <span style={{ fontSize: '15px', fontWeight: '500', fontFamily: theme.fonts.brand, letterSpacing: '0.01em' }}>What is your focus?</span>
               </div>
             ) : (
               tasks.map((task) => (

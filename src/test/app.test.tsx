@@ -38,7 +38,7 @@ describe('App Integration', () => {
   it('should open task shelf when clicking active task label', () => {
     render(<App />);
     
-    const taskLabel = screen.getByText('Select a focus task');
+    const taskLabel = screen.getByText('What are you working on?');
     fireEvent.click(taskLabel);
     
     expect(screen.getByText('Tasks')).toBeInTheDocument();

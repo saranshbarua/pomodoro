@@ -296,35 +296,49 @@ const App: React.FC = () => {
             onMouseEnter={e => { if (!showTasks) e.currentTarget.style.transform = 'translateY(-2px)' }}
             onMouseLeave={e => { if (!showTasks) e.currentTarget.style.transform = 'translateY(0)' }}
           >
-            <div style={{ 
-              display: 'flex', 
-              flexDirection: 'row',
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              gap: '8px',
-              width: '100%',
-              minWidth: 0,
-              flexWrap: 'wrap'
-            }}>
+            <div 
+              style={{ 
+                display: 'flex', 
+                flexDirection: 'row',
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                gap: '10px',
+                width: '100%',
+                minWidth: 0,
+                flexWrap: 'wrap',
+                padding: '6px 16px',
+                borderRadius: '12px',
+                background: tasks.length === 0 ? 'rgba(255, 255, 255, 0.03)' : 'none',
+                transition: 'all 0.3s ease',
+              }}
+            >
+              {!activeTask && (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6, color: 'white' }}>
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="16"></line>
+                  <line x1="8" y1="12" x2="16" y2="12"></line>
+                </svg>
+              )}
               <span 
                 title={activeTask?.title || ''}
                 style={{ 
-                  fontSize: '15px', 
-                  fontWeight: '600', 
-                  color: activeTask ? 'white' : 'rgba(255, 255, 255, 0.25)',
+                  fontSize: '14px', 
+                  fontWeight: '500', 
+                  color: activeTask ? 'white' : 'rgba(255, 255, 255, 0.5)',
                   textAlign: 'center',
                   display: '-webkit-box',
                   WebkitLineClamp: 2,
                   WebkitBoxOrient: 'vertical',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
-                  letterSpacing: '-0.01em',
+                  letterSpacing: '0.01em',
                   flexShrink: 1,
                   minWidth: '50px',
-                  lineHeight: '1.4'
+                  lineHeight: '1.4',
+                  fontFamily: theme.fonts.brand
                 }}
               >
-                {activeTask ? activeTask.title : 'Select a focus task'}
+                {activeTask ? activeTask.title : 'What are you working on?'}
               </span>
               {activeTask?.tag && (
                 <span 

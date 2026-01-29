@@ -107,16 +107,38 @@ const App: React.FC = () => {
   const [showReports, setShowReports] = useState(false);
   const [showTasks, setShowTasks] = useState(false);
   const [isCelebrating, setIsCelebrating] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
 
   const handleCloseTasks = () => {
     setShowTasks(false);
   };
 
+  const handleTogglePin = () => {
+    NativeBridge.togglePinned();
+  };
+
   useEffect(() => {
     initPersistence();
     const interval = setInterval(() => tick(), 100);
+    
+    // Request initial pinned state from native
+    NativeBridge.getPinnedState();
+    
     return () => clearInterval(interval);
   }, [tick]);
+
+  // Listen for pinned state changes from native
+  useEffect(() => {
+    const handlePinnedStateChanged = (event: any) => {
+      const { isPinned: pinned } = event.detail;
+      setIsPinned(pinned);
+    };
+
+    window.addEventListener('native:pinnedStateChanged' as any, handlePinnedStateChanged);
+    return () => {
+      window.removeEventListener('native:pinnedStateChanged' as any, handlePinnedStateChanged);
+    };
+  }, []);
 
   // Listen for native menu actions and task completion
   useEffect(() => {
@@ -175,7 +197,7 @@ const App: React.FC = () => {
     };
   }, [timerStatus, startTimer, pauseTimer, skipTimer, resetTimer, config.soundEnabled, tick]);
 
-  // Local keyboard shortcuts (Space for start/pause, Esc for hide)
+  // Local keyboard shortcuts (Space for start/pause, Esc for hide, Cmd+Shift+P for pin)
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // Don't trigger if user is typing in an input or textarea
@@ -186,6 +208,13 @@ const App: React.FC = () => {
       
       if (isInput) return;
 
+      // Cmd+Shift+P to toggle pin
+      if (event.code === 'KeyP' && event.metaKey && event.shiftKey) {
+        event.preventDefault();
+        NativeBridge.togglePinned();
+        return;
+      }
+
       if (event.code === 'Space') {
         event.preventDefault(); // Prevent page scroll
         if (timerStatus === 'running') {
@@ -195,13 +224,18 @@ const App: React.FC = () => {
           startTimer();
         }
       } else if (event.code === 'Escape') {
-        NativeBridge.hideWindow();
+        // If pinned, Escape will unpin; if not pinned, it will hide
+        if (isPinned) {
+          NativeBridge.setPinned(false);
+        } else {
+          NativeBridge.hideWindow();
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [timerStatus, startTimer, pauseTimer, config.soundEnabled]);
+  }, [timerStatus, startTimer, pauseTimer, config.soundEnabled, isPinned]);
 
   const getThemeColor = () => {
     if (isCelebrating) return '#FFD700'; // Gold celebration glow
@@ -222,6 +256,11 @@ const App: React.FC = () => {
       position: 'relative',
       overflow: 'hidden',
       fontFamily: theme.fonts.display,
+      // Subtle pinned indicator - golden glow around the edges
+      boxShadow: isPinned 
+        ? 'inset 0 0 0 1px rgba(255, 215, 0, 0.15), inset 0 0 30px rgba(255, 215, 0, 0.05)' 
+        : 'none',
+      transition: 'box-shadow 0.3s ease-out',
     }}>
       <BlobBackground 
         color={getThemeColor()} 
@@ -238,6 +277,43 @@ const App: React.FC = () => {
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+      </button>
+
+      {/* Pin Button */}
+      <button 
+        onClick={handleTogglePin}
+        style={{
+          ...pinButtonStyle,
+          opacity: isPinned ? 1 : 0.3,
+          background: isPinned ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.05)',
+        }}
+        title={isPinned ? "Unpin from screen (⇧⌘P)" : "Pin to screen (⇧⌘P)"}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.opacity = '1';
+          e.currentTarget.style.transform = 'scale(1.05)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.opacity = isPinned ? '1' : '0.3';
+          e.currentTarget.style.transform = 'scale(1)';
+        }}
+      >
+        <svg 
+          width="16" 
+          height="16" 
+          viewBox="0 0 24 24" 
+          fill={isPinned ? "currentColor" : "none"}
+          stroke="currentColor" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+          style={{
+            transform: isPinned ? 'rotate(45deg)' : 'rotate(0deg)',
+            transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          }}
+        >
+          <line x1="12" y1="17" x2="12" y2="22"/>
+          <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/>
         </svg>
       </button>
 
@@ -461,6 +537,25 @@ const reportsButtonStyle: React.CSSProperties = {
   opacity: 0.3,
   cursor: 'pointer',
   transition: 'all 0.2s ease-out',
+  border: 'none',
+};
+
+const pinButtonStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '24px',
+  right: '64px',
+  zIndex: 10,
+  width: '32px',
+  height: '32px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: '50%',
+  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  color: 'white',
+  opacity: 0.3,
+  cursor: 'pointer',
+  transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
   border: 'none',
 };
 

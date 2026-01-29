@@ -43,6 +43,18 @@ class StatusBarController {
         menu.addItem(NSMenuItem(title: "Skip", action: #selector(menuSkip), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Reset", action: #selector(menuReset), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
+        
+        // Pin/Unpin option
+        let isPinned = windowController.isPinned
+        let pinItem = NSMenuItem(
+            title: isPinned ? "Unpin from Screen" : "Pin to Screen",
+            action: #selector(menuTogglePin),
+            keyEquivalent: "p"
+        )
+        pinItem.keyEquivalentModifierMask = [.command, .shift]
+        menu.addItem(pinItem)
+        
+        menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "About Pomodoro", action: #selector(menuAbout), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Check for Updates...", action: #selector(menuUpdate), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
@@ -67,6 +79,10 @@ class StatusBarController {
 
     @objc func menuReset() {
         windowController.bridge.sendToJS(action: "menuAction", data: ["type": "reset"])
+    }
+    
+    @objc func menuTogglePin() {
+        windowController.togglePinned()
     }
 
     @objc func menuAbout() {

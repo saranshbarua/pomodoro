@@ -103,10 +103,39 @@ export const NativeBridge = {
   },
 
   /**
+   * Force hides the native popup window (even if pinned).
+   */
+  forceHideWindow() {
+    this.postMessage('forceHideWindow');
+  },
+
+  /**
    * Terminates the native application.
    */
   quitApp() {
     this.postMessage('quitApp');
+  },
+
+  /**
+   * Sets the window pinned state.
+   * When pinned, the window stays visible even when clicking outside.
+   */
+  setPinned(pinned: boolean) {
+    this.postMessage('setPinned', { pinned });
+  },
+
+  /**
+   * Toggles the window pinned state.
+   */
+  togglePinned() {
+    this.postMessage('togglePinned');
+  },
+
+  /**
+   * Requests the current pinned state from native.
+   */
+  getPinnedState() {
+    this.postMessage('getPinnedState');
   },
 
   /**

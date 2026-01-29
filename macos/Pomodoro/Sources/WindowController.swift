@@ -42,6 +42,13 @@ class WindowController: NSWindowController {
     var bridge: Bridge!
     weak var statusBarController: StatusBarController?
     private var eventMonitor: Any?
+    
+    /// Pin state - when true, the window stays visible even when clicking outside
+    private(set) var isPinned: Bool = false {
+        didSet {
+            updatePinnedState()
+        }
+    }
 
     init() {
         // Use PomodoroPanel to allow it to become key (necessary for text input)
@@ -54,6 +61,9 @@ class WindowController: NSWindowController {
         
         self.panel = panel
         super.init(window: panel)
+        
+        // Restore pinned state from UserDefaults
+        isPinned = UserDefaults.standard.bool(forKey: "windowPinned")
         
         setupPanel()
         setupWebView()
@@ -68,8 +78,10 @@ class WindowController: NSWindowController {
         panel.isOpaque = false
         panel.hasShadow = true
         panel.level = .statusBar
-        panel.collectionBehavior = [.moveToActiveSpace, .transient, .ignoresCycle]
         panel.hidesOnDeactivate = false
+        
+        // Apply initial collection behavior based on pinned state
+        updatePanelCollectionBehavior()
         
         // Native border radius enforcement
         if let contentView = panel.contentView {
@@ -82,6 +94,49 @@ class WindowController: NSWindowController {
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
         panel.isMovableByWindowBackground = true
+    }
+    
+    private func updatePanelCollectionBehavior() {
+        if isPinned {
+            // When pinned: stay visible across spaces, don't hide, float above other windows
+            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
+            panel.level = .floating
+        } else {
+            // When unpinned: transient behavior (default menu bar app style)
+            panel.collectionBehavior = [.moveToActiveSpace, .transient, .ignoresCycle]
+            panel.level = .statusBar
+        }
+    }
+    
+    private func updatePinnedState() {
+        // Update panel behavior
+        updatePanelCollectionBehavior()
+        
+        // Persist the state
+        UserDefaults.standard.set(isPinned, forKey: "windowPinned")
+        UserDefaults.standard.synchronize()
+        
+        // Update event monitoring
+        if isPinned {
+            stopMonitoring()
+        } else if panel.isVisible {
+            startMonitoring()
+        }
+        
+        // Notify JS about the state change
+        bridge?.sendToJS(action: "pinnedStateChanged", data: ["isPinned": isPinned])
+        
+        print("WindowController: Pinned state changed to \(isPinned)")
+    }
+    
+    /// Sets the pinned state
+    func setPinned(_ pinned: Bool) {
+        isPinned = pinned
+    }
+    
+    /// Toggles the pinned state
+    func togglePinned() {
+        isPinned.toggle()
     }
 
     private func setupWebView() {
@@ -132,17 +187,38 @@ class WindowController: NSWindowController {
     }
 
     func show(relativeTo rect: NSRect) {
-        let x = rect.origin.x + (rect.width / 2) - (panel.frame.width / 2)
-        let y = rect.origin.y - panel.frame.height - 5
+        // Only reposition if not pinned (pinned windows keep their position)
+        if !isPinned || !panel.isVisible {
+            let x = rect.origin.x + (rect.width / 2) - (panel.frame.width / 2)
+            let y = rect.origin.y - panel.frame.height - 5
+            panel.setFrameOrigin(NSPoint(x: x, y: y))
+        }
         
-        panel.setFrameOrigin(NSPoint(x: x, y: y))
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         
-        startMonitoring()
+        // Only start monitoring if not pinned
+        if !isPinned {
+            startMonitoring()
+        }
+        
+        // Send current pinned state to JS
+        bridge?.sendToJS(action: "pinnedStateChanged", data: ["isPinned": isPinned])
     }
 
     func hide() {
+        // If pinned, don't actually hide - just lose focus
+        if isPinned {
+            return
+        }
+        
+        panel.orderOut(nil)
+        stopMonitoring()
+        bridge.sendToJS(action: "windowHidden", data: [:])
+    }
+    
+    /// Force hide the window even if pinned (for explicit close actions)
+    func forceHide() {
         panel.orderOut(nil)
         stopMonitoring()
         bridge.sendToJS(action: "windowHidden", data: [:])
@@ -150,15 +226,36 @@ class WindowController: NSWindowController {
     
     func toggle(relativeTo rect: NSRect) {
         if panel.isVisible {
-            hide()
+            // If pinned, toggling should still hide the window
+            if isPinned {
+                forceHide()
+            } else {
+                hide()
+            }
         } else {
             show(relativeTo: rect)
         }
     }
 
     private func startMonitoring() {
-        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            self?.hide()
+        // Don't monitor clicks if pinned
+        guard !isPinned else { return }
+        
+        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+            guard let self = self else { return }
+            
+            // Don't hide if pinned
+            if self.isPinned { return }
+            
+            // Check if the click is inside the panel
+            let clickLocation = event.locationInWindow
+            let panelFrame = self.panel.frame
+            
+            // Convert screen coordinates properly
+            let clickScreenLocation = NSEvent.mouseLocation
+            if !panelFrame.contains(clickScreenLocation) {
+                self.hide()
+            }
         }
         
         // Remove localEventMonitor for Space/Escape. 

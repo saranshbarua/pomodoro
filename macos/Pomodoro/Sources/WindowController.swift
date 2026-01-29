@@ -53,7 +53,7 @@ class WindowController: NSWindowController {
     init() {
         // Use PomodoroPanel to allow it to become key (necessary for text input)
         let panel = PomodoroPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 340, height: 520), // Reduced from 540 to 520 for a tighter fit
+            contentRect: NSRect(x: 0, y: 0, width: 340, height: 520),
             styleMask: [.nonactivatingPanel, .fullSizeContentView],
             backing: .buffered,
             defer: false

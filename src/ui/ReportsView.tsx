@@ -66,7 +66,23 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
   };
 
   const dailyData = selectDailyFocusStats(stats);
-  const projectData = selectProjectDistribution(stats);
+  const projectDataRaw = selectProjectDistribution(stats);
+  
+  // Scalable Project Data: Group "Others" if more than 12 projects
+  const projectData = React.useMemo(() => {
+    if (projectDataRaw.length <= 13) return [...projectDataRaw].sort((a, b) => b.value - a.value);
+    
+    const sorted = [...projectDataRaw].sort((a, b) => b.value - a.value);
+    const topN = sorted.slice(0, 12);
+    const others = sorted.slice(12);
+    const othersValue = others.reduce((acc, curr) => acc + curr.value, 0);
+    
+    return [
+      ...topN,
+      { name: `Others (${others.length})`, value: othersValue }
+    ];
+  }, [projectDataRaw]);
+
   const taskData = selectTaskBreakdown(stats);
   const streak = selectStreak(stats);
   const totalFocusSeconds = selectTotalFocusTime(stats);
@@ -75,12 +91,19 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
   const totalTimeDisplay = formatDuration(totalFocusSeconds);
 
   const COLORS = [
-    theme.colors.focus.primary, 
-    '#007AFF', 
-    '#28C840', 
-    '#A855F7', 
-    '#EC4899', 
-    '#EAB308'
+    theme.colors.focus.primary, // Red/Orange
+    '#007AFF', // Blue
+    '#28C840', // Green
+    '#A855F7', // Purple
+    '#EC4899', // Pink
+    '#EAB308', // Yellow
+    '#FF9500', // Orange
+    '#5856D6', // Indigo
+    '#00C7BE', // Teal
+    '#FF2D55', // Rose
+    '#AF52DE', // Violet
+    '#5AC8FA', // Sky
+    '#64748B'  // Slate for "Others"
   ];
 
   return (
@@ -209,45 +232,86 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', flexShrink: 0 }}>
           <h4 style={sectionHeaderStyle}>Project Mix</h4>
           <div style={{ 
-            height: '240px', 
+            height: '280px', // Increased height to accommodate scrollable legend
             width: '100%', 
             background: 'rgba(255,255,255,0.02)', 
             borderRadius: '20px', 
-            padding: '12px', 
+            padding: '16px', 
             border: '1px solid rgba(255,255,255,0.05)', 
             display: 'flex', 
+            flexDirection: 'column', // Changed to column to stack chart and legend
             alignItems: 'center',
-            boxSizing: 'border-box' 
+            boxSizing: 'border-box',
+            gap: '12px'
           }}>
             {projectData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-                  <Pie
-                    data={projectData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={40}
-                    outerRadius={65}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {projectData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ background: '#141414', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', fontSize: '12px', fontFamily: theme.fonts.display }}
-                    itemStyle={{ color: 'white' }}
-                    formatter={(value: any) => [formatDuration(Number(value) * 3600), 'Time Spent']}
-                  />
-                  <Legend 
-                    verticalAlign="bottom" 
-                    height={36} 
-                    iconType="circle" 
-                    wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <>
+                <div style={{ width: '100%', height: '140px', flexShrink: 0 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={projectData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={45}
+                        outerRadius={65}
+                        paddingAngle={4}
+                        dataKey="value"
+                        stroke="none"
+                      >
+                        {projectData.map((entry, index) => {
+                          // Use the last color (Slate) for "Others" if it's the last item and we have multiple items
+                          const isOthers = entry.name.startsWith('Others (');
+                          const color = isOthers ? COLORS[COLORS.length - 1] : COLORS[index % (COLORS.length - 1)];
+                          return <Cell key={`cell-${index}`} fill={color} />;
+                        })}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ background: '#141414', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', fontSize: '12px', fontFamily: theme.fonts.display }}
+                        itemStyle={{ color: 'white' }}
+                        formatter={(value: any) => [formatDuration(Number(value) * 3600), 'Time Spent']}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                {/* Custom Scrollable Legend */}
+                <div className="custom-scrollbar" style={{ 
+                  width: '100%', 
+                  overflowY: 'auto', 
+                  maxHeight: '100px', 
+                  display: 'flex', 
+                  flexWrap: 'wrap', 
+                  justifyContent: 'center',
+                  gap: '8px 12px',
+                  padding: '4px 8px'
+                }}>
+                  {projectData.map((entry, index) => {
+                    const isOthers = entry.name.startsWith('Others (');
+                    const color = isOthers ? COLORS[COLORS.length - 1] : COLORS[index % (COLORS.length - 1)];
+                    return (
+                      <div key={index} style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '6px',
+                        fontSize: '11px',
+                        color: isOthers ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.7)',
+                        fontWeight: isOthers ? '400' : '500',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        <div style={{ 
+                          width: '8px', 
+                          height: '8px', 
+                          borderRadius: '50%', 
+                          background: color,
+                          flexShrink: 0
+                        }} />
+                        <span>{entry.name}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             ) : (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.colors.text.muted, fontSize: '14px' }}>
                 No project data yet

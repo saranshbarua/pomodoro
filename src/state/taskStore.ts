@@ -28,6 +28,7 @@ interface TaskStore {
   addTask: (title: string, estimatedPomos: number, tag?: string) => string;
   toggleTask: (id: string) => void;
   deleteTask: (id: string) => void;
+  updateTask: (id: string, updates: { title: string; estimatedPomos: number; tag?: string }) => void;
   setActiveTask: (id: string | null) => void;
   incrementCompletedPomos: (id: string) => void;
   autoSelectNextTask: () => void;
@@ -120,6 +121,38 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     set((state) => ({
       tasks: state.tasks.filter((t) => t.id !== id),
       activeTaskId: state.activeTaskId === id ? null : state.activeTaskId,
+    }));
+  },
+
+  updateTask: (id: string, updates: { title: string; estimatedPomos: number; tag?: string }) => {
+    const { title, estimatedPomos, tag } = updates;
+    const { tasks, projects } = get();
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
+    let projectId = task.projectId;
+    if (tag && tag !== task.tag) {
+      // Upsert project if tag changed
+      let project = projects.find(p => p.name.toLowerCase() === tag.toLowerCase());
+      if (!project) {
+        projectId = crypto.randomUUID();
+        const newProject = { id: projectId, name: tag };
+        set(state => ({ projects: [...state.projects, newProject] }));
+        NativeBridge.db_upsertProject(tag, projectId);
+      } else {
+        projectId = project.id;
+      }
+    } else if (!tag) {
+      projectId = undefined;
+    }
+
+    // Native call
+    NativeBridge.db_updateTask(id, title, estimatedPomos, tag, projectId);
+
+    set((state) => ({
+      tasks: state.tasks.map((t) => 
+        t.id === id ? { ...t, title, estimatedPomos, tag, projectId } : t
+      ),
     }));
   },
 

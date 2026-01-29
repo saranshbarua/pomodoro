@@ -91,6 +91,10 @@ export const NativeBridge = {
     this.postMessage('db_upsertProject', { name, id, color });
   },
 
+  db_exportCSV() {
+    this.postMessage('db_exportCSV');
+  },
+
   /**
    * Hides the native popup window.
    */

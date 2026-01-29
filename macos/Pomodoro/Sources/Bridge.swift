@@ -2,6 +2,8 @@ import WebKit
 import UserNotifications
 import AudioToolbox
 import GRDB
+import AppKit
+import UniformTypeIdentifiers
 
 class Bridge: NSObject, WKScriptMessageHandler {
     weak var windowController: WindowController?
@@ -25,6 +27,7 @@ class Bridge: NSObject, WKScriptMessageHandler {
     }
     
     private func handleAction(_ action: String, body: [String: Any]) {
+        print("Bridge: Received action '\(action)'")
         switch action {
         case "updateMenuBar":
             if let title = body["title"] as? String {
@@ -91,6 +94,8 @@ class Bridge: NSObject, WKScriptMessageHandler {
             }
         case "db_getReports":
             getReports()
+        case "db_exportCSV":
+            exportTaskBreakdownToCSV()
             
         case "hideWindow":
             windowController?.hide()
@@ -402,6 +407,74 @@ class Bridge: NSObject, WKScriptMessageHandler {
         }
         
         return streak
+    }
+
+    private func exportTaskBreakdownToCSV() {
+        // Ensure app is active to show the dialog
+        NSApp.activate(ignoringOtherApps: true)
+        
+        let savePanel = NSSavePanel()
+        savePanel.allowedContentTypes = [.commaSeparatedText]
+        savePanel.nameFieldStringValue = "Pomodoro_Task_Breakdown_\(Int(Date().timeIntervalSince1970)).csv"
+        savePanel.title = "Export Task Breakdown"
+        savePanel.message = "Choose where to save your task report"
+        
+        // runModal() is more reliable for showing the dialog from an NSPanel
+        let result = savePanel.runModal()
+        if result == .OK, let url = savePanel.url {
+            self.generateAndSaveCSV(to: url)
+        } else {
+            self.sendToJS(action: "db_csvExportResult", data: ["success": false, "error": "User cancelled"])
+        }
+    }
+
+    private func generateAndSaveCSV(to url: URL) {
+        do {
+            try DatabaseManager.shared.dbPool.read { db in
+                let taskRows = try Row.fetchAll(db, sql: """
+                    SELECT COALESCE(l.task_title, t.title, 'Unselected Activity') as title, 
+                           COALESCE(p.name, l.tag, 'Untagged') as tag, 
+                           SUM(l.duration_seconds) as duration
+                    FROM session_logs l
+                    LEFT JOIN tasks t ON l.task_id = t.id
+                    LEFT JOIN projects p ON l.project_id = p.id
+                    GROUP BY COALESCE(l.task_title, t.title, 'Unselected Activity'), 
+                             COALESCE(p.name, l.tag, 'Untagged')
+                    ORDER BY duration DESC
+                    """)
+                
+                var csvString = "Task,Project,Time (Seconds),Time (Formatted)\n"
+                
+                for row in taskRows {
+                    let title = row["title"] as String
+                    let tag = row["tag"] as String
+                    let duration = row["duration"] as Int
+                    
+                    let hours = duration / 3600
+                    let minutes = (duration % 3600) / 60
+                    let seconds = duration % 60
+                    let formatted = String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+                    
+                    // Simple CSV escaping: wrap in quotes and escape internal quotes
+                    let escapedTitle = title.replacingOccurrences(of: "\"", with: "\"\"")
+                    let escapedTag = tag.replacingOccurrences(of: "\"", with: "\"\"")
+                    
+                    csvString += "\"\(escapedTitle)\",\"\(escapedTag)\",\(duration),\"\(formatted)\"\n"
+                }
+                
+                try csvString.write(to: url, atomically: true, encoding: .utf8)
+                
+                DispatchQueue.main.async {
+                    self.sendToJS(action: "db_csvExportResult", data: ["success": true])
+                    self.showNativeNotification(title: "Export Successful", body: "Your task reports has been saved successfully")
+                }
+            }
+        } catch {
+            print("Bridge: CSV Export failed: \(error)")
+            DispatchQueue.main.async {
+                self.sendToJS(action: "db_csvExportResult", data: ["success": false, "error": error.localizedDescription])
+            }
+        }
     }
 }
 

@@ -14,6 +14,7 @@ vi.mock('../services/nativeBridge', () => ({
   NativeBridge: {
     db_logActivity: vi.fn(),
     db_getReports: vi.fn(),
+    db_exportCSV: vi.fn(),
     showNotification: vi.fn(),
     updateMenuBar: vi.fn(),
     playClickSound: vi.fn(),

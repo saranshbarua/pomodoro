@@ -156,7 +156,7 @@ const App: React.FC = () => {
     window.addEventListener('task-completed' as any, handleTaskCompletion);
     window.addEventListener('native:windowHidden' as any, handleWindowHidden);
     
-    // Expert Fix: Handle app activation to catch up on timer state
+    // Handle app activation to catch up on timer state
     const handleAppActivation = () => {
       try {
         console.log('App: Received activation signal, ticking timer');
@@ -263,17 +263,24 @@ const App: React.FC = () => {
         justifyContent: 'flex-start', 
         width: '100%',
         zIndex: 1,
-        padding: '40px 0 12px 0', // Bottom padding for session indicators
+        padding: '40px 0 0 0', // Padding top for nav, bottom handled by footer spacing
         minHeight: 0, 
         overflowY: 'auto',
       }}>
         {/* Timer Section */}
-        <div style={{ marginBottom: '16px' }}>
+        <div style={{ marginBottom: '4px' }}>
           <TimerView />
         </div>
         
         {/* Task & Controls Stack */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '16px' }}>
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          width: '100%', 
+          gap: '16px',
+          paddingBottom: '48px'
+        }}>
           {/* Active Task Label */}
           <button 
             onClick={() => !showTasks && setShowTasks(true)}
@@ -289,6 +296,7 @@ const App: React.FC = () => {
               pointerEvents: showTasks ? 'none' : 'auto',
               opacity: showTasks ? 0 : 1,
               width: '100%',
+              marginTop: '12px',
               maxWidth: '300px',
               padding: '0 24px',
               boxSizing: 'border-box'
@@ -308,7 +316,7 @@ const App: React.FC = () => {
                 flexWrap: 'wrap',
                 padding: '6px 16px',
                 borderRadius: '12px',
-                background: tasks.length === 0 ? 'rgba(255, 255, 255, 0.03)' : 'none',
+                background: (tasks.length === 0 || !activeTask) ? 'rgba(255, 255, 255, 0.03)' : 'none',
                 transition: 'all 0.3s ease',
               }}
             >
@@ -327,7 +335,7 @@ const App: React.FC = () => {
                   color: activeTask ? 'white' : 'rgba(255, 255, 255, 0.5)',
                   textAlign: 'center',
                   display: '-webkit-box',
-                  WebkitLineClamp: 2,
+                  WebkitLineClamp: activeTask?.tag ? 1 : 2, // Clamp to 1 line if tag exists to save space
                   WebkitBoxOrient: 'vertical',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -402,32 +410,33 @@ const App: React.FC = () => {
 
           <Controls />
         </div>
-
-        {/* Subtle Session Indicators at the absolute bottom */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center',
-          gap: '6px', 
-          opacity: 0.3,
-          marginTop: 'auto', // Pushes only this element to the bottom
-          marginBottom: '8px'
-        }}>
-          {Array.from({ length: config.sessionsUntilLongBreak }).map((_, i) => (
-            <div 
-              key={i}
-              style={{
-                width: '10px',
-                height: '2px',
-                borderRadius: '1px',
-                backgroundColor: i < focusInCycleCount 
-                  ? 'rgba(255, 255, 255, 0.8)' 
-                  : 'rgba(255, 255, 255, 0.1)',
-                transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
-              }}
-            />
-          ))}
-        </div>
       </main>
+
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center',
+        gap: '6px', 
+        opacity: 0.3,
+        paddingBottom: '16px', 
+        flexShrink: 0,
+        zIndex: 1,
+        pointerEvents: 'none'
+      }}>
+        {Array.from({ length: config.sessionsUntilLongBreak }).map((_, i) => (
+          <div 
+            key={i}
+            style={{
+              width: '10px',
+              height: '2px',
+              borderRadius: '1px',
+              backgroundColor: i < focusInCycleCount 
+                ? 'rgba(255, 255, 255, 0.8)' 
+                : 'rgba(255, 255, 255, 0.1)',
+              transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+            }}
+          />
+        ))}
+      </div>
 
       <TaskShelf isOpen={showTasks} onClose={handleCloseTasks} />
       {showSettings && <SettingsView onClose={() => setShowSettings(false)} />}

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, Legend 
@@ -13,6 +13,7 @@ import {
   selectTotalSessions
 } from '../state/statsStore';
 import { theme } from './theme';
+import { NativeBridge } from '../services/nativeBridge';
 
 interface ReportsViewProps {
   onClose: () => void;
@@ -28,10 +29,41 @@ export const formatDuration = (seconds: number) => {
 const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
   const fetchReports = useStatsStore(state => state.fetchReports);
   const stats = useStatsStore();
+  const [exportStatus, setExportStatus] = useState<'idle' | 'exporting' | 'success'>('idle');
   
   useEffect(() => {
     fetchReports();
   }, [fetchReports]);
+
+  useEffect(() => {
+    const handleExportResult = (e: any) => {
+      const { success, error } = e.detail;
+      if (success) {
+        setExportStatus('success');
+        setTimeout(() => setExportStatus('idle'), 3000);
+      } else {
+        setExportStatus('idle');
+        if (error !== 'User cancelled') {
+          console.error('CSV Export failed:', error);
+        }
+      }
+    };
+
+    window.addEventListener('native:db_csvExportResult' as any, handleExportResult);
+    return () => window.removeEventListener('native:db_csvExportResult' as any, handleExportResult);
+  }, []);
+
+  const handleExport = () => {
+    if (exportStatus !== 'idle') return;
+    setExportStatus('exporting');
+    NativeBridge.db_exportCSV();
+    
+    // Safety timeout: if no response from native side after 60s, reset to idle
+    // This handles cases where the native dialog might be dismissed or fail without calling back
+    setTimeout(() => {
+      setExportStatus(current => current === 'exporting' ? 'idle' : current);
+    }, 60000);
+  };
 
   const dailyData = selectDailyFocusStats(stats);
   const projectData = selectProjectDistribution(stats);
@@ -83,6 +115,18 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
           .custom-scrollbar::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
+          }
+          .spinner {
+            width: 10px;
+            height: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-top: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
           }
         `}
       </style>
@@ -214,7 +258,66 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
 
         {/* Task Breakdown Table */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', flexShrink: 0 }}>
-        <h4 style={sectionHeaderStyle}>Task Breakdown</h4>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingRight: '4px' }}>
+          <h4 style={sectionHeaderStyle}>Task Breakdown</h4>
+          <button 
+            onClick={handleExport}
+            disabled={exportStatus === 'exporting'}
+            style={{
+              background: exportStatus === 'success' ? 'rgba(40, 200, 64, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+              border: `1px solid ${exportStatus === 'success' ? 'rgba(40, 200, 64, 0.2)' : 'rgba(255, 255, 255, 0.1)'}`,
+              color: exportStatus === 'success' ? '#28C840' : 'rgba(255, 255, 255, 0.5)',
+              cursor: exportStatus === 'exporting' ? 'default' : 'pointer',
+              padding: '4px 10px',
+              borderRadius: '8px',
+              fontSize: '10px',
+              fontWeight: '800',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              backdropFilter: 'blur(10px)',
+              outline: 'none'
+            }}
+            onMouseOver={(e) => {
+              if (exportStatus === 'idle') {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                e.currentTarget.style.color = 'white';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (exportStatus === 'idle') {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.5)';
+              }
+            }}
+          >
+            {exportStatus === 'exporting' ? (
+              <>
+                <div className="spinner" />
+                <span>Exporting...</span>
+              </>
+            ) : exportStatus === 'success' ? (
+              <>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span>Saved</span>
+              </>
+            ) : (
+              <>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>CSV</span>
+              </>
+            )}
+          </button>
+        </div>
         <div style={{ 
           background: 'rgba(255,255,255,0.02)', 
           borderRadius: '20px', 

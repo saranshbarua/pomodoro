@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import ReportsView, { formatDuration } from '../ui/ReportsView';
 import { useStatsStore } from '../state/statsStore';
 import { NativeBridge } from '../services/nativeBridge';
@@ -35,6 +35,7 @@ vi.mock('../services/nativeBridge', () => ({
     db_logActivity: vi.fn(),
     db_getProjects: vi.fn(),
     db_upsertProject: vi.fn(),
+    db_exportCSV: vi.fn(),
     hideWindow: vi.fn(),
     quitApp: vi.fn(),
     startTimerActivity: vi.fn(),
@@ -102,6 +103,54 @@ describe('ReportsView and Helpers', () => {
 
       expect(screen.getByText('No tasks logged yet')).toBeDefined();
       expect(screen.getByText('No project data yet')).toBeDefined();
+    });
+
+    it('should trigger CSV export when button is clicked', () => {
+      render(<ReportsView onClose={() => {}} />);
+      
+      const exportButton = screen.getByText('CSV');
+      fireEvent.click(exportButton);
+      
+      expect(NativeBridge.db_exportCSV).toHaveBeenCalled();
+      expect(screen.getByText('Exporting...')).toBeDefined();
+    });
+
+    it('should show saved state when export succeeds', async () => {
+      render(<ReportsView onClose={() => {}} />);
+      
+      const exportButton = screen.getByText('CSV');
+      fireEvent.click(exportButton);
+      
+      expect(screen.getByText('Exporting...')).toBeDefined();
+
+      // Simulate native result event
+      act(() => {
+        const event = new CustomEvent('native:db_csvExportResult', { 
+          detail: { success: true } 
+        });
+        window.dispatchEvent(event);
+      });
+
+      expect(screen.getByText('Saved')).toBeDefined();
+    });
+
+    it('should reset to idle state when export fails', () => {
+      render(<ReportsView onClose={() => {}} />);
+      
+      const exportButton = screen.getByText('CSV');
+      fireEvent.click(exportButton);
+      
+      expect(screen.getByText('Exporting...')).toBeDefined();
+
+      // Simulate native failure event
+      act(() => {
+        const event = new CustomEvent('native:db_csvExportResult', { 
+          detail: { success: false, error: 'Some error' } 
+        });
+        window.dispatchEvent(event);
+      });
+
+      expect(screen.getByText('CSV')).toBeDefined();
     });
   });
 });

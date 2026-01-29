@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { usePomodoroStore } from '../../state/pomodoroStore';
 import { useStatsStore, selectTotalFocusTime, selectTotalSessions } from '../../state/statsStore';
 import { useTaskStore } from '../../state/taskStore';
+import { NativeBridge } from '../../services/nativeBridge';
 
 // Mock NativeBridge
 vi.mock('../../services/nativeBridge', () => ({
@@ -18,6 +19,7 @@ vi.mock('../../services/nativeBridge', () => ({
     db_upsertProject: vi.fn(),
     db_updateTaskStatus: vi.fn(),
     db_getProjects: vi.fn(),
+    db_exportCSV: vi.fn(),
     startTimerActivity: vi.fn(),
     endTimerActivity: vi.fn(),
     playClickSound: vi.fn(),
@@ -115,5 +117,10 @@ describe('Reporting Integration Flow', () => {
     expect(newState.session.type).toBe('shortBreak');
     expect(newState.timer.totalDuration).toBe(300);
     expect(newState.lastLoggedSeconds).toBe(300);
+  });
+
+  it('should call native export when triggering CSV download', () => {
+    NativeBridge.db_exportCSV();
+    expect(NativeBridge.db_exportCSV).toHaveBeenCalled();
   });
 });

@@ -106,6 +106,20 @@ class DatabaseManager {
             try db.create(index: "idx_logs_reporting_v2", on: "session_logs", columns: ["timestamp", "project_id", "duration_seconds"])
         }
         
+        migrator.registerMigration("v3") { db in
+            // Add estimated_pomos to session_logs to snapshot estimates
+            try db.alter(table: "session_logs") { t in
+                t.add(column: "estimated_pomos", .integer).notNull().defaults(to: 1)
+            }
+        }
+        
+        migrator.registerMigration("v4") { db in
+            // Add snapshot_focus_duration to session_logs to handle variable pomo lengths
+            try db.alter(table: "session_logs") { t in
+                t.add(column: "snapshot_focus_duration", .integer).notNull().defaults(to: 1500) // Default to 25 mins
+            }
+        }
+        
         return migrator
     }
     

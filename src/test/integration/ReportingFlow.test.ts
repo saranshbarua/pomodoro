@@ -119,6 +119,78 @@ describe('Reporting Integration Flow', () => {
     expect(newState.lastLoggedSeconds).toBe(300);
   });
 
+  it('should handle temporal snapshots and variable pomo durations', () => {
+    const { startTimer, tick, updateConfig, completeSession } = usePomodoroStore.getState();
+    const { addTask } = useTaskStore.getState();
+    
+    // 1. Setup Task with 2 estimated pomos
+    const taskId = addTask('Variable Duration Task', 2);
+    useTaskStore.setState({ activeTaskId: taskId });
+
+    // 2. Start session with 25m duration
+    usePomodoroStore.setState({ config: { ...usePomodoroStore.getState().config, focusDuration: 1500 } });
+    usePomodoroStore.getState().resetTimer();
+    usePomodoroStore.getState().startTimer();
+    
+    // Simulate 25m passing and completion
+    vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 1500 * 1000);
+    usePomodoroStore.getState().completeSession();
+
+    // Verify first log has 25m snapshot
+    expect(NativeBridge.db_logActivity).toHaveBeenCalledWith(
+      expect.any(Number), taskId, 'Variable Duration Task', null, true, null, 2, 1500
+    );
+
+    // 3. Change duration to 40m mid-way
+    usePomodoroStore.setState({ 
+      config: { ...usePomodoroStore.getState().config, focusDuration: 2400 },
+      lockedTaskContext: null, // Force re-locking on next start
+      session: { ...usePomodoroStore.getState().session, type: 'focus' } // Ensure it's focus type
+    });
+    
+    // Reset timer to apply new duration to the idle state
+    usePomodoroStore.getState().resetTimer();
+    
+    // Start second session
+    usePomodoroStore.getState().startTimer();
+    
+    // Simulate 40m passing and completion
+    vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 2400 * 1000);
+    usePomodoroStore.getState().completeSession();
+
+    // Verify second log has 40m snapshot
+    const lastCall = vi.mocked(NativeBridge.db_logActivity).mock.calls.slice(-1)[0];
+    expect(lastCall[7]).toBe(2400);
+
+    vi.restoreAllMocks();
+  });
+
+  it('should prevent mid-session duration changes from affecting the running log', () => {
+    const { addTask } = useTaskStore.getState();
+    
+    const taskId = addTask('Mid-session Change Task', 1);
+    useTaskStore.setState({ activeTaskId: taskId });
+
+    // 1. Start with 25m
+    usePomodoroStore.setState({ config: { ...usePomodoroStore.getState().config, focusDuration: 1500 } });
+    usePomodoroStore.getState().resetTimer();
+    usePomodoroStore.getState().startTimer();
+
+    // 2. Change config to 40m WHILE running
+    usePomodoroStore.setState({ config: { ...usePomodoroStore.getState().config, focusDuration: 2400 } });
+
+    // 3. Simulate 10m passing and pause
+    vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 600 * 1000);
+    usePomodoroStore.getState().pauseTimer();
+
+    // 4. Verify log still uses the LOCKED 25m snapshot
+    expect(NativeBridge.db_logActivity).toHaveBeenCalledWith(
+      600, taskId, 'Mid-session Change Task', null, false, null, 1, 1500
+    );
+
+    vi.restoreAllMocks();
+  });
+
   it('should call native export when triggering CSV download', () => {
     NativeBridge.db_exportCSV();
     expect(NativeBridge.db_exportCSV).toHaveBeenCalled();

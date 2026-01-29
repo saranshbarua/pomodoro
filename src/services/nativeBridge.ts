@@ -79,8 +79,8 @@ export const NativeBridge = {
     this.postMessage('db_incrementPomos', { id });
   },
 
-  db_logActivity(duration: number, taskId: string | null, taskTitle: string | null, tag: string | null, isCompletion: boolean, projectId?: string | null) {
-    this.postMessage('db_logActivity', { duration, taskId, taskTitle, tag, isCompletion, projectId });
+  db_logActivity(duration: number, taskId: string | null, taskTitle: string | null, tag: string | null, isCompletion: boolean, projectId?: string | null, estimatedPomos: number = 1, snapshotFocusDuration: number = 1500) {
+    this.postMessage('db_logActivity', { duration, taskId, taskTitle, tag, isCompletion, projectId, estimatedPomos, snapshotFocusDuration });
   },
 
   db_getReports() {

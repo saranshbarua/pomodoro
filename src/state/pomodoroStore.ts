@@ -52,7 +52,7 @@ interface PomodoroStore {
   config: SessionConfig;
   dailyGoal: number;
   taskName: string;
-  lockedTaskContext: { id: string, title: string, tag?: string, projectId?: string } | null;
+  lockedTaskContext: { id: string, title: string, tag?: string, projectId?: string, estimatedPomos: number, snapshotFocusDuration: number } | null;
   lastLoggedSeconds: number; // Seconds remaining at last log
 
   // Actions
@@ -93,13 +93,16 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     // Expert Fix: Lock in the current task metadata when a focus session starts
     if (session.type === 'focus') {
       const { tasks, activeTaskId } = useTaskStore.getState();
+      const { config } = get();
       const activeTask = tasks.find(t => t.id === activeTaskId);
       if (activeTask) {
         set({ lockedTaskContext: { 
           id: activeTask.id, 
           title: activeTask.title, 
           tag: activeTask.tag,
-          projectId: activeTask.projectId
+          projectId: activeTask.projectId,
+          estimatedPomos: activeTask.estimatedPomos,
+          snapshotFocusDuration: config.focusDuration
         }});
       }
     }
@@ -123,13 +126,16 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
         let context = get().lockedTaskContext;
         if (!context) {
           const { tasks, activeTaskId } = useTaskStore.getState();
+          const { config } = get();
           const activeTask = tasks.find(t => t.id === activeTaskId);
           if (activeTask) {
             context = { 
               id: activeTask.id, 
               title: activeTask.title, 
               tag: activeTask.tag,
-              projectId: activeTask.projectId
+              projectId: activeTask.projectId,
+              estimatedPomos: activeTask.estimatedPomos,
+              snapshotFocusDuration: config.focusDuration
             };
             set({ lockedTaskContext: context });
           }
@@ -141,7 +147,9 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
           context?.title || null,
           context?.tag || null,
           false,
-          context?.projectId
+          context?.projectId,
+          context?.estimatedPomos,
+          context?.snapshotFocusDuration
         );
       }
     }
@@ -174,7 +182,7 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     
     if (nextTimer === timer) return;
 
-    // Log stats if 60 seconds have passed during a focus session
+        // Log stats if 60 seconds have passed during a focus session
     if (session.type === 'focus') {
       const elapsedSinceLastLog = lastLoggedSeconds - nextTimer.remainingSeconds;
       if (elapsedSinceLastLog >= LOG_INTERVAL_SECONDS) {
@@ -182,13 +190,16 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
         let context = get().lockedTaskContext;
         if (!context) {
           const { tasks, activeTaskId } = useTaskStore.getState();
+          const { config } = get();
           const activeTask = tasks.find(t => t.id === activeTaskId);
           if (activeTask) {
             context = { 
               id: activeTask.id, 
               title: activeTask.title, 
               tag: activeTask.tag,
-              projectId: activeTask.projectId
+              projectId: activeTask.projectId,
+              estimatedPomos: activeTask.estimatedPomos,
+              snapshotFocusDuration: config.focusDuration
             };
             set({ lockedTaskContext: context });
           }
@@ -200,7 +211,9 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
           context?.title || null,
           context?.tag || null,
           false,
-          context?.projectId
+          context?.projectId,
+          context?.estimatedPomos,
+          context?.snapshotFocusDuration
         );
         
         set({ lastLoggedSeconds: nextTimer.remainingSeconds });
@@ -248,13 +261,16 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
       let context = get().lockedTaskContext;
       if (!context) {
         const { tasks, activeTaskId } = useTaskStore.getState();
+        const { config } = get();
         const activeTask = tasks.find(t => t.id === activeTaskId);
         if (activeTask) {
           context = { 
             id: activeTask.id, 
             title: activeTask.title, 
             tag: activeTask.tag,
-            projectId: activeTask.projectId
+            projectId: activeTask.projectId,
+            estimatedPomos: activeTask.estimatedPomos,
+            snapshotFocusDuration: config.focusDuration
           };
         }
       }
@@ -266,7 +282,9 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
         context?.title || null,
         context?.tag || null,
         true, // Mark as completion
-        context?.projectId
+        context?.projectId,
+        context?.estimatedPomos,
+        context?.snapshotFocusDuration
       );
 
       if (context?.id) {

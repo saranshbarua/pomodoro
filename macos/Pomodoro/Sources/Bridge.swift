@@ -95,6 +95,8 @@ class Bridge: NSObject, WKScriptMessageHandler {
                     taskTitle: body["taskTitle"] as? String,
                     tag: body["tag"] as? String,
                     projectId: body["projectId"] as? String,
+                    estimatedPomos: body["estimatedPomos"] as? Int ?? 1,
+                    snapshotFocusDuration: body["snapshotFocusDuration"] as? Int ?? 1500,
                     isCompletion: body["isCompletion"] as? Bool ?? false
                 )
             }
@@ -286,7 +288,7 @@ class Bridge: NSObject, WKScriptMessageHandler {
         }
     }
     
-    private func logActivity(duration: Int, taskId: String?, taskTitle: String?, tag: String?, projectId: String?, isCompletion: Bool) {
+    private func logActivity(duration: Int, taskId: String?, taskTitle: String?, tag: String?, projectId: String?, estimatedPomos: Int, snapshotFocusDuration: Int, isCompletion: Bool) {
         do {
             let offset = TimeZone.current.secondsFromGMT() / 60
             
@@ -298,9 +300,9 @@ class Bridge: NSObject, WKScriptMessageHandler {
 
             try DatabaseManager.shared.dbPool.write { db in
                 try db.execute(sql: """
-                    INSERT INTO session_logs (id, task_id, task_title, tag, project_id, duration_seconds, is_completion, timestamp, timezone_offset)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, arguments: [UUID().uuidString, cleanTaskId, cleanTaskTitle, cleanTag, cleanProjectId, duration, isCompletion, Date(), offset])
+                    INSERT INTO session_logs (id, task_id, task_title, tag, project_id, estimated_pomos, snapshot_focus_duration, duration_seconds, is_completion, timestamp, timezone_offset)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, arguments: [UUID().uuidString, cleanTaskId, cleanTaskTitle, cleanTag, cleanProjectId, estimatedPomos, snapshotFocusDuration, duration, isCompletion, Date(), offset])
             }
         } catch {
             print("Bridge: db_logActivity failed: \(error)")
@@ -363,13 +365,16 @@ class Bridge: NSObject, WKScriptMessageHandler {
                 let taskRows = try Row.fetchAll(db, sql: """
                     SELECT COALESCE(l.task_title, t.title, 'Unselected Activity') as title, 
                            COALESCE(p.name, l.tag, 'Untagged') as tag, 
-                           SUM(l.duration_seconds) as duration
+                           SUM(l.duration_seconds) as duration,
+                           COALESCE(t.estimated_pomos, MAX(l.estimated_pomos), 1) as estimated_pomos,
+                           AVG(l.snapshot_focus_duration) as avg_snapshot_duration,
+                           DATE(MAX(l.timestamp), '+' || l.timezone_offset || ' minutes') as last_active
                     FROM session_logs l
                     LEFT JOIN tasks t ON l.task_id = t.id
                     LEFT JOIN projects p ON l.project_id = p.id
                     GROUP BY COALESCE(l.task_title, t.title, 'Unselected Activity'), 
                              COALESCE(p.name, l.tag, 'Untagged')
-                    ORDER BY duration DESC
+                    ORDER BY MAX(l.timestamp) DESC
                     """)
 
                 let dailyStats: [[String: Any]] = dailyRows.map { row in
@@ -392,7 +397,10 @@ class Bridge: NSObject, WKScriptMessageHandler {
                     return [
                         "title": row["title"] as String,
                         "tag": row["tag"] as String,
-                        "duration": row["duration"] as Int
+                        "duration": row["duration"] as Int,
+                        "estimatedPomos": row["estimated_pomos"] as Int,
+                        "avgSnapshotDuration": row["avg_snapshot_duration"] as Double,
+                        "date": row["last_active"] as String
                     ]
                 }
                 
@@ -473,21 +481,29 @@ class Bridge: NSObject, WKScriptMessageHandler {
                 let taskRows = try Row.fetchAll(db, sql: """
                     SELECT COALESCE(l.task_title, t.title, 'Unselected Activity') as title, 
                            COALESCE(p.name, l.tag, 'Untagged') as tag, 
-                           SUM(l.duration_seconds) as duration
+                           SUM(l.duration_seconds) as duration,
+                           COALESCE(t.estimated_pomos, MAX(l.estimated_pomos), 1) as estimated_pomos,
+                           AVG(l.snapshot_focus_duration) as avg_snapshot_duration,
+                           DATE(MAX(l.timestamp), '+' || l.timezone_offset || ' minutes') as date
                     FROM session_logs l
                     LEFT JOIN tasks t ON l.task_id = t.id
                     LEFT JOIN projects p ON l.project_id = p.id
                     GROUP BY COALESCE(l.task_title, t.title, 'Unselected Activity'), 
                              COALESCE(p.name, l.tag, 'Untagged')
-                    ORDER BY duration DESC
+                    ORDER BY MAX(l.timestamp) DESC
                     """)
                 
-                var csvString = "Task,Project,Time (Seconds),Time (Formatted)\n"
+                var csvString = "Date,Task,Project,Actual Time (Formatted),Actual Seconds,Estimated Pomos,Estimated Seconds (Snapshot),Variance (Seconds)\n"
                 
                 for row in taskRows {
+                    let date = row["date"] as String
                     let title = row["title"] as String
                     let tag = row["tag"] as String
                     let duration = row["duration"] as Int
+                    let estimatedPomos = row["estimated_pomos"] as Int
+                    let avgSnapshotDuration = row["avg_snapshot_duration"] as Double
+                    let estimatedSeconds = Int(Double(estimatedPomos) * avgSnapshotDuration)
+                    let variance = duration - estimatedSeconds
                     
                     let hours = duration / 3600
                     let minutes = (duration % 3600) / 60
@@ -498,7 +514,7 @@ class Bridge: NSObject, WKScriptMessageHandler {
                     let escapedTitle = title.replacingOccurrences(of: "\"", with: "\"\"")
                     let escapedTag = tag.replacingOccurrences(of: "\"", with: "\"\"")
                     
-                    csvString += "\"\(escapedTitle)\",\"\(escapedTag)\",\(duration),\"\(formatted)\"\n"
+                    csvString += "\(date),\"\(escapedTitle)\",\"\(escapedTag)\",\"\(formatted)\",\(duration),\(estimatedPomos),\(estimatedSeconds),\(variance)\n"
                 }
                 
                 try csvString.write(to: url, atomically: true, encoding: .utf8)

@@ -72,7 +72,7 @@ describe('ReportsView and Helpers', () => {
         projectDistribution: [{ name: 'Test Project', value: 2.5 }],
         totalFocusTime: 9000,
         totalSessions: 5,
-        taskBreakdown: [{ title: 'Special Task', tag: 'Test Project', duration: 9000 }],
+        taskBreakdown: [{ title: 'Special Task', tag: 'Test Project', duration: 9000, estimatedPomos: 3, avgSnapshotDuration: 1500, date: '2026-01-10' }],
         streak: 3
       });
 

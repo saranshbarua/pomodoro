@@ -43,7 +43,7 @@ describe('StatsStore', () => {
   it('should log activity correctly and call native bridge', () => {
     const { logActivity } = useStatsStore.getState();
     
-    logActivity(300, 'task-1', 'Test Task', 'Work', false, 'project-1');
+    logActivity(300, 'task-1', 'Test Task', 'Work', false, 'project-1', 3);
     
     const state = useStatsStore.getState();
     expect(state.logs).toHaveLength(1);
@@ -51,7 +51,7 @@ describe('StatsStore', () => {
     expect(state.logs[0].projectId).toBe('project-1');
     
     expect(NativeBridge.db_logActivity).toHaveBeenCalledWith(
-      300, 'task-1', 'Test Task', 'Work', false, 'project-1'
+      300, 'task-1', 'Test Task', 'Work', false, 'project-1', 3, 1500
     );
   });
 
@@ -61,7 +61,7 @@ describe('StatsStore', () => {
       projectDistribution: [{ name: 'Work', value: 5 }],
       totalFocusTime: 18000,
       totalSessions: 10,
-      taskBreakdown: [{ title: 'Task 1', tag: 'Work', duration: 18000 }],
+      taskBreakdown: [{ title: 'Task 1', tag: 'Work', duration: 18000, estimatedPomos: 1, avgSnapshotDuration: 1500, date: '2026-01-10' }],
       streak: 7
     };
 

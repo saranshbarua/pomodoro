@@ -75,6 +75,42 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
 
   const totalTimeDisplay = formatDuration(totalFocusSeconds);
 
+  // Date Grouping Logic
+  const groupedTasks = React.useMemo(() => {
+    const groups: Record<string, typeof taskData> = {
+      'Today': [],
+      'Yesterday': [],
+      'Last Week': [],
+      'Earlier': []
+    };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const lastWeek = new Date(today);
+    lastWeek.setDate(lastWeek.getDate() - 7);
+
+    taskData.forEach(task => {
+      const taskDate = new Date(task.date);
+      taskDate.setHours(0, 0, 0, 0);
+
+      if (taskDate.getTime() === today.getTime()) {
+        groups['Today'].push(task);
+      } else if (taskDate.getTime() === yesterday.getTime()) {
+        groups['Yesterday'].push(task);
+      } else if (taskDate.getTime() >= lastWeek.getTime()) {
+        groups['Last Week'].push(task);
+      } else {
+        groups['Earlier'].push(task);
+      }
+    });
+
+    return groups;
+  }, [taskData]);
+
   const filteredProjectData = React.useMemo(() => {
     let data = [...projectDataRaw];
     if (projectFilter === 'tagged') {
@@ -459,42 +495,113 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <th style={{ ...thStyle, width: '45%' }}>Task</th>
-                <th style={{ ...thStyle, width: '30%' }}>Project</th>
-                <th style={{ ...thStyle, width: '25%', textAlign: 'right' }}>Time</th>
+                <th style={{ ...thStyle, width: '25%' }}>Project</th>
+                <th style={{ ...thStyle, width: '30%', textAlign: 'right' }}>Time</th>
               </tr>
             </thead>
             <tbody>
               {taskData.length > 0 ? (
-                taskData.map((task, i) => (
-                  <tr key={i} style={{ borderBottom: i === taskData.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.03)' }}>
-                    <td style={{ ...tdStyle, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.4' }} title={task.title}>{task.title}</td>
-                    <td style={tdStyle}>
-                      <span 
-                        title={task.tag || 'General Focus'}
-                        style={{ 
-                          fontSize: '9px', 
-                          color: task.tag ? theme.colors.focus.primary : 'rgba(255, 255, 255, 0.4)', 
-                          background: task.tag ? theme.colors.focus.glow : 'rgba(255, 255, 255, 0.05)', 
-                          padding: '2px 8px', 
-                          borderRadius: '5px',
+                Object.entries(groupedTasks).map(([groupName, tasks]) => (
+                  tasks.length > 0 && (
+                    <React.Fragment key={groupName}>
+                      <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
+                        <td colSpan={3} style={{ 
+                          padding: '8px 16px', 
+                          fontSize: '10px', 
+                          fontWeight: '800', 
+                          color: 'rgba(255,255,255,0.2)', 
                           textTransform: 'uppercase',
-                          fontWeight: '800',
-                          letterSpacing: '0.08em',
-                          display: 'inline-block',
-                          maxWidth: '100%',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          lineHeight: '1.2',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        {task.tag || 'General Focus'}
-                      </span>
-                    </td>
-                    <td style={{ ...tdStyle, textAlign: 'right', fontWeight: '600', fontFamily: theme.fonts.display, width: 'auto' }}>
-                      {formatDuration(task.duration)}
-                    </td>
-                  </tr>
+                          letterSpacing: '0.05em'
+                        }}>
+                          {groupName}
+                        </td>
+                      </tr>
+                      {tasks.map((task, i) => {
+                        const estimatedSeconds = task.estimatedPomos * task.avgSnapshotDuration;
+                        const varianceSeconds = task.duration - estimatedSeconds;
+                        
+                        const formatVariance = (seconds: number) => {
+                          const absSeconds = Math.abs(seconds);
+                          const mins = Math.round(absSeconds / 60);
+                          if (mins < 1) return '';
+                          if (mins < 60) return `${mins}m`;
+                          const hours = mins / 60;
+                          return `${hours.toFixed(1)}h`;
+                        };
+
+                        const isOver = varianceSeconds > 60; // More than 1m over
+                        const isUnder = varianceSeconds < -60; // More than 1m under
+                        
+                        return (
+                          <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                            <td style={{ ...tdStyle, paddingRight: '8px' }}>
+                              <span 
+                                title={task.title}
+                                style={{ 
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  lineHeight: '1.4',
+                                  color: 'white',
+                                  fontWeight: '500'
+                                }}
+                              >
+                                {task.title}
+                              </span>
+                            </td>
+                            <td style={{ ...tdStyle, padding: '12px 0' }}>
+                              <div 
+                                title={task.tag && task.tag !== 'Untagged' ? task.tag : 'General Focus'}
+                                style={{
+                                  fontSize: '9px', 
+                                  color: task.tag && task.tag !== 'Untagged' ? theme.colors.focus.primary : 'rgba(255, 255, 255, 0.3)', 
+                                  background: task.tag && task.tag !== 'Untagged' ? theme.colors.focus.glow : 'rgba(255, 255, 255, 0.03)', 
+                                  padding: '2px 8px', 
+                                  borderRadius: '6px',
+                                  textTransform: 'uppercase',
+                                  fontWeight: '800',
+                                  letterSpacing: '0.05em',
+                                  display: 'inline-flex',
+                                  maxWidth: '100%',
+                                  boxSizing: 'border-box'
+                                }}
+                              >
+                                <span style={{
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  {task.tag && task.tag !== 'Untagged' ? task.tag : 'General'}
+                                </span>
+                              </div>
+                            </td>
+                            <td style={{ ...tdStyle, textAlign: 'right', paddingLeft: '0' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                                <span style={{ fontWeight: '700', color: 'white', fontFamily: theme.fonts.display }}>
+                                  {formatDuration(task.duration)}
+                                </span>
+                                {isOver ? (
+                                  <span style={{ fontSize: '9px', fontWeight: '800', color: '#FF9500', opacity: 0.8 }}>
+                                    +{formatVariance(varianceSeconds)} over
+                                  </span>
+                                ) : isUnder ? (
+                                  <span style={{ fontSize: '9px', fontWeight: '800', color: '#28C840', opacity: 0.8 }}>
+                                    {formatVariance(varianceSeconds)} ahead
+                                  </span>
+                                ) : (
+                                  <span style={{ fontSize: '9px', fontWeight: '800', color: 'rgba(255,255,255,0.2)' }}>
+                                    on target
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </React.Fragment>
+                  )
                 ))
               ) : (
                   <tr>
@@ -552,8 +659,6 @@ const thStyle: React.CSSProperties = {
 const tdStyle: React.CSSProperties = {
   padding: '12px 16px',
   color: 'rgba(255,255,255,0.8)',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis'
 };
 
 export default ReportsView;

@@ -10,6 +10,8 @@ export interface SessionLog {
   tag: string | null;
   projectId?: string | null;
   isCompletion?: boolean;
+  estimatedPomos?: number;
+  snapshotFocusDuration?: number;
 }
 
 export interface ReportsData {
@@ -17,7 +19,7 @@ export interface ReportsData {
   projectDistribution: { name: string; value: number }[];
   totalFocusTime: number;
   totalSessions: number;
-  taskBreakdown: { title: string; tag: string; duration: number }[];
+  taskBreakdown: { title: string; tag: string; duration: number; estimatedPomos: number; avgSnapshotDuration: number; date: string }[];
   streak: number;
 }
 
@@ -26,7 +28,7 @@ interface StatsStore {
   logs: SessionLog[]; // Local cache of recent logs for optimistic updates and testing
   
   // Actions
-  logActivity: (duration: number, taskId: string | null, taskTitle: string | null, tag: string | null, isCompletion?: boolean, projectId?: string | null) => void;
+  logActivity: (duration: number, taskId: string | null, taskTitle: string | null, tag: string | null, isCompletion?: boolean, projectId?: string | null, estimatedPomos?: number, snapshotFocusDuration?: number) => void;
   fetchReports: () => void;
   hydrateReports: (data: ReportsData) => void;
 }
@@ -35,7 +37,7 @@ export const useStatsStore = create<StatsStore>((set, get) => ({
   reports: null,
   logs: [],
 
-  logActivity: (duration, taskId, taskTitle, tag, isCompletion = false, projectId = null) => {
+  logActivity: (duration, taskId, taskTitle, tag, isCompletion = false, projectId = null, estimatedPomos = 1, snapshotFocusDuration = 1500) => {
     const newLog: SessionLog = {
       id: crypto.randomUUID(),
       timestamp: Date.now(),
@@ -45,6 +47,8 @@ export const useStatsStore = create<StatsStore>((set, get) => ({
       tag,
       projectId,
       isCompletion,
+      estimatedPomos,
+      snapshotFocusDuration
     };
 
     // Update local state for immediate feedback
@@ -53,7 +57,7 @@ export const useStatsStore = create<StatsStore>((set, get) => ({
     }));
 
     // Native call for permanent SQLite storage
-    NativeBridge.db_logActivity(duration, taskId, taskTitle, tag, isCompletion, projectId);
+    NativeBridge.db_logActivity(duration, taskId, taskTitle, tag, isCompletion, projectId, estimatedPomos, snapshotFocusDuration);
   },
 
   fetchReports: () => {
@@ -102,14 +106,17 @@ export const selectTotalSessions = (state: StatsStore) => {
 export const selectTaskBreakdown = (state: StatsStore) => {
   if (state.reports) return state.reports.taskBreakdown;
 
-  const taskMap: Record<string, { title: string; tag: string; duration: number }> = {};
+  const taskMap: Record<string, { title: string; tag: string; duration: number; estimatedPomos: number; avgSnapshotDuration: number; date: string }> = {};
   state.logs.forEach(log => {
     if (!log.taskId) return;
     if (!taskMap[log.taskId]) {
       taskMap[log.taskId] = { 
         title: log.taskTitle || 'Untitled Task',
         tag: log.tag || 'Untagged',
-        duration: 0 
+        duration: 0,
+        estimatedPomos: log.estimatedPomos || 1,
+        avgSnapshotDuration: log.snapshotFocusDuration || 1500,
+        date: new Date(log.timestamp).toISOString().split('T')[0]
       };
     }
     taskMap[log.taskId].duration += log.durationSeconds;

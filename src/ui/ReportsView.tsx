@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { 
   BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, Legend 
+  Cell 
 } from 'recharts';
 import { 
   useStatsStore, 
@@ -30,6 +30,8 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
   const fetchReports = useStatsStore(state => state.fetchReports);
   const stats = useStatsStore();
   const [exportStatus, setExportStatus] = useState<'idle' | 'exporting' | 'success'>('idle');
+  const [isProjectExpanded, setIsProjectExpanded] = useState(false);
+  const [projectFilter, setProjectFilter] = useState<'all' | 'tagged'>('all');
   
   useEffect(() => {
     fetchReports();
@@ -58,8 +60,6 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
     setExportStatus('exporting');
     NativeBridge.db_exportCSV();
     
-    // Safety timeout: if no response from native side after 60s, reset to idle
-    // This handles cases where the native dialog might be dismissed or fail without calling back
     setTimeout(() => {
       setExportStatus(current => current === 'exporting' ? 'idle' : current);
     }, 60000);
@@ -68,27 +68,20 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
   const dailyData = selectDailyFocusStats(stats);
   const projectDataRaw = selectProjectDistribution(stats);
   
-  // Scalable Project Data: Group "Others" if more than 12 projects
-  const projectData = React.useMemo(() => {
-    if (projectDataRaw.length <= 13) return [...projectDataRaw].sort((a, b) => b.value - a.value);
-    
-    const sorted = [...projectDataRaw].sort((a, b) => b.value - a.value);
-    const topN = sorted.slice(0, 12);
-    const others = sorted.slice(12);
-    const othersValue = others.reduce((acc, curr) => acc + curr.value, 0);
-    
-    return [
-      ...topN,
-      { name: `Others (${others.length})`, value: othersValue }
-    ];
-  }, [projectDataRaw]);
-
   const taskData = selectTaskBreakdown(stats);
   const streak = selectStreak(stats);
   const totalFocusSeconds = selectTotalFocusTime(stats);
   const totalSessions = selectTotalSessions(stats);
 
   const totalTimeDisplay = formatDuration(totalFocusSeconds);
+
+  const filteredProjectData = React.useMemo(() => {
+    let data = [...projectDataRaw];
+    if (projectFilter === 'tagged') {
+      data = data.filter(p => p.name !== 'Untagged');
+    }
+    return data.sort((a, b) => b.value - a.value);
+  }, [projectDataRaw, projectFilter]);
 
   const COLORS = [
     theme.colors.focus.primary, // Red/Orange
@@ -106,6 +99,22 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
     '#64748B'  // Slate for "Others"
   ];
 
+  // Stable Color Assignment based on global rank (All view)
+  const projectColors = React.useMemo(() => {
+    const sortedAll = [...projectDataRaw].sort((a, b) => b.value - a.value);
+    const colorMap: Record<string, string> = {};
+    
+    sortedAll.forEach((p, i) => {
+      if (p.name === 'Untagged') {
+        colorMap[p.name] = 'rgba(255, 255, 255, 0.2)';
+      } else {
+        colorMap[p.name] = COLORS[i % (COLORS.length - 1)];
+      }
+    });
+    
+    return colorMap;
+  }, [projectDataRaw, COLORS]);
+
   return (
     <div style={{
       position: 'absolute',
@@ -120,7 +129,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
       flexDirection: 'column',
       padding: '24px',
       boxSizing: 'border-box',
-      fontFamily: theme.fonts.brand, // Use DM Sans
+      fontFamily: theme.fonts.brand,
       animation: 'slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
     }}>
       <style>
@@ -230,90 +239,148 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
 
         {/* Project Breakdown */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', flexShrink: 0 }}>
-          <h4 style={sectionHeaderStyle}>Project Mix</h4>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px' }}>
+            <h4 style={sectionHeaderStyle}>Project Mix</h4>
+            
+            {/* Filter Toggle */}
+            <div style={{ 
+              display: 'flex', 
+              background: 'rgba(255, 255, 255, 0.05)', 
+              padding: '2px', 
+              borderRadius: '8px',
+              border: '1px solid rgba(255, 255, 255, 0.05)'
+            }}>
+              <button 
+                onClick={() => setProjectFilter('all')}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  fontSize: '9px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  background: projectFilter === 'all' ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
+                  color: projectFilter === 'all' ? 'white' : 'rgba(255, 255, 255, 0.4)',
+                  transition: 'all 0.2s ease',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}
+              >All</button>
+              <button 
+                onClick={() => setProjectFilter('tagged')}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  fontSize: '9px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  background: projectFilter === 'tagged' ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
+                  color: projectFilter === 'tagged' ? 'white' : 'rgba(255, 255, 255, 0.4)',
+                  transition: 'all 0.2s ease',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}
+              >Tagged</button>
+            </div>
+          </div>
+
           <div style={{ 
-            height: '280px', // Increased height to accommodate scrollable legend
             width: '100%', 
             background: 'rgba(255,255,255,0.02)', 
             borderRadius: '20px', 
-            padding: '16px', 
+            padding: '20px', 
             border: '1px solid rgba(255,255,255,0.05)', 
             display: 'flex', 
-            flexDirection: 'column', // Changed to column to stack chart and legend
-            alignItems: 'center',
+            flexDirection: 'column',
             boxSizing: 'border-box',
-            gap: '12px'
+            gap: '16px'
           }}>
-            {projectData.length > 0 ? (
-              <>
-                <div style={{ width: '100%', height: '140px', flexShrink: 0 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={projectData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={45}
-                        outerRadius={65}
-                        paddingAngle={4}
-                        dataKey="value"
-                        stroke="none"
-                      >
-                        {projectData.map((entry, index) => {
-                          // Use the last color (Slate) for "Others" if it's the last item and we have multiple items
-                          const isOthers = entry.name.startsWith('Others (');
-                          const color = isOthers ? COLORS[COLORS.length - 1] : COLORS[index % (COLORS.length - 1)];
-                          return <Cell key={`cell-${index}`} fill={color} />;
-                        })}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ background: '#141414', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', fontSize: '12px', fontFamily: theme.fonts.display }}
-                        itemStyle={{ color: 'white' }}
-                        formatter={(value: any) => [formatDuration(Number(value) * 3600), 'Time Spent']}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                
-                {/* Custom Scrollable Legend */}
-                <div className="custom-scrollbar" style={{ 
-                  width: '100%', 
-                  overflowY: 'auto', 
-                  maxHeight: '100px', 
-                  display: 'flex', 
-                  flexWrap: 'wrap', 
-                  justifyContent: 'center',
-                  gap: '8px 12px',
-                  padding: '4px 8px'
-                }}>
-                  {projectData.map((entry, index) => {
-                    const isOthers = entry.name.startsWith('Others (');
-                    const color = isOthers ? COLORS[COLORS.length - 1] : COLORS[index % (COLORS.length - 1)];
+            {filteredProjectData.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {filteredProjectData
+                  .slice(0, isProjectExpanded ? undefined : 5)
+                  .map((entry, index) => {
+                    const totalValue = filteredProjectData.reduce((acc, curr) => acc + curr.value, 0);
+                    const percentage = totalValue > 0 ? Math.max((entry.value / totalValue) * 100, 1.5) : 0;
+                    
+                    const isUntagged = entry.name === 'Untagged';
+                    const displayName = isUntagged ? 'General Focus' : entry.name;
+                    const color = projectColors[entry.name];
+                    
                     return (
-                      <div key={index} style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '6px',
-                        fontSize: '11px',
-                        color: isOthers ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.7)',
-                        fontWeight: isOthers ? '400' : '500',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        <div style={{ 
-                          width: '8px', 
-                          height: '8px', 
-                          borderRadius: '50%', 
-                          background: color,
-                          flexShrink: 0
-                        }} />
-                        <span>{entry.name}</span>
-                      </div>
+                      <React.Fragment key={index}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: color }} />
+                              <span style={{ 
+                                fontSize: '13px', 
+                                fontWeight: '600', 
+                                color: isUntagged ? 'rgba(255, 255, 255, 0.4)' : 'white', 
+                                letterSpacing: '-0.01em' 
+                              }}>{displayName}</span>
+                            </div>
+                            <span style={{ fontSize: '11px', fontWeight: '700', color: 'rgba(255,255,255,0.4)', fontFamily: theme.fonts.display }}>
+                              {formatDuration(entry.value * 3600)}
+                            </span>
+                          </div>
+                          <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.03)', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{ 
+                              width: `${percentage}%`, 
+                              height: '100%', 
+                              background: color, 
+                              borderRadius: '2px',
+                              opacity: isUntagged ? 0.2 : 0.8,
+                              transition: 'width 1s cubic-bezier(0.16, 1, 0.3, 1)'
+                            }} />
+                          </div>
+                        </div>
+                        {isUntagged && projectFilter === 'all' && filteredProjectData.length > 1 && (
+                          <div style={{ height: '1px', background: 'rgba(255, 255, 255, 0.05)', margin: '4px 0' }} />
+                        )}
+                      </React.Fragment>
                     );
                   })}
-                </div>
-              </>
+                
+                {filteredProjectData.length > 5 && (
+                  <button
+                    onClick={() => setIsProjectExpanded(!isProjectExpanded)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: theme.colors.focus.primary,
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      padding: '8px 0 0 0',
+                      textAlign: 'left',
+                      fontFamily: theme.fonts.brand,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      opacity: 0.8,
+                      transition: 'opacity 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = '0.8'}
+                  >
+                    {isProjectExpanded ? (
+                      <>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                        Show Less
+                      </>
+                    ) : (
+                      <>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        Show {filteredProjectData.length - 5} More {projectFilter === 'tagged' ? 'Tagged ' : ''}Projects
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
             ) : (
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.colors.text.muted, fontSize: '14px' }}>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.colors.text.muted, fontSize: '14px', padding: '20px 0' }}>
                 No project data yet
               </div>
             )}
@@ -403,11 +470,11 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
                     <td style={{ ...tdStyle, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.4' }} title={task.title}>{task.title}</td>
                     <td style={tdStyle}>
                       <span 
-                        title={task.tag}
+                        title={task.tag || 'General Focus'}
                         style={{ 
                           fontSize: '9px', 
-                          color: theme.colors.focus.primary, 
-                          background: theme.colors.focus.glow, 
+                          color: task.tag ? theme.colors.focus.primary : 'rgba(255, 255, 255, 0.4)', 
+                          background: task.tag ? theme.colors.focus.glow : 'rgba(255, 255, 255, 0.05)', 
                           padding: '2px 8px', 
                           borderRadius: '5px',
                           textTransform: 'uppercase',
@@ -421,7 +488,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
                           whiteSpace: 'nowrap'
                         }}
                       >
-                        {task.tag}
+                        {task.tag || 'General Focus'}
                       </span>
                     </td>
                     <td style={{ ...tdStyle, textAlign: 'right', fontWeight: '600', fontFamily: theme.fonts.display, width: 'auto' }}>

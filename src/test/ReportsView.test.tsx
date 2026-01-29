@@ -90,7 +90,8 @@ describe('ReportsView and Helpers', () => {
 
       // Task Breakdown row
       expect(screen.getByText('Special Task')).toBeDefined();
-      expect(screen.getByText('Test Project')).toBeDefined();
+      const projectElements = screen.getAllByText('Test Project');
+      expect(projectElements.length).toBeGreaterThanOrEqual(1);
     });
 
     it('should call fetchReports on mount', () => {

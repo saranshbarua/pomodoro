@@ -8,6 +8,7 @@ vi.mock('../services/nativeBridge', () => ({
     db_addTask: vi.fn(),
     db_updateTaskStatus: vi.fn(),
     db_deleteTask: vi.fn(),
+    db_updateTask: vi.fn(),
     db_incrementPomos: vi.fn(),
     db_upsertProject: vi.fn(),
     showNotification: vi.fn(),
@@ -95,5 +96,98 @@ describe('TaskStore', () => {
     
     toggleTask(id1);
     expect(useTaskStore.getState().activeTaskId).toBe(id2);
+  });
+
+  describe('updateTask', () => {
+    it('should update task title and estimated pomos', () => {
+      const { addTask, updateTask } = useTaskStore.getState();
+      const id = addTask('Initial Title', 1);
+      
+      updateTask(id, { title: 'Updated Title', estimatedPomos: 5 });
+      
+      const task = useTaskStore.getState().tasks.find(t => t.id === id);
+      expect(task?.title).toBe('Updated Title');
+      expect(task?.estimatedPomos).toBe(5);
+      expect(NativeBridge.db_updateTask).toHaveBeenCalledWith(
+        id, 
+        'Updated Title', 
+        5, 
+        undefined, 
+        undefined
+      );
+    });
+
+    it('should update project tag and create new project if needed', () => {
+      const { addTask, updateTask } = useTaskStore.getState();
+      const id = addTask('Task', 1, 'Old Tag');
+      vi.clearAllMocks(); // Clear mocks after initial add
+      
+      updateTask(id, { title: 'Task', estimatedPomos: 1, tag: 'New Tag' });
+      
+      const state = useTaskStore.getState();
+      const task = state.tasks.find(t => t.id === id);
+      expect(task?.tag).toBe('New Tag');
+      expect(state.projects.find(p => p.name === 'New Tag')).toBeDefined();
+      expect(NativeBridge.db_upsertProject).toHaveBeenCalled();
+      expect(NativeBridge.db_updateTask).toHaveBeenCalledWith(
+        id, 
+        'Task', 
+        1, 
+        'New Tag', 
+        expect.any(String)
+      );
+    });
+
+    it('should use existing project when updating to an existing tag', () => {
+      const { addTask, updateTask } = useTaskStore.getState();
+      const existingProjectId = 'existing-p-id';
+      useTaskStore.setState({ 
+        projects: [{ id: existingProjectId, name: 'Work' }] 
+      });
+      
+      const id = addTask('Task', 1);
+      updateTask(id, { title: 'Task', estimatedPomos: 1, tag: 'Work' });
+      
+      const task = useTaskStore.getState().tasks.find(t => t.id === id);
+      expect(task?.projectId).toBe(existingProjectId);
+      expect(NativeBridge.db_upsertProject).not.toHaveBeenCalledTimes(2); // Only called during initial logic if applicable, but here we expect it not to be called for the update
+    });
+
+    it('should remove tag and projectId when tag is undefined', () => {
+      const { addTask, updateTask } = useTaskStore.getState();
+      const id = addTask('Task', 1, 'Personal');
+      
+      updateTask(id, { title: 'Task', estimatedPomos: 1, tag: undefined });
+      
+      const task = useTaskStore.getState().tasks.find(t => t.id === id);
+      expect(task?.tag).toBeUndefined();
+      expect(task?.projectId).toBeUndefined();
+      expect(NativeBridge.db_updateTask).toHaveBeenCalledWith(
+        id, 
+        'Task', 
+        1, 
+        undefined, 
+        undefined
+      );
+    });
+
+    it('should do nothing if task ID is not found', () => {
+      const { updateTask } = useTaskStore.getState();
+      
+      updateTask('non-existent-id', { title: 'New', estimatedPomos: 2 });
+      
+      expect(NativeBridge.db_updateTask).not.toHaveBeenCalled();
+      expect(useTaskStore.getState().tasks).toHaveLength(0);
+    });
+
+    it('should maintain active task status after update', () => {
+      const { addTask, updateTask, setActiveTask } = useTaskStore.getState();
+      const id = addTask('Active Task', 1);
+      setActiveTask(id);
+      
+      updateTask(id, { title: 'Still Active', estimatedPomos: 2 });
+      
+      expect(useTaskStore.getState().activeTaskId).toBe(id);
+    });
   });
 });

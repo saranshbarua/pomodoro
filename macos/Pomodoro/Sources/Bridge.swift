@@ -71,6 +71,18 @@ class Bridge: NSObject, WKScriptMessageHandler {
             if let id = body["id"] as? String {
                 deleteTask(id: id)
             }
+        case "db_updateTask":
+            if let id = body["id"] as? String,
+               let title = body["title"] as? String,
+               let estimatedPomos = body["estimatedPomos"] as? Int {
+                updateTask(
+                    id: id,
+                    title: title,
+                    tag: body["tag"] as? String,
+                    projectId: body["projectId"] as? String,
+                    estimatedPomos: estimatedPomos
+                )
+            }
         case "db_incrementPomos":
             if let id = body["id"] as? String {
                 incrementTaskPomos(id: id)
@@ -236,6 +248,20 @@ class Bridge: NSObject, WKScriptMessageHandler {
             }
         } catch {
             print("Bridge: db_updateTaskStatus failed: \(error)")
+        }
+    }
+    
+    private func updateTask(id: String, title: String, tag: String?, projectId: String?, estimatedPomos: Int) {
+        do {
+            try DatabaseManager.shared.dbPool.write { db in
+                try db.execute(sql: """
+                    UPDATE tasks 
+                    SET title = ?, tag = ?, project_id = ?, estimated_pomos = ? 
+                    WHERE id = ?
+                    """, arguments: [title, tag, projectId, estimatedPomos, id])
+            }
+        } catch {
+            print("Bridge: db_updateTask failed: \(error)")
         }
     }
     

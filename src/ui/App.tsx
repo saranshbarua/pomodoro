@@ -262,6 +262,36 @@ const App: React.FC = () => {
         : 'none',
       transition: 'box-shadow 0.3s ease-out',
     }}>
+      <style>
+        {`
+          /* Hide scrollbar for Chrome, Safari and Opera */
+          *::-webkit-scrollbar {
+            display: none;
+          }
+          /* Hide scrollbar for IE, Edge and Firefox */
+          * {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+          }
+          /* Disable Rubber-banding / Elastic Scrolling on root */
+          html, body {
+            overscroll-behavior: none;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            position: fixed;
+            margin: 0;
+            padding: 0;
+            -webkit-user-select: none;
+            user-select: none;
+          }
+          #root {
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+          }
+        `}
+      </style>
       <BlobBackground 
         color={getThemeColor()} 
         isBreak={sessionType !== 'focus'} 
@@ -339,9 +369,9 @@ const App: React.FC = () => {
         justifyContent: 'flex-start', 
         width: '100%',
         zIndex: 1,
-        padding: '40px 0 0 0', // Padding top for nav, bottom handled by footer spacing
+        padding: '40px 0 0 0',
         minHeight: 0, 
-        overflowY: 'auto',
+        overflow: 'hidden', 
       }}>
         {/* Timer Section */}
         <div style={{ marginBottom: '4px' }}>
@@ -392,12 +422,15 @@ const App: React.FC = () => {
                 flexWrap: 'wrap',
                 padding: '6px 16px',
                 borderRadius: '12px',
-                background: (tasks.length === 0 || !activeTask) ? 'rgba(255, 255, 255, 0.03)' : 'none',
+                background: (tasks.length === 0 || !activeTask) ? 'rgba(255, 255, 255, 0.04)' : 'none',
+                color: 'white',
                 transition: 'all 0.3s ease',
+                border: (tasks.length === 0 || !activeTask) ? '1px solid rgba(255, 255, 255, 0.05)' : 'none',
+                boxShadow: 'none'
               }}
             >
               {!activeTask && (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6, color: 'white' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.4, color: 'white' }}>
                   <circle cx="12" cy="12" r="10"></circle>
                   <line x1="12" y1="8" x2="12" y2="16"></line>
                   <line x1="8" y1="12" x2="16" y2="12"></line>
@@ -408,7 +441,7 @@ const App: React.FC = () => {
                 style={{ 
                   fontSize: '14px', 
                   fontWeight: '500', 
-                  color: activeTask ? 'white' : 'rgba(255, 255, 255, 0.5)',
+                  color: activeTask ? 'white' : 'rgba(255, 255, 255, 0.4)',
                   textAlign: 'center',
                   display: '-webkit-box',
                   WebkitLineClamp: activeTask?.tag ? 1 : 2, // Clamp to 1 line if tag exists to save space

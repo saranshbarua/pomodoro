@@ -1,5 +1,17 @@
 # Changelog
 
+# [1.6.0](https://github.com/saranshbarua/pomodoro/compare/v1.5.0...v1.6.0) (2026-01-29)
+
+
+### Bug Fixes
+
+* enhance logging and reporting with estimated pomos and snapshot focus duration ([#14](https://github.com/saranshbarua/pomodoro/issues/14)) ([fb35d80](https://github.com/saranshbarua/pomodoro/commit/fb35d801848d2a348367380a0fbce1f3a96b9128))
+
+
+### Features
+
+* Add pin-to-screen feature for persistent timer visibility ([#12](https://github.com/saranshbarua/pomodoro/issues/12)) ([55f8680](https://github.com/saranshbarua/pomodoro/commit/55f868041fc440229e4c1a3f4db02136de55aa7c))
+
 # [1.5.0](https://github.com/saranshbarua/pomodoro/compare/v1.4.1...v1.5.0) (2026-01-29)
 
 

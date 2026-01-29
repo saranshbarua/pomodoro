@@ -1,5 +1,12 @@
 # Changelog
 
+# [1.5.0](https://github.com/saranshbarua/pomodoro/compare/v1.4.1...v1.5.0) (2026-01-29)
+
+
+### Features
+
+* **export:** add CSV export functionality for task breakdown ([0d2676e](https://github.com/saranshbarua/pomodoro/commit/0d2676eed7186eabe645189cc5b28f5ede1f82b2))
+
 ## [1.4.1](https://github.com/saranshbarua/pomodoro/compare/v1.4.0...v1.4.1) (2026-01-28)
 
 

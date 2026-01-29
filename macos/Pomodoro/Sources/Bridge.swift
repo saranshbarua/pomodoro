@@ -99,8 +99,21 @@ class Bridge: NSObject, WKScriptMessageHandler {
             
         case "hideWindow":
             windowController?.hide()
+        case "forceHideWindow":
+            windowController?.forceHide()
         case "quitApp":
             NSApplication.shared.terminate(nil)
+            
+        // --- Pin Window Actions ---
+        case "setPinned":
+            if let pinned = body["pinned"] as? Bool {
+                windowController?.setPinned(pinned)
+            }
+        case "togglePinned":
+            windowController?.togglePinned()
+        case "getPinnedState":
+            let isPinned = windowController?.isPinned ?? false
+            sendToJS(action: "pinnedStateChanged", data: ["isPinned": isPinned])
         case "playClickSound":
             print("Bridge: Playing click sound...")
             if let soundUrl = Bundle.main.url(forResource: "click", withExtension: "mp3") {

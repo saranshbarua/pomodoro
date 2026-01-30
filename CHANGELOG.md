@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/saranshbarua/pomodoro/compare/v1.6.0...v1.6.1) (2026-01-30)
+
+
+### Bug Fixes
+
+* implement native countdown timer and enhance power management ([#15](https://github.com/saranshbarua/pomodoro/issues/15)) ([82b6d32](https://github.com/saranshbarua/pomodoro/commit/82b6d329386665a43b73b4d1a271c4d9e96110c4))
+
 # [1.6.0](https://github.com/saranshbarua/pomodoro/compare/v1.5.0...v1.6.0) (2026-01-29)
 
 

@@ -216,5 +216,108 @@ describe('ReportsView and Helpers', () => {
       expect(screen.getByText('Project A')).toBeDefined();
       expect(screen.getByText('Project B')).toBeDefined();
     });
+
+    it('should display General Focus at top even when it has the highest time value', () => {
+      const { hydrateReports } = useStatsStore.getState();
+      
+      hydrateReports({
+        dailyStats: [],
+        projectDistribution: [
+          { name: 'Project A', value: 2 },
+          { name: 'Untagged', value: 10 },
+          { name: 'Project B', value: 3 }
+        ],
+        totalFocusTime: 54000,
+        totalSessions: 15,
+        taskBreakdown: [],
+        streak: 1
+      });
+
+      render(<ReportsView onClose={() => {}} />);
+
+      const generalFocus = screen.getByText('General Focus');
+      expect(generalFocus).toBeDefined();
+      
+      // Verify separator exists (only shows when multiple projects)
+      const separator = document.querySelector('div[style*="height: 1px"][style*="rgba(255, 255, 255, 0.05)"]');
+      expect(separator).toBeDefined();
+    });
+
+    it('should handle when only Untagged exists (no separator)', () => {
+      const { hydrateReports } = useStatsStore.getState();
+      
+      hydrateReports({
+        dailyStats: [],
+        projectDistribution: [
+          { name: 'Untagged', value: 5 }
+        ],
+        totalFocusTime: 18000,
+        totalSessions: 5,
+        taskBreakdown: [],
+        streak: 1
+      });
+
+      render(<ReportsView onClose={() => {}} />);
+
+      const generalFocus = screen.getByText('General Focus');
+      expect(generalFocus).toBeDefined();
+      
+      // Separator should NOT exist when only one project (the condition checks filteredProjectData.length > 1)
+      const separator = document.querySelector('div[style*="height: 1px"][style*="rgba(255, 255, 255, 0.05)"]');
+      expect(separator).toBeNull();
+    });
+
+    it('should handle when no Untagged exists (all tagged)', () => {
+      const { hydrateReports } = useStatsStore.getState();
+      
+      hydrateReports({
+        dailyStats: [],
+        projectDistribution: [
+          { name: 'Project A', value: 5 },
+          { name: 'Project B', value: 3 },
+          { name: 'Project C', value: 7 }
+        ],
+        totalFocusTime: 54000,
+        totalSessions: 15,
+        taskBreakdown: [],
+        streak: 1
+      });
+
+      render(<ReportsView onClose={() => {}} />);
+
+      // General Focus should not appear
+      expect(screen.queryByText('General Focus')).toBeNull();
+      
+      // Other projects should be sorted by value (descending)
+      expect(screen.getByText('Project C')).toBeDefined(); // highest value (7)
+      expect(screen.getByText('Project A')).toBeDefined();
+      expect(screen.getByText('Project B')).toBeDefined();
+    });
+
+    it('should display General Focus at top even with zero time value', () => {
+      const { hydrateReports } = useStatsStore.getState();
+      
+      hydrateReports({
+        dailyStats: [],
+        projectDistribution: [
+          { name: 'Project A', value: 5 },
+          { name: 'Untagged', value: 0 },
+          { name: 'Project B', value: 3 }
+        ],
+        totalFocusTime: 28800,
+        totalSessions: 8,
+        taskBreakdown: [],
+        streak: 1
+      });
+
+      render(<ReportsView onClose={() => {}} />);
+
+      const generalFocus = screen.getByText('General Focus');
+      expect(generalFocus).toBeDefined();
+      
+      // Should show 0m for time
+      const timeElements = screen.getAllByText('0m');
+      expect(timeElements.length).toBeGreaterThan(0);
+    });
   });
 });

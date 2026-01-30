@@ -40,6 +40,8 @@ vi.mock('../services/nativeBridge', () => ({
     quitApp: vi.fn(),
     startTimerActivity: vi.fn(),
     endTimerActivity: vi.fn(),
+    startNativeTimer: vi.fn(),
+    stopNativeTimer: vi.fn(),
   },
 }));
 

@@ -1,12 +1,14 @@
 import AppKit
 import UserNotifications
 import Sparkle
+import IOKit.pwr_mgt
 
 class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate, SPUUpdaterDelegate {
     var statusBarController: StatusBarController?
     var windowController: WindowController?
     var updaterController: SPUStandardUpdaterController?
     private var timerActivity: NSObjectProtocol?
+    private var powerAssertionID: IOPMAssertionID = 0
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Initialize Sparkle Updater
@@ -149,18 +151,52 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     func startTimerActivity() {
         guard timerActivity == nil else { return }
+        
+        // 1. Prevent App Nap (Process Throttling)
         timerActivity = ProcessInfo.processInfo.beginActivity(
             options: [.userInitiated, .userInitiatedAllowingIdleSystemSleep],
             reason: "Pomodoro timer is running"
         )
+        
+        // 2. Prevent System Idle Sleep (Kernel Level)
+        let reason = "Pomodoro timer is active" as CFString
+        let result = IOPMAssertionCreateWithDescription(
+            kIOPMAssertionTypeNoIdleSleep as CFString,
+            reason,
+            nil,
+            nil,
+            nil,
+            0,
+            nil,
+            &powerAssertionID
+        )
+        
+        if result == kIOReturnSuccess {
+            print("AppDelegate: Started kernel-level power assertion (\(powerAssertionID))")
+        } else {
+            print("AppDelegate: Failed to create power assertion: \(result)")
+        }
+        
         print("AppDelegate: Started timer activity to prevent App Nap")
     }
 
     func endTimerActivity() {
+        // End App Nap prevention
         if let activity = timerActivity {
             ProcessInfo.processInfo.endActivity(activity)
             timerActivity = nil
-            print("AppDelegate: Ended timer activity")
+            print("AppDelegate: Ended App Nap activity")
+        }
+        
+        // End System Idle Sleep prevention
+        if powerAssertionID != 0 {
+            let result = IOPMAssertionRelease(powerAssertionID)
+            if result == kIOReturnSuccess {
+                print("AppDelegate: Released power assertion (\(powerAssertionID))")
+            } else {
+                print("AppDelegate: Failed to release power assertion: \(result)")
+            }
+            powerAssertionID = 0
         }
     }
 }

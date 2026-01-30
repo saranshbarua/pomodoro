@@ -187,6 +187,7 @@ class WindowController: NSWindowController {
     }
 
     func show(relativeTo rect: NSRect) {
+        panel.alphaValue = 1.0
         // Only reposition if not pinned (pinned windows keep their position)
         if !isPinned || !panel.isVisible {
             let x = rect.origin.x + (rect.width / 2) - (panel.frame.width / 2)
@@ -212,20 +213,41 @@ class WindowController: NSWindowController {
             return
         }
         
-        panel.orderOut(nil)
-        stopMonitoring()
+        // Expert Fix: If a timer is running, we don't want to fully 'orderOut' 
+        // as macOS may aggressively throttle the WKWebView process.
+        // Instead, we make it invisible but technically 'on-screen'.
+        if let appDelegate = NSApp.delegate as? AppDelegate, 
+           let pomodoroStore = UserDefaults.standard.string(forKey: "pomodoroState"),
+           pomodoroStore.contains("\"status\":\"running\"") {
+            panel.alphaValue = 0.0
+            // We still want to stop monitoring clicks to avoid accidental triggers
+            stopMonitoring()
+            print("WindowController: Hiding via alphaValue to maintain WebView vitality")
+        } else {
+            panel.orderOut(nil)
+            stopMonitoring()
+        }
+        
         bridge.sendToJS(action: "windowHidden", data: [:])
     }
     
     /// Force hide the window even if pinned (for explicit close actions)
     func forceHide() {
-        panel.orderOut(nil)
+        if let appDelegate = NSApp.delegate as? AppDelegate, 
+           let pomodoroStore = UserDefaults.standard.string(forKey: "pomodoroState"),
+           pomodoroStore.contains("\"status\":\"running\"") {
+            panel.alphaValue = 0.0
+            print("WindowController: Force hiding via alphaValue to maintain WebView vitality")
+        } else {
+            panel.orderOut(nil)
+            panel.alphaValue = 1.0 // Reset alpha
+        }
         stopMonitoring()
         bridge.sendToJS(action: "windowHidden", data: [:])
     }
     
     func toggle(relativeTo rect: NSRect) {
-        if panel.isVisible {
+        if panel.isVisible && panel.alphaValue > 0 {
             // If pinned, toggling should still hide the window
             if isPinned {
                 forceHide()
@@ -233,6 +255,8 @@ class WindowController: NSWindowController {
                 hide()
             }
         } else {
+            // Reset alpha if it was hidden via alpha
+            panel.alphaValue = 1.0
             show(relativeTo: rect)
         }
     }

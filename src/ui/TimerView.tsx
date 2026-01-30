@@ -35,11 +35,13 @@ const TimerView: React.FC = () => {
     };
   }, [timer.status, timer.remainingSeconds, timer.lastStartedAt]);
 
-  // Update native menu bar title
+  // Update native menu bar title (Only when not running to avoid fighting the native timer)
   useEffect(() => {
-    const timeStr = formatTime(timer.remainingSeconds);
-    NativeBridge.updateMenuBar(timeStr);
-  }, [timer.remainingSeconds]);
+    if (timer.status !== 'running') {
+      const timeStr = formatTime(timer.remainingSeconds);
+      NativeBridge.updateMenuBar(timeStr);
+    }
+  }, [timer.remainingSeconds, timer.status]);
 
   const formatTime = (seconds: number) => {
     const totalSeconds = Math.ceil(seconds);

@@ -4,6 +4,7 @@ class StatusBarController {
     private var statusBar: NSStatusBar
     private var statusItem: NSStatusItem
     private var windowController: WindowController
+    private var nativeTimer: DispatchSourceTimer?
 
     init(windowController: WindowController) {
         self.windowController = windowController
@@ -116,6 +117,42 @@ class StatusBarController {
     func updateTitle(_ title: String) {
         DispatchQueue.main.async { [weak self] in
             self?.statusItem.button?.title = title
+        }
+    }
+
+    func startCountdown(endTime: Date) {
+        stopCountdown()
+        
+        let timer = DispatchSource.makeTimerSource(queue: .main)
+        timer.schedule(deadline: .now(), repeating: 1.0)
+        timer.setEventHandler { [weak self] in
+            guard let self = self else { return }
+            
+            let now = Date()
+            let remaining = Int(ceil(endTime.timeIntervalSince(now)))
+            
+            if remaining <= 0 {
+                self.updateTitle("00:00")
+                self.stopCountdown()
+                return
+            }
+            
+            let mins = remaining / 60
+            let secs = remaining % 60
+            let timeStr = String(format: "%02d:%02d", mins, secs)
+            self.updateTitle(timeStr)
+        }
+        
+        self.nativeTimer = timer
+        timer.resume()
+        print("StatusBarController: Started native countdown timer")
+    }
+
+    func stopCountdown() {
+        if let timer = nativeTimer {
+            timer.cancel()
+            nativeTimer = nil
+            print("StatusBarController: Stopped native countdown timer")
         }
     }
 }

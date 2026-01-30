@@ -116,7 +116,15 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
     if (projectFilter === 'tagged') {
       data = data.filter(p => p.name !== 'Untagged');
     }
-    return data.sort((a, b) => b.value - a.value);
+    
+    // Sort by value, but ensure "Untagged" (General Focus) always comes first in 'all' view
+    return data.sort((a, b) => {
+      if (projectFilter === 'all') {
+        if (a.name === 'Untagged') return -1;
+        if (b.name === 'Untagged') return 1;
+      }
+      return b.value - a.value;
+    });
   }, [projectDataRaw, projectFilter]);
 
   const COLORS = [

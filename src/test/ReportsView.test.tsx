@@ -155,5 +155,66 @@ describe('ReportsView and Helpers', () => {
 
       expect(screen.getByText('CSV')).toBeDefined();
     });
+
+    it('should display General Focus (Untagged) at the top in All tab', () => {
+      const { hydrateReports } = useStatsStore.getState();
+      
+      hydrateReports({
+        dailyStats: [],
+        projectDistribution: [
+          { name: 'Project A', value: 5 },
+          { name: 'Untagged', value: 2 },
+          { name: 'Project B', value: 3 }
+        ],
+        totalFocusTime: 36000,
+        totalSessions: 10,
+        taskBreakdown: [],
+        streak: 1
+      });
+
+      render(<ReportsView onClose={() => {}} />);
+
+      // Get all project name elements in the Project Mix section
+      const generalFocus = screen.getByText('General Focus');
+      const projectA = screen.getByText('Project A');
+      const projectB = screen.getByText('Project B');
+
+      // Check that General Focus appears in the document
+      expect(generalFocus).toBeDefined();
+      
+      // Verify there's a separator after General Focus (it has the specific style)
+      const separator = document.querySelector('div[style*="height: 1px"][style*="rgba(255, 255, 255, 0.05)"]');
+      expect(separator).toBeDefined();
+    });
+
+    it('should not display Untagged in Tagged filter', () => {
+      const { hydrateReports } = useStatsStore.getState();
+      
+      hydrateReports({
+        dailyStats: [],
+        projectDistribution: [
+          { name: 'Project A', value: 5 },
+          { name: 'Untagged', value: 2 },
+          { name: 'Project B', value: 3 }
+        ],
+        totalFocusTime: 28800,
+        totalSessions: 8,
+        taskBreakdown: [],
+        streak: 1
+      });
+
+      render(<ReportsView onClose={() => {}} />);
+
+      // Switch to Tagged filter
+      const taggedButton = screen.getByText('Tagged');
+      fireEvent.click(taggedButton);
+
+      // General Focus should not be visible
+      expect(screen.queryByText('General Focus')).toBeNull();
+      
+      // But other projects should still be visible
+      expect(screen.getByText('Project A')).toBeDefined();
+      expect(screen.getByText('Project B')).toBeDefined();
+    });
   });
 });

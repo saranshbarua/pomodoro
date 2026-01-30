@@ -25,6 +25,8 @@ vi.mock('../services/nativeBridge', () => ({
     db_getProjects: vi.fn(),
     hideWindow: vi.fn(),
     quitApp: vi.fn(),
+    startNativeTimer: vi.fn(),
+    stopNativeTimer: vi.fn(),
   },
 }));
 

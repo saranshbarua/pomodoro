@@ -111,6 +111,11 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
       timer: TimerEngine.start(state.timer, startTime),
     }));
     NativeBridge.startTimerActivity();
+    
+    // Start native countdown hand-off
+    const { timer } = get();
+    const endTime = startTime + (timer.remainingSeconds * 1000);
+    NativeBridge.startNativeTimer(endTime);
   },
 
   pauseTimer: () => {
@@ -118,6 +123,7 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     const now = Date.now();
     const nextTimer = TimerEngine.pause(timer, now);
     NativeBridge.endTimerActivity();
+    NativeBridge.stopNativeTimer();
 
     // Log time on pause during focus
     if (session.type === 'focus') {
@@ -171,6 +177,7 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
       lastLoggedSeconds: duration,
       lockedTaskContext: null, // Clear context on reset
     });
+    NativeBridge.stopNativeTimer();
   },
 
   tick: () => {
@@ -291,7 +298,8 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
         incrementCompletedPomos(context.id);
       }
     }
-
+    
+    NativeBridge.stopNativeTimer();
     NativeBridge.endTimerActivity();
 
     // Trigger engaging notification

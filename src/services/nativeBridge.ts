@@ -154,6 +154,21 @@ export const NativeBridge = {
    */
   endTimerActivity() {
     this.postMessage('endTimerActivity');
+  },
+
+  /**
+   * Starts a native countdown timer in the menu bar.
+   * @param endTime - The target completion timestamp in milliseconds.
+   */
+  startNativeTimer(endTime: number) {
+    this.postMessage('startNativeTimer', { endTime });
+  },
+
+  /**
+   * Stops the native countdown timer.
+   */
+  stopNativeTimer() {
+    this.postMessage('stopNativeTimer');
   }
 };
 

@@ -25,6 +25,8 @@ vi.mock('../services/nativeBridge', () => ({
     db_upsertProject: vi.fn(),
     hideWindow: vi.fn(),
     quitApp: vi.fn(),
+    startNativeTimer: vi.fn(),
+    stopNativeTimer: vi.fn(),
   },
 }));
 
@@ -130,5 +132,39 @@ describe('Background Recovery Tests', () => {
     const state = usePomodoroStore.getState();
     expect(state.timer.remainingSeconds).toBe(900); // 25m - 10m = 15m (900s)
     expect(state.timer.status).toBe('running');
+  });
+
+  it('should hand off timer to native when starting focus', () => {
+    const { startTimer } = usePomodoroStore.getState();
+    const startTime = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(startTime);
+    
+    startTimer();
+    
+    const expectedEndTime = startTime + (1500 * 1000); // 25m in ms
+    expect(NativeBridge.startNativeTimer).toHaveBeenCalledWith(expectedEndTime);
+  });
+
+  it('should stop native timer when pausing', () => {
+    const { startTimer, pauseTimer } = usePomodoroStore.getState();
+    
+    startTimer();
+    pauseTimer();
+    
+    expect(NativeBridge.stopNativeTimer).toHaveBeenCalled();
+  });
+
+  it('should stop native timer when session completes', () => {
+    const { startTimer, tick } = usePomodoroStore.getState();
+    const startTime = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(startTime);
+    
+    startTimer();
+    
+    // Simulate completion
+    vi.spyOn(Date, 'now').mockReturnValue(startTime + (1501 * 1000));
+    tick();
+    
+    expect(NativeBridge.stopNativeTimer).toHaveBeenCalled();
   });
 });

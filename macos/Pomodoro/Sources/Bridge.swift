@@ -144,6 +144,13 @@ class Bridge: NSObject, WKScriptMessageHandler {
             if let appDelegate = NSApp.delegate as? AppDelegate {
                 appDelegate.endTimerActivity()
             }
+        case "startNativeTimer":
+            if let endTimeMs = body["endTime"] as? Double {
+                let endTime = Date(timeIntervalSince1970: endTimeMs / 1000.0)
+                windowController?.statusBarController?.startCountdown(endTime: endTime)
+            }
+        case "stopNativeTimer":
+            windowController?.statusBarController?.stopCountdown()
         default:
             print("Bridge: Unknown action: \(action)")
         }

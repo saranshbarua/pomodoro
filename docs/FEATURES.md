@@ -24,11 +24,13 @@ A premium, award-winning Pomodoro timer built for macOS, focusing on deep work, 
 - **Sound Effects**: Custom-recorded "Click" and "Tink" sounds for button interactions and session completion.
 
 ## 4. Analytics & Reporting
-- **Persistence**: All focus time is logged per minute and persisted to the **macOS Native Layer** (UserDefaults). It survives system restarts and app updates.
-- **Focus Distribution**: Bar charts visualizing your productivity across days.
-- **Project Mix**: A boutique donut chart showing exactly which project tags consumed your time.
-- **Granular Table**: A high-fidelity breakdown of every task, its project, and the exact time spent focusing.
-- **Consistency Tracking**: Real-time streak calculation and "Total Hours Focused" stats.
+- **Persistence**: All focus time is logged per minute and persisted to a **Native SQLite Database**. It survives system restarts and app updates.
+- **Focus Activity**: Bar charts visualizing your productivity across days.
+- **Project Mix**: A boutique breakdown showing exactly which project tags consumed your time, with filtering for tagged vs. general focus.
+- **Granular Table**: A high-fidelity breakdown of every task, its project, and the exact time spent focusing, grouped by date (Today, Yesterday, etc.).
+- **Performance Variance**: Real-time tracking of whether you are "ahead" or "over" your estimated Pomodoros for each task.
+- **CSV Export**: One-click export of all historical data to a CSV file.
+- **Consistency Tracking**: Real-time streak calculation and "Total Sessions" stats.
 
 ## 5. System Integration & Settings
 - **Native Notifications**: Engaging macOS system notifications with custom messages for each session type.

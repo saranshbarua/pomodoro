@@ -22,7 +22,8 @@ This document outlines the vision and feature set required to transform this Pom
 ## 4. Intelligent Analytics & Intentionality
 *   **Session Tagging**: Allow users to tag sessions (e.g., #Coding, #Writing, #Meetings) to categorize focus time. [V2] (Done)
 *   **Productivity Heatmap**: A GitHub-style contribution graph visualizing focus intensity over weeks and months. [V2] (De-prioritized)
-*   **Focus Narrative**: Weekly automated reports comparing performance trends and identifying "Peak Focus Hours." [V2] (Done)
+*   **Focus Narrative**: Weekly automated reports comparing performance trends and identifying "Peak Focus Hours." [V2] (Done - Basic reporting implemented)
+*   **CSV Data Export**: Allow users to export their focus logs for external analysis. [V1] (Done)
 
 ## 5. Power-User Features
 *   **Global Hotkeys**: System-wide customizable shortcuts (e.g., `Cmd+Shift+Space`) to toggle the timer from any application. [V2]

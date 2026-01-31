@@ -10,7 +10,7 @@ The app uses a **Hybrid Architecture** combining a native Swift wrapper with a R
 graph LR
     Swift[Swift Native Wrapper] <--> Bridge[WKScriptMessageHandler]
     Bridge <--> React[React Frontend]
-    Swift --> UD[UserDefaults Persistence]
+    Swift --> DB[SQLite Database]
     Swift --> NS[NSStatusItem / NSPanel]
 ```
 
@@ -20,6 +20,7 @@ graph LR
 ├── macos/Pomodoro/         # Native Swift Project (Swift Package Manager)
 │   ├── Sources/            # Native source code
 │   │   ├── Bridge.swift    # Handle messages from JS to Swift
+│   │   ├── DatabaseManager.swift # SQLite persistence layer
 │   │   ├── WindowController.swift # NSPanel & WKWebView setup
 │   │   └── StatusBarController.swift # Tray icon & right-click menu
 ├── src/                    # React Frontend
@@ -36,8 +37,10 @@ Communication between JavaScript and Swift happens through a custom bridge.
 
 ### JS to Swift (`src/services/nativeBridge.ts`)
 The `NativeBridge` object wraps `window.webkit.messageHandlers.native.postMessage`.
-- `saveState(json)`: Writes app state to native `UserDefaults`.
-- `loadState()`: Requests state from disk.
+- `saveState(json)`: Writes app state to native `UserDefaults` (settings, tasks).
+- `db_logActivity(...)`: Logs focus sessions to the native SQLite database.
+- `db_getReports()`: Requests aggregated report data from the database.
+- `db_exportCSV()`: Triggers a native file save dialog for CSV export.
 - `updateMenuBar(text)`: Changes the status item title in the macOS menu bar.
 - `playClickSound()`: Triggers native `NSSound` playback.
 

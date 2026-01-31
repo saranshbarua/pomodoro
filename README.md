@@ -44,8 +44,10 @@ To install and run the app:
 ### 📊 Integrated Analytics & Tasks
 - **Task Focused**: A slide-up "Task Shelf" to manage your session goals without distraction.
 - **Project Tagging**: Categorize your focus sessions with project-level tags to see where your time goes.
-- **Deep Insights**: Detailed bar charts, project distribution donuts, and streak tracking.
-- **Native Persistence**: Your logs and tasks are saved to the native macOS layer (`UserDefaults`), surviving updates and restarts.
+- **Deep Insights**: Detailed bar charts, project distribution lists, and streak tracking.
+- **CSV Export**: Export your focus data to CSV for external analysis.
+- **Native Persistence**: Your logs and tasks are saved to a native SQLite database, surviving updates and restarts.
+- **Automatic Logging**: Focus time is logged automatically every minute and on session completion.
 
 ---
 
@@ -103,7 +105,11 @@ Explore the technical details:
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on reporting bugs, suggesting features, and submitting PRs.
+We welcome contributions! Whether you're fixing a bug, suggesting a feature, or improving documentation, we appreciate your help. Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- **Conventional Commits**: We follow strict commit naming conventions.
+- **Development Workflow**: How to set up and run the project locally.
+- **Testing**: How to run our Vitest suite.
+- **Release Process**: How we automate builds and deployments.
 
 ## 📄 License
 

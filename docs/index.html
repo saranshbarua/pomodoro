@@ -13,13 +13,12 @@
     <nav class="navbar">
         <div class="container nav-content">
             <div class="logo">
-                <span class="logo-icon">🍅</span>
                 <span class="logo-text">Pomodoro</span>
             </div>
             <div class="nav-links">
+                <a href="#philosophy">Philosophy</a>
                 <a href="#features">Features</a>
-                <a href="#showcase">Showcase</a>
-                <a href="#faq">FAQ</a>
+                <a href="#setup">Setup</a>
                 <a href="https://github.com/saranshbarua/pomodoro/releases/latest/download/Pomodoro_macOS_Universal.zip" class="btn btn-nav">Download</a>
             </div>
         </div>
@@ -27,12 +26,20 @@
 
     <header class="hero">
         <div class="container hero-content">
-            <div class="badge fade-in">Initial Launch (Beta)</div>
-            <h1 class="fade-in">Master your focus, one Pomodoro at a time.</h1>
-            <p class="hero-subtitle fade-in">A beautiful, native macOS companion designed for deep work, project tracking, and detailed analytics.</p>
+            <div class="badge fade-in">Available for macOS</div>
+            <h1 class="fade-in">Deep work, refined.<br>Built for the Mac.</h1>
+            <p class="hero-subtitle fade-in">A premium, native macOS companion with an analogue soul. Designed for deep thinkers who value high-fidelity aesthetics and tactile focus.</p>
             <div class="hero-ctas fade-in">
-                <a href="https://github.com/saranshbarua/pomodoro/releases/latest/download/Pomodoro_macOS_Universal.zip" class="btn btn-primary">Download for macOS</a>
-                <a href="https://github.com/saranshbarua/pomodoro" class="btn btn-secondary">View Source on GitHub</a>
+                <div class="cta-group">
+                    <div class="cta-row">
+                        <a href="https://github.com/saranshbarua/pomodoro/releases/latest/download/Pomodoro_macOS_Universal.zip" class="btn btn-primary" id="main-download-btn">
+                            <span>Download for macOS</span>
+                            <svg class="btn-icon btn-icon-download" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        </a>
+                        <a href="https://github.com/saranshbarua/pomodoro" class="btn btn-secondary">View Source on GitHub</a>
+                    </div>
+                    <p class="onboarding-tip">Need help opening the app? <a href="#setup">Follow the setup guide</a>.</p>
+                </div>
             </div>
             <div class="hero-image-container fade-in">
                 <img src="./assets/banner.png" alt="Pomodoro App Banner" class="hero-image">
@@ -40,51 +47,110 @@
         </div>
     </header>
 
-    <section id="features" class="features">
+    <section id="philosophy" class="philosophy section-alt">
         <div class="container">
-            <h2 class="section-title fade-in">Built for macOS, Designed for You</h2>
-            <div class="features-grid">
-                <div class="feature-card fade-in">
-                    <div class="feature-icon">🍏</div>
-                    <h3>Native Experience</h3>
-                    <p>Mirror your timer in the menu bar and control everything with global hotkeys (⌥⇧P).</p>
-                </div>
-                <div class="feature-card fade-in">
-                    <div class="feature-icon">📊</div>
-                    <h3>Deep Analytics</h3>
-                    <p>Track focus sessions, project distributions, and streaks with beautiful, interactive charts.</p>
-                </div>
-                <div class="feature-card fade-in">
-                    <div class="feature-icon">📝</div>
-                    <h3>Task Shelf</h3>
-                    <p>Manage your to-do list without leaving the app. Assign estimated pomodoros and track progress.</p>
-                </div>
-                <div class="feature-card fade-in">
-                    <div class="feature-icon">🔐</div>
-                    <h3>Privacy First</h3>
-                    <p>Your data never leaves your Mac. We use native macOS UserDefaults for lightning-fast persistence.</p>
+            <div class="philosophy-content fade-in">
+                <h2 class="section-title">The Philosophy of Single-Tasking</h2>
+                <p class="section-subtitle">In a world of constant distraction, Pomodoro is built on the belief that true productivity comes from doing one thing exceptionally well. No clutter, no noise, just you and your work.</p>
+                <div class="philosophy-grid">
+                    <div class="philosophy-item">
+                        <h3>Native by Design</h3>
+                        <p>Built with Swift and AppKit to feel like a part of macOS, not just another app running on it.</p>
+                    </div>
+                    <div class="philosophy-item">
+                        <h3>Single-Task Focus</h3>
+                        <p>Our "Task Shelf" ensures you're always focused on exactly one goal at a time.</p>
+                    </div>
+                    <div class="philosophy-item">
+                        <h3>Privacy First</h3>
+                        <p>Your data is yours. Everything is stored locally on your device, ensuring total privacy.</p>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section id="showcase" class="showcase section-alt">
+    <section id="features" class="features">
         <div class="container">
-            <div class="showcase-content">
-                <div class="showcase-text fade-in">
-                    <h2 class="section-title">Visual Insight into Your Work</h2>
-                    <p>Categorize focus sessions with project tags and see exactly where your hours go. Our analytics dashboard gives you the data you need to optimize your productivity.</p>
+            <!-- Feature 1: Focus -->
+            <div class="feature-row fade-in">
+                <div class="feature-text">
+                    <div class="badge">The Pulse</div>
+                    <h2>Glanceable, sub-second precision.</h2>
+                    <p>Mirror your focus directly in the macOS menu bar. Our zero-drift engine ensures absolute accuracy, while the 60fps progress ring provides a smooth, analogue sweep that feels alive on your screen.</p>
                 </div>
-                <div class="showcase-image-grid fade-in">
-                    <div class="showcase-image-wrapper">
-                        <img src="./assets/task-shelf.png" alt="Task Management Shelf" class="showcase-img">
-                        <span>Task Management</span>
-                    </div>
-                    <div class="showcase-image-wrapper">
-                        <img src="./assets/analytics-report.png" alt="Analytics Dashboard" class="showcase-img">
-                        <span>Detailed Reports</span>
+                <div class="feature-visual">
+                    <img src="./assets/main-timer.png" alt="Focus Mode" class="feature-img">
+                </div>
+            </div>
+
+            <!-- Feature 2: Plan -->
+            <div class="feature-row reverse fade-in">
+                <div class="feature-text">
+                    <div class="badge">The Shelf</div>
+                    <h2>Boutique planning.</h2>
+                    <p>A slide-up drawer for managing your goals without distraction. Assign estimated sessions with a tactile stepper and track your momentum with "Pomo Dots" in a high-fidelity interface.</p>
+                </div>
+                <div class="feature-visual">
+                    <img src="./assets/task-shelf.png" alt="Task Management" class="feature-img">
+                </div>
+            </div>
+
+            <!-- Feature 3: Analyze -->
+            <div class="feature-row fade-in">
+                <div class="feature-text">
+                    <div class="badge">The Insight</div>
+                    <h2>High-fidelity reporting.</h2>
+                    <p>Visualize your productivity with elegant bar charts and project-level distributions. Gain deep insights into where your time goes with a beautifully crafted analytics dashboard.</p>
+                </div>
+                <div class="feature-visual">
+                    <img src="./assets/analytics-report-1.png" alt="Analytics Dashboard" class="feature-img">
+                </div>
+            </div>
+
+            <!-- Feature 4: Relax -->
+            <div class="feature-row reverse fade-in">
+                <div class="feature-text">
+                    <div class="badge">The Breath</div>
+                    <h2>Analogue relaxation.</h2>
+                    <p>During breaks, organic blobs shift in a 4-7-8 breathing rhythm. A subtle film grain texture and custom-recorded sounds provide a tactile, premium experience that aids deep recovery.</p>
+                </div>
+                <div class="feature-visual">
+                    <img src="./assets/analytics-report-2.png" alt="Relaxation and Details" class="feature-img">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="setup" class="setup section-alt">
+        <div class="container">
+            <h2 class="section-title fade-in">Quick Start Guide</h2>
+            <p class="section-subtitle fade-in">Experience high-fidelity focus in three simple steps.</p>
+            <div class="setup-steps fade-in">
+                <div class="setup-step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Download</h3>
+                        <p>Grab the latest Universal Binary and move it to your <strong>Applications</strong> folder.</p>
                     </div>
                 </div>
+                <div class="setup-step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Initialize</h3>
+                        <p>Because the app is ad-hoc signed, <strong>Right-Click</strong> the app and select <strong>Open</strong> for the first launch.</p>
+                    </div>
+                </div>
+                <div class="setup-step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Authorize</h3>
+                        <p>Open <strong>System Settings</strong> > <strong>Privacy & Security</strong> and click <strong>Open Anyway</strong> under the Security section.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="setup-note fade-in">
+                <p>Note: Ad-hoc signing is used for this boutique release. This process bypasses the "unidentified developer" warning safely.</p>
             </div>
         </div>
     </section>
@@ -94,16 +160,20 @@
             <h2 class="section-title fade-in">Frequently Asked Questions</h2>
             <div class="faq-grid">
                 <div class="faq-item fade-in">
-                    <h3>How do I install the app?</h3>
-                    <p>Download the ZIP from GitHub, move the .app file to your Applications folder. Since the app is currently in beta, you'll need to right-click the app and select 'Open' the first time to bypass the security dialog.</p>
+                    <h3>Is it free forever?</h3>
+                    <p>Yes. Pomodoro is a labor of love for the community. The core features will always remain free and open source for personal use.</p>
                 </div>
                 <div class="faq-item fade-in">
-                    <h3>Does it work on Apple Silicon (M1/M2/M3)?</h3>
-                    <p>Yes! We distribute a Universal Binary that runs natively on both Apple Silicon and Intel-based Macs for maximum performance.</p>
+                    <h3>Where is my data stored?</h3>
+                    <p>Your privacy is paramount. All focus logs, tasks, and project data are stored locally on your Mac in a native database. Nothing ever leaves your machine.</p>
+                </div>
+                <div class="faq-item fade-in">
+                    <h3>Can I export my data?</h3>
+                    <p>Absolutely. You can export your entire focus history to a CSV file at any time for your own analysis or backup.</p>
                 </div>
                 <div class="faq-item fade-in">
                     <h3>Is it open source?</h3>
-                    <p>Yes, the code is available on GitHub under a Non-Commercial Share-Alike license. You can learn from it, contribute, or build it yourself.</p>
+                    <p>Yes, the code is available on GitHub under a Non-Commercial Share-Alike license. You are welcome to contribute or build it yourself.</p>
                 </div>
             </div>
         </div>
@@ -113,7 +183,6 @@
         <div class="container footer-content">
             <div class="footer-info">
                 <div class="logo">
-                    <span class="logo-icon">🍅</span>
                     <span class="logo-text">Pomodoro</span>
                 </div>
                 <p>A labor of love for deep thinkers and focus enthusiasts.</p>
@@ -132,4 +201,3 @@
     <script src="script.js"></script>
 </body>
 </html>
-

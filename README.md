@@ -1,17 +1,12 @@
 # 🍅 Pomodoro for macOS
 
-![Status](https://img.shields.io/badge/status-beta-orange)
+![Status](https://img.shields.io/badge/status-stable-green)
 ![Platform](https://img.shields.io/badge/platform-macOS-lightgrey)
 ![License](https://img.shields.io/badge/license-Non--Commercial-red)
 
 A beautiful, native Pomodoro companion for macOS designed to help you stay focused and track your progress across projects.
 
 ![Pomodoro for macOS](docs/assets/banner.png)
----
-
-## 🚀 Initial Launch (Beta)
-This is the initial public release of Pomodoro for macOS. We are currently in beta, focused on delivering a rock-solid core experience for deep thinkers and developers.
-
 ---
 
 ## 💾 Download
@@ -55,7 +50,7 @@ To install and run the app:
 
 | Focus Mode | Task Shelf | Reports & Insights |
 | :---: | :---: | :---: |
-| ![Main Timer](docs/assets/main-timer.png) | ![Task Shelf](docs/assets/task-shelf.png) | ![Reports](docs/assets/analytics-report.png) |
+| ![Main Timer](docs/assets/main-timer.png) | ![Task Shelf](docs/assets/task-shelf.png) | ![Reports 1](docs/assets/analytics-report-1.png)
 
 ---
 

@@ -18,13 +18,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const fadeElements = document.querySelectorAll('.fade-in');
     fadeElements.forEach(el => observer.observe(el));
 
-    // Smooth Scroll for Nav Links
+    // Smooth Scroll for Nav Links and in-page anchors
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
+            const href = this.getAttribute('href');
+            if (href === '#') return;
             e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
+            
+            const target = document.querySelector(href);
             if (target) {
-                const headerOffset = 100;
+                const headerOffset = 80; // Match --nav-height
                 const elementPosition = target.getBoundingClientRect().top;
                 const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
 

@@ -1,6 +1,6 @@
 {
   "name": "flumen",
-  "version": "1.6.3-staging.2",
+  "version": "1.6.3-staging.3",
   "private": true,
   "main": "index.js",
   "scripts": {

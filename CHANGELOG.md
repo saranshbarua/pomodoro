@@ -1,5 +1,12 @@
 # Changelog
 
+# [2.0.0](https://github.com/saranshbarua/pomodoro/compare/v1.6.2...v2.0.0) (2026-02-05)
+
+
+### Features
+
+* Flumen Rebranding ([eacd620](https://github.com/saranshbarua/pomodoro/commit/eacd620654c0bd0282a28d9329ba3f105f611ae1))
+
 # [2.0.0-staging.4](https://github.com/saranshbarua/pomodoro/compare/v2.0.0-staging.3...v2.0.0-staging.4) (2026-02-05)
 
 

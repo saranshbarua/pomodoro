@@ -1,29 +1,30 @@
-# 🍅 Pomodoro for macOS
+# 🌊 Flumen for macOS
 
 ![Status](https://img.shields.io/badge/status-stable-green)
 ![Platform](https://img.shields.io/badge/platform-macOS-lightgrey)
 ![License](https://img.shields.io/badge/license-Non--Commercial-red)
 
-A beautiful, native Pomodoro companion for macOS designed to help you stay focused and track your progress across projects.
+A beautiful, native focus companion for macOS designed to help you find your rhythm and stay in flow.
 
-![Pomodoro for macOS](docs/assets/banner.png)
+![Flumen for macOS](docs/assets/banner.png)
+
 ---
 
 ## 💾 Download
 
-### [Download Latest Release (.zip)](https://github.com/saranshbarua/pomodoro/releases/latest/download/Pomodoro_macOS_Universal.zip)
+### [Download Latest Release (.zip)](https://github.com/saranshbarua/flumen/releases/latest/download/Flumen_macOS_Universal.zip)
 
 To install and run the app:
-1. Download the `Pomodoro_macOS_Universal.zip` from the link above.
+1. Download the `Flumen_macOS_Universal.zip` from the link above.
 2. Unzip the file to your **Applications** folder.
-3. **Right-click** `Pomodoro.app` and select **Open**.
+3. **Right-click** `Flumen.app` and select **Open**.
 4. Click **Open** again in the security dialog (this is required for the first launch as the app is currently ad-hoc signed).
 
 > [!TIP]
 > **If macOS blocks the app or asks to move it to the Bin:**
 > 1. Open **System Settings** > **Privacy & Security**.
 > 2. Scroll down to the **Security** section.
-> 3. You will see a message: *"Pomodoro.app was blocked from use because it is not from an identified developer."*
+> 3. You will see a message: *"Flumen.app was blocked from use because it is not from an identified developer."*
 > 4. Click **Open Anyway** and enter your password if prompted.
 
 ---
@@ -73,8 +74,8 @@ To install and run the app:
 ### Development Steps
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/pomodoro.git
-   cd pomodoro
+   git clone https://github.com/saranshbarua/flumen.git
+   cd flumen
    ```
 2. **Install Dependencies**:
    ```bash
@@ -84,7 +85,7 @@ To install and run the app:
    ```bash
    sh build_app.sh
    ```
-   This will generate `Pomodoro.app` and a distribution ZIP in the project root.
+   This will generate `Flumen.app` and a distribution ZIP in the project root.
 
 ---
 

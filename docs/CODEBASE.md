@@ -1,6 +1,6 @@
 # Technical Codebase Documentation
 
-This document serves as an onboarding guide for developers contributing to the Pomodoro macOS app.
+This document serves as an onboarding guide for developers contributing to the Flumen macOS app.
 
 ## 1. System Architecture
 The app uses a **Hybrid Architecture** combining a native Swift wrapper with a React + TypeScript frontend. This provides full control over native macOS behaviors (tray icons, non-activating panels) while allowing for rapid UI development with modern web tools.
@@ -51,7 +51,7 @@ Messages are sent back to React using `webView.evaluateJavaScript("window.receiv
 
 ## 4. State Management & Persistence
 The app uses **Zustand** for state, split into three focused stores:
-1. `pomodoroStore.ts`: Handles the timer, session cycles, and logic triggers.
+1. `sessionStore.ts`: Handles the timer, session cycles, and logic triggers.
 2. `taskStore.ts`: Manages the focus task list and project tags.
 3. `statsStore.ts`: Handles real-time logging and historical data aggregation.
 
@@ -73,4 +73,3 @@ The project is built using a custom `build_app.sh` script which automates:
     - **DM Sans**: Used for branding, headers, and reports.
     - **Inter**: Used for utility, timer digits (tabular), and small text.
 - **Visuals**: Styled with inline CSS objects for maximum portability and dynamic interaction (like the breath-sync blob animation).
-

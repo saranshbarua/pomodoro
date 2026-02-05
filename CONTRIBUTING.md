@@ -1,6 +1,6 @@
-# Contributing to Pomodoro
+# Contributing to Flumen
 
-First off, thank you for considering contributing to Pomodoro! It's people like you that make Pomodoro such a great tool.
+First off, thank you for considering contributing to Flumen! It's people like you that make Flumen such a great tool.
 
 ## Commit Message Convention
 

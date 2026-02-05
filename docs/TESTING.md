@@ -1,6 +1,6 @@
 # Quality Assurance Strategy & Test Cases
 
-This document outlines the testing strategy for the Pomodoro macOS app, covering functional requirements, edge cases, and native system integrations.
+This document outlines the testing strategy for the Flumen macOS app, covering functional requirements, edge cases, and native system integrations.
 
 ## 1. Core Timer Logic
 | Case ID | Feature | Description | Expected Result |
@@ -17,7 +17,7 @@ This document outlines the testing strategy for the Pomodoro macOS app, covering
 | TS-2.1 | Creation | Add a task with a project tag. | Task appears in list with the correct tag pill. |
 | TS-2.2 | Selection | Click a task in the shelf. | Task becomes 'Active' on the main screen. |
 | TS-2.3 | Scrolling | Add 15 tasks to the shelf. | List is scrollable; Header/Form remain pinned at top. |
-| TS-2.4 | Pomo Count | Set estimate to 20 pomodoros. | 20 small dots appear correctly in the task card. |
+| TS-2.4 | Session Count | Set estimate to 20 sessions. | 20 small dots appear correctly in the task card. |
 | TS-2.5 | Completion | Check a task as complete. | "Task-completed" event fires, next uncompleted task is auto-selected. |
 | TS-2.6 | Deletion | Delete the active task. | Task is removed; activeTaskId becomes null or switches to next. |
 
@@ -56,15 +56,9 @@ To run the full test suite once:
 npm test -- --run
 ```
 
-To run tests in watch mode (recommended during development):
-```bash
-npm test
-```
-
 ### Test Coverage
 - **`timerEngine.test.ts`**: Verifies accuracy of the core timestamp-based countdown.
-- **`sessionManager.test.ts`**: Validates Pomodoro cycle transitions (Focus -> Break -> Long Break).
+- **`sessionManager.test.ts`**: Validates focus cycle transitions (Focus -> Break -> Long Break).
 - **`taskStore.test.ts`**: Ensures tasks can be added, completed, and auto-selected.
 - **`statsStore.test.ts`**: Checks activity logging, streak calculation, and report data generation.
 - **`app.test.tsx`**: Integration tests for UI interactions like opening Settings and Task Shelf.
-

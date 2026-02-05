@@ -7,7 +7,7 @@
     "commitMessage": "chore: release v${version}",
     "tagName": "v${version}",
     "requireBranch": "main",
-    "add": ["package.json", "package-lock.json", "CHANGELOG.md", "macos/Pomodoro/Info.plist"]
+    "add": ["package.json", "package-lock.json", "CHANGELOG.md", "macos/Pomodoro/Info.plist", "flumen-appcast.xml"]
   },
   "hooks": {
     "after:bump": "plutil -replace CFBundleShortVersionString -string ${version} macos/Pomodoro/Info.plist && git add macos/Pomodoro/Info.plist"

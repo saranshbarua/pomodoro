@@ -16,7 +16,7 @@ class StatusBarController {
 
     private func setupButton() {
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "timer", accessibilityDescription: "Pomodoro")
+            button.image = NSImage(systemSymbolName: "timer", accessibilityDescription: "Flumen")
             button.action = #selector(handleAction(_:))
             button.target = self
             // Support both left and right clicks
@@ -56,7 +56,7 @@ class StatusBarController {
         menu.addItem(pinItem)
         
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "About Pomodoro", action: #selector(menuAbout), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "About Flumen", action: #selector(menuAbout), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Check for Updates...", action: #selector(menuUpdate), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(menuQuit), keyEquivalent: "q"))

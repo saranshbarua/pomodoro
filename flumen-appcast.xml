@@ -1,14 +1,14 @@
 <?xml version="1.0" standalone="yes"?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
     <channel>
-        <title>Flumen – Focus Timer for Mac</title>
+        <title>Flumen</title>
         <item>
             <title>2.0.0</title>
-            <pubDate>Wed, 04 Feb 2026 12:00:00 +0000</pubDate>
-            <sparkle:version>20260204.120000</sparkle:version>
+            <pubDate>Thu, 05 Feb 2026 17:12:20 +0000</pubDate>
+            <sparkle:version>20260205.171217</sparkle:version>
             <sparkle:shortVersionString>2.0.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>10.13</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/saranshbarua/flumen/releases/download/v2.0.0/Flumen_macOS_Universal.zip" length="0" type="application/octet-stream" sparkle:edSignature=""/>
+            <enclosure url="https://github.com/saranshbarua/flumen/releases/download/v2.0.0/Flumen_macOS_Universal.zip" length="7529121" type="application/octet-stream" sparkle:edSignature="8ggL3zQEWKN0k7xERQdxeP6+BaQdW/b2jTFv/YCsIyov2PdG/ctAcPHQzKnmWVGDqEC4yx6aJKEP5P+eMTd7AA=="/>
         </item>
     </channel>
 </rss>

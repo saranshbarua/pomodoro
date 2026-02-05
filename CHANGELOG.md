@@ -1,5 +1,12 @@
 # Changelog
 
+# [2.0.0-staging.2](https://github.com/saranshbarua/pomodoro/compare/v2.0.0-staging.1...v2.0.0-staging.2) (2026-02-05)
+
+
+### Bug Fixes
+
+* update release workflow to handle staging appcast filename correctly ([5df0d43](https://github.com/saranshbarua/pomodoro/commit/5df0d43fcdaceb19202264d2d924c841575c67f0))
+
 # [2.0.0-staging.1](https://github.com/saranshbarua/pomodoro/compare/v1.6.3-staging.3...v2.0.0-staging.1) (2026-02-05)
 
 ## [1.6.3-staging.3](https://github.com/saranshbarua/pomodoro/compare/v1.6.3-staging.2...v1.6.3-staging.3) (2026-02-05)

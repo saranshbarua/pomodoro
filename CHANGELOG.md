@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.3-staging.2](https://github.com/saranshbarua/pomodoro/compare/v1.6.3-staging.1...v1.6.3-staging.2) (2026-02-05)
+
+
+### Bug Fixes
+
+* dynamically resolve database path using bundle identifier ([b6e4fef](https://github.com/saranshbarua/pomodoro/commit/b6e4fef0794084954cabd0b8113ea932353b43d5))
+
 ## [1.6.3-staging.1](https://github.com/saranshbarua/pomodoro/compare/v1.6.3-staging.0...v1.6.3-staging.1) (2026-02-05)
 
 

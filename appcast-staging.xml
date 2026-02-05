@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>Pomodoro</title>
+        <item>
+            <title>1.6.3-staging.1</title>
+            <pubDate>Thu, 05 Feb 2026 03:20:39 +0000</pubDate>
+            <sparkle:version>20260205.032035</sparkle:version>
+            <sparkle:shortVersionString>1.6.3-staging.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>10.13</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/saranshbarua/pomodoro/releases/download/v1.6.3-staging.1/Pomodoro_macOS_Universal.zip" length="7530843" type="application/octet-stream" sparkle:edSignature="g5xaGMBw0zdgfPnR5SOuMmioUFZ6mJWaFy4EeERvAIAwvShHA50RTacVecc7U6OVTL70CYdR5c/DN1NlI/iXAA=="/>
+        </item>
+    </channel>
+</rss>

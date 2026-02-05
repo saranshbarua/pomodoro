@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.3-staging.1](https://github.com/saranshbarua/pomodoro/compare/v1.6.3-staging.0...v1.6.3-staging.1) (2026-02-05)
+
+
+### Bug Fixes
+
+* fix CI appcast path and add branch safety ([273353a](https://github.com/saranshbarua/pomodoro/commit/273353aacefc5b8d1014f51c5b8087f0ffa712c8))
+
 ## [1.6.3-staging.0](https://github.com/saranshbarua/pomodoro/compare/v1.6.2...v1.6.3-staging.0) (2026-02-05)
 
 ## [1.6.2](https://github.com/saranshbarua/pomodoro/compare/v1.6.1...v1.6.2) (2026-01-30)

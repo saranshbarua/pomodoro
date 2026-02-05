@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>Flumen</title>
+        <item>
+            <title>2.0.0-staging.4</title>
+            <pubDate>Thu, 05 Feb 2026 16:45:15 +0000</pubDate>
+            <sparkle:version>20260205.164511</sparkle:version>
+            <sparkle:shortVersionString>2.0.0-staging.4</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>10.13</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/saranshbarua/pomodoro/releases/download/v2.0.0-staging.4/Flumen_macOS_Universal.zip" length="7529224" type="application/octet-stream" sparkle:edSignature="LaFyXs8AIi9J6XaE3qz6nbu9ZZNyMnGUP5AU3jXy+MTJz/tkPBgJM1KaHssjBcdCGdlzvnOKCqRTfj9XZkUYCg=="/>
+        </item>
+    </channel>
+</rss>

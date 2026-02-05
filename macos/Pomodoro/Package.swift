@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "Pomodoro",
+    name: "Flumen",
     platforms: [
         .macOS(.v13)
     ],
     products: [
-        .executable(name: "Pomodoro", targets: ["Pomodoro"])
+        .executable(name: "Flumen", targets: ["Flumen"])
     ],
     dependencies: [
         .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.6.4"),
@@ -15,7 +15,7 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "Pomodoro",
+            name: "Flumen",
             dependencies: [
                 .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "GRDB", package: "GRDB.swift")

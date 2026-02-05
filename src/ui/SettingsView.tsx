@@ -264,7 +264,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
           onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
           onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
         >
-          Quit Pomodoro
+          Quit Flumen
         </button>
         <p style={{ fontSize: '0.55rem', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.08, margin: 0 }}>v{pkg.version}</p>
       </div>

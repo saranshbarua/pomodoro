@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# --- Pomodoro App Full Packaging Script ---
+# --- Flumen App Full Packaging Script ---
 # This script builds the React frontend, compiles the Swift native code,
-# and packages them into a proper Pomodoro.app bundle.
+# and packages them into a proper Flumen.app bundle.
 
 set -e
 
 # --- Configuration ---
-APP_NAME="Pomodoro"
+APP_NAME="Flumen"
 VERSION=$(grep '"version":' package.json | cut -d'"' -f4)
 APP_BUNDLE="$APP_NAME.app"
 CONTENTS_DIR="$APP_BUNDLE/Contents"
@@ -34,7 +34,7 @@ cd macos/Pomodoro
 # We force a clean build of the native code to ensure fresh architecture slices
 rm -rf .build
 swift build -c release --arch arm64 --arch x86_64
-BINARY_PATH=$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/Pomodoro
+BINARY_PATH=$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/Flumen
 cd ../../
 
 # 3. Create the .app structure
@@ -75,6 +75,19 @@ cp "macos/Pomodoro/Sources/AppIcon.icns" "$RESOURCES_DIR/"
 # This ensures CFBundleShortVersionString always matches package.json
 echo "💉 Injecting version $VERSION into Info.plist..."
 plutil -replace CFBundleShortVersionString -string "$VERSION" "$CONTENTS_DIR/Info.plist"
+
+# 5.2 Configure Staging Identity if needed
+if [[ "$VERSION" == *"-staging"* ]]; then
+  echo "🔧 Configuring staging build identifiers..."
+  # Use a distinct name for the staging app
+  APP_NAME_STAGING="Flumen Staging"
+  plutil -replace CFBundleName -string "$APP_NAME_STAGING" "$CONTENTS_DIR/Info.plist"
+  # Change the bundle ID to avoid sharing local data (SQLite/UserDefaults) with production
+  plutil -replace CFBundleIdentifier -string "com.saranshbarua.flumen.staging" "$CONTENTS_DIR/Info.plist"
+  # Point to the staging update feed
+  plutil -replace SUFeedURL -string "https://raw.githubusercontent.com/saranshbarua/flumen/staging/flumen-appcast-staging.xml" "$CONTENTS_DIR/Info.plist"
+fi
+
 # Also set a unique build number based on current timestamp
 BUILD_NUMBER=$(date +%Y%m%d.%H%M%S)
 plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$CONTENTS_DIR/Info.plist"

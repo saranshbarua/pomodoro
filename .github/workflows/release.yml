@@ -31,6 +31,20 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Set Environment Variables
+        run: |
+          if [[ "${{ github.ref_name }}" == *"-staging"* ]]; then
+            echo "IS_STAGING=true" >> $GITHUB_ENV
+            echo "TARGET_BRANCH=staging" >> $GITHUB_ENV
+            echo "APPCAST_FILE=flumen-appcast-staging.xml" >> $GITHUB_ENV
+            echo "PRERELEASE=true" >> $GITHUB_ENV
+          else
+            echo "IS_STAGING=false" >> $GITHUB_ENV
+            echo "TARGET_BRANCH=main" >> $GITHUB_ENV
+            echo "APPCAST_FILE=flumen-appcast.xml" >> $GITHUB_ENV
+            echo "PRERELEASE=false" >> $GITHUB_ENV
+          fi
+
       - name: Build App
         run: |
           chmod +x build_app.sh
@@ -49,8 +63,8 @@ jobs:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
           # 1. Verify file exists
-          if [ ! -f Pomodoro_macOS_Universal.zip ]; then
-            echo "❌ Error: Pomodoro_macOS_Universal.zip not found!"
+          if [ ! -f Flumen_macOS_Universal.zip ]; then
+            echo "❌ Error: Flumen_macOS_Universal.zip not found!"
             exit 1
           fi
 
@@ -60,10 +74,10 @@ jobs:
           
           # 3. Create workspace for appcast
           mkdir -p appcast_work
-          cp Pomodoro_macOS_Universal.zip appcast_work/
+          cp Flumen_macOS_Universal.zip appcast_work/
 
-          # 4. Generate the signed appcast.xml
-          echo "🌐 Generating signed appcast..."
+          # 4. Generate the signed appcast
+          echo "🌐 Generating signed $APPCAST_FILE..."
           # Use a trailing slash to ensure the filename is appended correctly
           REPO_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/"
           
@@ -73,11 +87,17 @@ jobs:
             appcast_work/
           
           # 5. Verify and Move
-          if [ -f appcast_work/appcast.xml ]; then
-            mv appcast_work/appcast.xml .
-            echo "✅ appcast.xml created and signed successfully."
+          # The tool generates appcast.xml by default in the work dir.
+          # We rename it to our environment-specific filename.
+          if [ -f "appcast_work/appcast.xml" ]; then
+            mv "appcast_work/appcast.xml" "./$APPCAST_FILE"
+            echo "✅ appcast.xml generated and moved to $APPCAST_FILE."
+          elif [ -f "appcast_work/$APPCAST_FILE" ]; then
+            mv "appcast_work/$APPCAST_FILE" "./$APPCAST_FILE"
+            echo "✅ $APPCAST_FILE found in work dir and moved successfully."
           else
-            echo "❌ Error: appcast.xml was not generated!"
+            echo "❌ Error: Could not find generated appcast file!"
+            ls -R appcast_work/
             rm -f sparkle_key.priv
             exit 1
           fi
@@ -90,19 +110,19 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin main:main
-          git add appcast.xml
-          git commit -m "chore: update appcast.xml [skip ci]" || echo "No changes to appcast"
-          git push origin HEAD:main
+          git fetch origin $TARGET_BRANCH:$TARGET_BRANCH
+          git add "$APPCAST_FILE"
+          git commit -m "chore: update $APPCAST_FILE [skip ci]" || echo "No changes to appcast"
+          git push origin HEAD:$TARGET_BRANCH
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            Pomodoro_macOS_Universal.zip
-            appcast.xml
+            Flumen_macOS_Universal.zip
+            ${{ env.APPCAST_FILE }}
           draft: false
-          prerelease: false
+          prerelease: ${{ env.PRERELEASE == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

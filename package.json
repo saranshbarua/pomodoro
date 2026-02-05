@@ -1,6 +1,6 @@
 {
-  "name": "pomodoro",
-  "version": "1.6.2",
+  "name": "flumen",
+  "version": "2.0.0-staging.4",
   "private": true,
   "main": "index.js",
   "scripts": {
@@ -10,12 +10,20 @@
     "test": "vitest",
     "prepare": "husky",
     "release": "release-it",
+    "release:staging": "release-it --config .release-it.staging.json --preRelease=staging",
     "commit": "cz"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "flumen",
+    "macos",
+    "focus timer",
+    "pomodoro",
+    "productivity",
+    "flow state"
+  ],
+  "author": "Saransh Barua",
   "license": "ISC",
-  "description": "",
+  "description": "Flumen is a minimalist focus timer for Mac. Glanceable, elegant, and built to keep you in flow.",
   "dependencies": {
     "@vitejs/plugin-react": "^5.1.2",
     "react": "^19.2.3",

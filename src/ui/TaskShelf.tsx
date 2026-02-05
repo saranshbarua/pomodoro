@@ -254,7 +254,7 @@ const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
                     textTransform: 'uppercase', 
                     letterSpacing: '0.1em',
                     fontFamily: theme.fonts.display
-                  }}>Est. Pomos</span>
+                  }}>Est. Sessions</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.03)', padding: '4px', borderRadius: '10px' }}>
                     <button
                       type="button"

@@ -1,13 +1,15 @@
 {
   "github": {
     "release": true,
-    "draft": true
+    "draft": true,
+    "preRelease": "staging"
   },
   "git": {
     "commitMessage": "chore: release v${version}",
     "tagName": "v${version}",
-    "requireBranch": "main",
-    "add": ["package.json", "package-lock.json", "CHANGELOG.md", "macos/Pomodoro/Info.plist", "flumen-appcast.xml"]
+    "requireBranch": "staging",
+    "push": true,
+    "add": ["package.json", "package-lock.json", "CHANGELOG.md", "macos/Pomodoro/Info.plist"]
   },
   "hooks": {
     "after:bump": "plutil -replace CFBundleShortVersionString -string ${version} macos/Pomodoro/Info.plist && git add macos/Pomodoro/Info.plist"

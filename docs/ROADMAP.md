@@ -1,6 +1,6 @@
-# Pomodoro: World-Class Product Roadmap
+# Flumen: World-Class Product Roadmap
 
-This document outlines the vision and feature set required to transform this Pomodoro timer into an award-winning macOS application focused on elite productivity and delightful user experience.
+This document outlines the vision and feature set required to transform this focus timer into an award-winning macOS application focused on elite productivity and delightful user experience.
 
 ---
 

@@ -1,6 +1,6 @@
 {
   "name": "pomodoro",
-  "version": "1.6.2",
+  "version": "1.6.3-staging.0",
   "private": true,
   "main": "index.js",
   "scripts": {

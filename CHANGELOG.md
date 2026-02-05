@@ -1,5 +1,12 @@
 # Changelog
 
+# [2.0.0-staging.4](https://github.com/saranshbarua/pomodoro/compare/v2.0.0-staging.3...v2.0.0-staging.4) (2026-02-05)
+
+
+### Bug Fixes
+
+* remove duplicate error block in release workflow ([ea19062](https://github.com/saranshbarua/pomodoro/commit/ea190625cc8aef45fbd9fe10f83ca00ef97343a7))
+
 # [2.0.0-staging.3](https://github.com/saranshbarua/pomodoro/compare/v2.0.0-staging.2...v2.0.0-staging.3) (2026-02-05)
 
 

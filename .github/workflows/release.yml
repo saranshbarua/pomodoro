@@ -36,7 +36,7 @@ jobs:
           if [[ "${{ github.ref_name }}" == *"-staging"* ]]; then
             echo "IS_STAGING=true" >> $GITHUB_ENV
             echo "TARGET_BRANCH=staging" >> $GITHUB_ENV
-            echo "APPCAST_FILE=flumen-appcast.xml" >> $GITHUB_ENV
+            echo "APPCAST_FILE=flumen-appcast-staging.xml" >> $GITHUB_ENV
             echo "PRERELEASE=true" >> $GITHUB_ENV
           else
             echo "IS_STAGING=false" >> $GITHUB_ENV
@@ -84,15 +84,18 @@ jobs:
           ./sparkle_tools/bin/generate_appcast \
             --download-url-prefix "$REPO_URL" \
             --ed-key-file sparkle_key.priv \
+            --output "$APPCAST_FILE" \
             appcast_work/
           
           # 5. Verify and Move
-          if [ -f "appcast_work/appcast.xml" ]; then
-            mv "appcast_work/appcast.xml" "./$APPCAST_FILE"
+          if [ -f "$APPCAST_FILE" ]; then
             echo "✅ $APPCAST_FILE created and signed successfully."
+          elif [ -f "appcast_work/appcast.xml" ]; then
+            mv "appcast_work/appcast.xml" "./$APPCAST_FILE"
+            echo "✅ appcast.xml found and moved to $APPCAST_FILE."
           elif [ -f "appcast_work/$APPCAST_FILE" ]; then
             mv "appcast_work/$APPCAST_FILE" "./$APPCAST_FILE"
-            echo "✅ $APPCAST_FILE found and moved successfully."
+            echo "✅ $APPCAST_FILE found in work dir and moved successfully."
           else
             echo "❌ Error: Neither appcast.xml nor $APPCAST_FILE was generated!"
             ls -R appcast_work/

@@ -10,6 +10,7 @@
     "test": "vitest",
     "prepare": "husky",
     "release": "release-it",
+    "release:staging": "release-it --config .release-it.staging.json",
     "commit": "cz"
   },
   "keywords": [],

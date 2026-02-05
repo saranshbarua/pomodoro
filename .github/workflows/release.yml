@@ -31,6 +31,20 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Set Environment Variables
+        run: |
+          if [[ "${{ github.ref_name }}" == *"-staging"* ]]; then
+            echo "IS_STAGING=true" >> $GITHUB_ENV
+            echo "TARGET_BRANCH=staging" >> $GITHUB_ENV
+            echo "APPCAST_FILE=appcast-staging.xml" >> $GITHUB_ENV
+            echo "PRERELEASE=true" >> $GITHUB_ENV
+          else
+            echo "IS_STAGING=false" >> $GITHUB_ENV
+            echo "TARGET_BRANCH=main" >> $GITHUB_ENV
+            echo "APPCAST_FILE=appcast.xml" >> $GITHUB_ENV
+            echo "PRERELEASE=false" >> $GITHUB_ENV
+          fi
+
       - name: Build App
         run: |
           chmod +x build_app.sh
@@ -62,8 +76,8 @@ jobs:
           mkdir -p appcast_work
           cp Pomodoro_macOS_Universal.zip appcast_work/
 
-          # 4. Generate the signed appcast.xml
-          echo "🌐 Generating signed appcast..."
+          # 4. Generate the signed appcast
+          echo "🌐 Generating signed $APPCAST_FILE..."
           # Use a trailing slash to ensure the filename is appended correctly
           REPO_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/"
           
@@ -73,9 +87,9 @@ jobs:
             appcast_work/
           
           # 5. Verify and Move
-          if [ -f appcast_work/appcast.xml ]; then
-            mv appcast_work/appcast.xml .
-            echo "✅ appcast.xml created and signed successfully."
+          if [ -f "appcast_work/appcast.xml" ]; then
+            mv "appcast_work/appcast.xml" "./$APPCAST_FILE"
+            echo "✅ $APPCAST_FILE created and signed successfully."
           else
             echo "❌ Error: appcast.xml was not generated!"
             rm -f sparkle_key.priv
@@ -90,10 +104,10 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin main:main
-          git add appcast.xml
-          git commit -m "chore: update appcast.xml [skip ci]" || echo "No changes to appcast"
-          git push origin HEAD:main
+          git fetch origin $TARGET_BRANCH:$TARGET_BRANCH
+          git add "$APPCAST_FILE"
+          git commit -m "chore: update $APPCAST_FILE [skip ci]" || echo "No changes to appcast"
+          git push origin HEAD:$TARGET_BRANCH
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -101,8 +115,8 @@ jobs:
         with:
           files: |
             Pomodoro_macOS_Universal.zip
-            appcast.xml
+            ${{ env.APPCAST_FILE }}
           draft: false
-          prerelease: false
+          prerelease: ${{ env.PRERELEASE == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

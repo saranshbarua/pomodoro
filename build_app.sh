@@ -75,6 +75,19 @@ cp "macos/Pomodoro/Sources/AppIcon.icns" "$RESOURCES_DIR/"
 # This ensures CFBundleShortVersionString always matches package.json
 echo "💉 Injecting version $VERSION into Info.plist..."
 plutil -replace CFBundleShortVersionString -string "$VERSION" "$CONTENTS_DIR/Info.plist"
+
+# 5.2 Configure Staging Identity if needed
+if [[ "$VERSION" == *"-staging"* ]]; then
+  echo "🔧 Configuring staging build identifiers..."
+  # Use a distinct name for the staging app
+  APP_NAME_STAGING="Pomodoro Staging"
+  plutil -replace CFBundleName -string "$APP_NAME_STAGING" "$CONTENTS_DIR/Info.plist"
+  # Change the bundle ID to avoid sharing local data (SQLite/UserDefaults) with production
+  plutil -replace CFBundleIdentifier -string "com.saranshbarua.pomodoro.staging" "$CONTENTS_DIR/Info.plist"
+  # Point to the staging update feed
+  plutil -replace SUFeedURL -string "https://raw.githubusercontent.com/saranshbarua/pomodoro/staging/appcast-staging.xml" "$CONTENTS_DIR/Info.plist"
+fi
+
 # Also set a unique build number based on current timestamp
 BUILD_NUMBER=$(date +%Y%m%d.%H%M%S)
 plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$CONTENTS_DIR/Info.plist"

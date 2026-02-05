@@ -1,0 +1,24 @@
+{
+  "github": {
+    "release": true,
+    "draft": true,
+    "preRelease": "staging"
+  },
+  "git": {
+    "commitMessage": "chore: release v${version}",
+    "tagName": "v${version}",
+    "add": ["package.json", "package-lock.json", "CHANGELOG.md", "macos/Pomodoro/Info.plist"]
+  },
+  "hooks": {
+    "after:bump": "plutil -replace CFBundleShortVersionString -string ${version} macos/Pomodoro/Info.plist && git add macos/Pomodoro/Info.plist"
+  },
+  "npm": {
+    "publish": false
+  },
+  "plugins": {
+    "@release-it/conventional-changelog": {
+      "preset": "angular",
+      "infile": "CHANGELOG.md"
+    }
+  }
+}

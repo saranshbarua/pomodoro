@@ -101,11 +101,6 @@ jobs:
             rm -f sparkle_key.priv
             exit 1
           fi
-            echo "❌ Error: Neither appcast.xml nor $APPCAST_FILE was generated!"
-            ls -R appcast_work/
-            rm -f sparkle_key.priv
-            exit 1
-          fi
 
           # 6. Cleanup
           rm -f sparkle_key.priv

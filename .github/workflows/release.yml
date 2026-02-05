@@ -90,8 +90,12 @@ jobs:
           if [ -f "appcast_work/appcast.xml" ]; then
             mv "appcast_work/appcast.xml" "./$APPCAST_FILE"
             echo "✅ $APPCAST_FILE created and signed successfully."
+          elif [ -f "appcast_work/$APPCAST_FILE" ]; then
+            mv "appcast_work/$APPCAST_FILE" "./$APPCAST_FILE"
+            echo "✅ $APPCAST_FILE found and moved successfully."
           else
-            echo "❌ Error: appcast.xml was not generated!"
+            echo "❌ Error: Neither appcast.xml nor $APPCAST_FILE was generated!"
+            ls -R appcast_work/
             rm -f sparkle_key.priv
             exit 1
           fi

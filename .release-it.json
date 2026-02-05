@@ -6,6 +6,7 @@
   "git": {
     "commitMessage": "chore: release v${version}",
     "tagName": "v${version}",
+    "requireBranch": "main",
     "add": ["package.json", "package-lock.json", "CHANGELOG.md", "macos/Pomodoro/Info.plist"]
   },
   "hooks": {

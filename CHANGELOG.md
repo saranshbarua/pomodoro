@@ -1,5 +1,7 @@
 # Changelog
 
+# [2.0.0-staging.1](https://github.com/saranshbarua/pomodoro/compare/v1.6.3-staging.3...v2.0.0-staging.1) (2026-02-05)
+
 ## [1.6.3-staging.3](https://github.com/saranshbarua/pomodoro/compare/v1.6.3-staging.2...v1.6.3-staging.3) (2026-02-05)
 
 ## [1.6.3-staging.2](https://github.com/saranshbarua/pomodoro/compare/v1.6.3-staging.1...v1.6.3-staging.2) (2026-02-05)

@@ -18,7 +18,8 @@ class DatabaseManager {
         do {
             let fileManager = FileManager.default
             let appSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-            let dbFolderURL = appSupportURL.appendingPathComponent("com.saranshbarua.pomodoro", isDirectory: true)
+            let bundleID = Bundle.main.bundleIdentifier ?? "com.saranshbarua.pomodoro"
+            let dbFolderURL = appSupportURL.appendingPathComponent(bundleID, isDirectory: true)
             
             if !fileManager.fileExists(atPath: dbFolderURL.path) {
                 try fileManager.createDirectory(at: dbFolderURL, withIntermediateDirectories: true)

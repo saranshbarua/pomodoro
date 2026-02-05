@@ -1,5 +1,12 @@
 # Changelog
 
+# [2.0.0-staging.3](https://github.com/saranshbarua/pomodoro/compare/v2.0.0-staging.2...v2.0.0-staging.3) (2026-02-05)
+
+
+### Bug Fixes
+
+* remove unsupported --output flag and handle default appcast.xml naming ([9d00e2d](https://github.com/saranshbarua/pomodoro/commit/9d00e2da8d0586196bac95d1edd1250e572c3b47))
+
 # [2.0.0-staging.2](https://github.com/saranshbarua/pomodoro/compare/v2.0.0-staging.1...v2.0.0-staging.2) (2026-02-05)
 
 

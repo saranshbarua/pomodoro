@@ -10,16 +10,21 @@ interface TaskShelfProps {
 }
 
 const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
-  const { tasks, activeTaskId, addTask, toggleTask, deleteTask, setActiveTask, updateTask } = useTaskStore();
+  const { tasks, activeTaskId, addTask, toggleTask, deleteTask, setActiveTask, updateTask, reorderTasks } = useTaskStore();
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskTag, setNewTaskTag] = useState(''); // Added tag state
   const [estimatedPomos, setEstimatedPomos] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
   const [recentlyAddedId, setRecentlyAddedId] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Sort tasks by order
+  const sortedTasks = [...tasks].sort((a, b) => a.order - b.order);
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -73,6 +78,54 @@ const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
       e.stopPropagation();
     }
     onClose();
+  };
+
+  const handleDragStart = (e: React.DragEvent, taskId: string) => {
+    setDraggedTaskId(taskId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', taskId);
+    // Add subtle opacity to dragged element
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '0.5';
+    }
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setDraggedTaskId(null);
+    setDragOverTaskId(null);
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '1';
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent, taskId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    if (draggedTaskId && draggedTaskId !== taskId) {
+      setDragOverTaskId(taskId);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverTaskId(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetTaskId: string) => {
+    e.preventDefault();
+    
+    if (!draggedTaskId || draggedTaskId === targetTaskId) {
+      setDragOverTaskId(null);
+      return;
+    }
+    
+    const newIndex = sortedTasks.findIndex(t => t.id === targetTaskId);
+    if (newIndex !== -1) {
+      reorderTasks(draggedTaskId, newIndex);
+    }
+    
+    setDraggedTaskId(null);
+    setDragOverTaskId(null);
   };
 
   const shelfStyle: React.CSSProperties = {
@@ -141,6 +194,15 @@ const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
             opacity: 1 !important;
             background: rgba(255, 255, 255, 0.1) !important;
             color: white !important;
+          }
+          .task-item:hover .drag-handle {
+            opacity: 0.6 !important;
+          }
+          .drag-handle:hover {
+            opacity: 1 !important;
+          }
+          .task-item:active {
+            cursor: grabbing !important;
           }
         `}
       </style>
@@ -341,13 +403,15 @@ const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
                 <span style={{ fontSize: '15px', fontWeight: '500', fontFamily: theme.fonts.brand, letterSpacing: '0.01em' }}>No tasks yet</span>
               </div>
             ) : (
-              tasks.map((task) => (
+              sortedTasks.map((task) => (
                 <TaskItem 
                   key={task.id} 
                   task={task} 
                   isActive={activeTaskId === task.id}
                   isNew={recentlyAddedId === task.id}
                   isEditing={editingTaskId === task.id}
+                  isDragging={draggedTaskId === task.id}
+                  isDragOver={dragOverTaskId === task.id}
                   onToggle={() => handleToggle(task.id)}
                   onDelete={() => deleteTask(task.id)}
                   onSelect={() => setActiveTask(task.id)}
@@ -357,6 +421,11 @@ const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
                     updateTask(task.id, updates);
                     setEditingTaskId(null);
                   }}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
                 />
               ))
             )}
@@ -372,12 +441,19 @@ interface TaskItemProps {
   isActive: boolean;
   isNew?: boolean;
   isEditing: boolean;
+  isDragging?: boolean;
+  isDragOver?: boolean;
   onToggle: () => void;
   onDelete: () => void;
   onSelect: () => void;
   onEdit: () => void;
   onCancelEdit: () => void;
   onSaveEdit: (updates: { title: string; estimatedPomos: number; tag?: string }) => void;
+  onDragStart: (e: React.DragEvent, taskId: string) => void;
+  onDragEnd: (e: React.DragEvent) => void;
+  onDragOver: (e: React.DragEvent, taskId: string) => void;
+  onDragLeave: () => void;
+  onDrop: (e: React.DragEvent, taskId: string) => void;
 }
 
 const TaskItem: React.FC<TaskItemProps> = ({ 
@@ -385,12 +461,19 @@ const TaskItem: React.FC<TaskItemProps> = ({
   isActive, 
   isNew, 
   isEditing, 
+  isDragging,
+  isDragOver,
   onToggle, 
   onDelete, 
   onSelect, 
   onEdit, 
   onCancelEdit, 
-  onSaveEdit 
+  onSaveEdit,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDragLeave,
+  onDrop
 }) => {
   const [editTitle, setEditTitle] = useState(task.title);
   const [editTag, setEditTag] = useState(task.tag || '');
@@ -442,6 +525,12 @@ const TaskItem: React.FC<TaskItemProps> = ({
   return (
     <div 
       className="task-item"
+      draggable={!isEditing}
+      onDragStart={(e) => onDragStart(e, task.id)}
+      onDragEnd={onDragEnd}
+      onDragOver={(e) => onDragOver(e, task.id)}
+      onDragLeave={onDragLeave}
+      onDrop={(e) => onDrop(e, task.id)}
       onClick={() => {
         if (!isEditing) {
           onSelect();
@@ -450,21 +539,26 @@ const TaskItem: React.FC<TaskItemProps> = ({
       style={{
         padding: isEditing ? '16px 20px 20px 20px' : '16px',
         borderRadius: '20px',
-        background: isEditing ? 'rgba(255, 255, 255, 0.08)' : (isActive ? 'rgba(255, 255, 255, 0.07)' : 'rgba(255, 255, 255, 0.02)'),
-        border: `1px solid ${isEditing ? theme.colors.focus.primary : (isActive ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.04)')}`,
+        background: isDragOver 
+          ? 'rgba(255, 255, 255, 0.12)' 
+          : (isEditing ? 'rgba(255, 255, 255, 0.08)' : (isActive ? 'rgba(255, 255, 255, 0.07)' : 'rgba(255, 255, 255, 0.02)')),
+        border: `1px solid ${isDragOver 
+          ? theme.colors.focus.primary 
+          : (isEditing ? theme.colors.focus.primary : (isActive ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.04)'))}`,
+        borderStyle: isDragOver ? 'dashed' : 'solid',
         boxShadow: isActive && !isEditing ? '0 4px 20px rgba(0, 0, 0, 0.4)' : 'none',
         display: 'flex',
         flexDirection: 'column',
         gap: isEditing ? '12px' : '8px',
-        cursor: 'pointer',
-        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-        opacity: task.isCompleted && !isEditing ? 0.4 : 1,
+        cursor: isEditing ? 'default' : 'grab',
+        transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+        opacity: isDragging ? 0.5 : (task.isCompleted && !isEditing ? 0.4 : 1),
         width: '100%',
         boxSizing: 'border-box',
         animation: isNew ? 'glow 1.5s ease-out' : 'none',
         flexShrink: 0,
         position: 'relative',
-        // Removed overflow: hidden to prevent clipping and layout issues
+        transform: isDragOver ? 'scale(1.02)' : 'scale(1)',
       }}
     >
       {/* Active Indicator Accent */}
@@ -483,7 +577,31 @@ const TaskItem: React.FC<TaskItemProps> = ({
         }} />
       )}
       
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', width: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', width: '100%' }}>
+        {/* Drag Handle */}
+        {!isEditing && (
+          <div 
+            className="drag-handle"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '20px',
+              height: '22px',
+              marginTop: '2px',
+              cursor: 'grab',
+              opacity: 0,
+              transition: 'opacity 0.2s ease',
+              flexShrink: 0,
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="8" x2="21" y2="8"></line>
+              <line x1="3" y1="16" x2="21" y2="16"></line>
+            </svg>
+          </div>
+        )}
+        
         <button
           onClick={(e) => {
             e.stopPropagation();

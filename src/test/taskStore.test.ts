@@ -11,6 +11,7 @@ vi.mock('../services/nativeBridge', () => ({
     db_updateTask: vi.fn(),
     db_incrementPomos: vi.fn(),
     db_upsertProject: vi.fn(),
+    db_reorderTasks: vi.fn(),
     showNotification: vi.fn(),
     updateMenuBar: vi.fn(),
     playClickSound: vi.fn(),
@@ -45,6 +46,7 @@ describe('TaskStore', () => {
     const state = useTaskStore.getState();
     expect(state.tasks).toHaveLength(1);
     expect(state.tasks[0].title).toBe('Test Task');
+    expect(state.tasks[0].order).toBe(0);
     expect(state.activeTaskId).toBe(state.tasks[0].id);
     
     // Verify native call
@@ -190,6 +192,123 @@ describe('TaskStore', () => {
       updateTask(id, { title: 'Still Active', estimatedPomos: 2 });
       
       expect(useTaskStore.getState().activeTaskId).toBe(id);
+    });
+  });
+
+  describe('reorderTasks', () => {
+    it('should reorder tasks and update order values', () => {
+      const { addTask, reorderTasks } = useTaskStore.getState();
+      
+      const id1 = addTask('Task 1', 1);
+      const id2 = addTask('Task 2', 1);
+      const id3 = addTask('Task 3', 1);
+      
+      // Verify initial order
+      let state = useTaskStore.getState();
+      expect(state.tasks.find(t => t.id === id1)?.order).toBe(0);
+      expect(state.tasks.find(t => t.id === id2)?.order).toBe(1);
+      expect(state.tasks.find(t => t.id === id3)?.order).toBe(2);
+      
+      // Move Task 3 to position 0
+      reorderTasks(id3, 0);
+      
+      state = useTaskStore.getState();
+      const sortedTasks = [...state.tasks].sort((a, b) => a.order - b.order);
+      
+      expect(sortedTasks[0].id).toBe(id3);
+      expect(sortedTasks[1].id).toBe(id1);
+      expect(sortedTasks[2].id).toBe(id2);
+      
+      expect(sortedTasks[0].order).toBe(0);
+      expect(sortedTasks[1].order).toBe(1);
+      expect(sortedTasks[2].order).toBe(2);
+      
+      expect(NativeBridge.db_reorderTasks).toHaveBeenCalledWith({
+        [id3]: 0,
+        [id1]: 1,
+        [id2]: 2
+      });
+    });
+
+    it('should handle moving task down in the list', () => {
+      const { addTask, reorderTasks } = useTaskStore.getState();
+      
+      const id1 = addTask('Task 1', 1);
+      const id2 = addTask('Task 2', 1);
+      const id3 = addTask('Task 3', 1);
+      
+      // Move Task 1 to position 2
+      reorderTasks(id1, 2);
+      
+      const state = useTaskStore.getState();
+      const sortedTasks = [...state.tasks].sort((a, b) => a.order - b.order);
+      
+      expect(sortedTasks[0].id).toBe(id2);
+      expect(sortedTasks[1].id).toBe(id3);
+      expect(sortedTasks[2].id).toBe(id1);
+    });
+
+    it('should do nothing if task is moved to same position', () => {
+      const { addTask, reorderTasks } = useTaskStore.getState();
+      
+      const id1 = addTask('Task 1', 1);
+      const id2 = addTask('Task 2', 1);
+      
+      vi.clearAllMocks();
+      
+      reorderTasks(id1, 0);
+      
+      // Should not call native bridge if no change
+      expect(NativeBridge.db_reorderTasks).not.toHaveBeenCalled();
+    });
+
+    it('should handle reordering with non-existent task ID', () => {
+      const { addTask, reorderTasks } = useTaskStore.getState();
+      
+      addTask('Task 1', 1);
+      
+      vi.clearAllMocks();
+      
+      reorderTasks('non-existent-id', 0);
+      
+      expect(NativeBridge.db_reorderTasks).not.toHaveBeenCalled();
+    });
+
+    it('should maintain sequential order after multiple reorders', () => {
+      const { addTask, reorderTasks } = useTaskStore.getState();
+      
+      const id1 = addTask('Task 1', 1);
+      const id2 = addTask('Task 2', 1);
+      const id3 = addTask('Task 3', 1);
+      const id4 = addTask('Task 4', 1);
+      
+      reorderTasks(id4, 0); // Move Task 4 to top
+      reorderTasks(id2, 2); // Move Task 2 down
+      
+      const state = useTaskStore.getState();
+      const sortedTasks = [...state.tasks].sort((a, b) => a.order - b.order);
+      
+      // Check all orders are sequential
+      sortedTasks.forEach((task, index) => {
+        expect(task.order).toBe(index);
+      });
+    });
+
+    it('should preserve task properties during reordering', () => {
+      const { addTask, reorderTasks } = useTaskStore.getState();
+      
+      const id1 = addTask('Task 1', 3, 'Work');
+      const id2 = addTask('Task 2', 5, 'Personal');
+      
+      reorderTasks(id2, 0);
+      
+      const state = useTaskStore.getState();
+      const task2 = state.tasks.find(t => t.id === id2);
+      
+      expect(task2?.title).toBe('Task 2');
+      expect(task2?.estimatedPomos).toBe(5);
+      expect(task2?.tag).toBe('Personal');
+      expect(task2?.order).toBe(0);
     });
   });
 });

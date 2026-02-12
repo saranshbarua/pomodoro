@@ -83,23 +83,17 @@ const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     setDraggedTaskId(taskId);
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', taskId);
-    // Add subtle opacity to dragged element
-    if (e.currentTarget instanceof HTMLElement) {
-      e.currentTarget.style.opacity = '0.5';
-    }
+    e.dataTransfer.setData('text/plain', taskId);
   };
 
   const handleDragEnd = (e: React.DragEvent) => {
     setDraggedTaskId(null);
     setDragOverTaskId(null);
-    if (e.currentTarget instanceof HTMLElement) {
-      e.currentTarget.style.opacity = '1';
-    }
   };
 
   const handleDragOver = (e: React.DragEvent, taskId: string) => {
     e.preventDefault();
+    e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
     
     if (draggedTaskId && draggedTaskId !== taskId) {
@@ -107,8 +101,13 @@ const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleDragLeave = () => {
-    setDragOverTaskId(null);
+  const handleDragLeave = (e: React.DragEvent, taskId: string) => {
+    // Only clear if we're actually leaving this task item (not entering a child)
+    if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget as Node)) {
+      if (dragOverTaskId === taskId) {
+        setDragOverTaskId(null);
+      }
+    }
   };
 
   const handleDrop = (e: React.DragEvent, targetTaskId: string) => {
@@ -196,13 +195,10 @@ const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
             color: white !important;
           }
           .task-item:hover .drag-handle {
-            opacity: 0.6 !important;
+            opacity: 0.7 !important;
           }
-          .drag-handle:hover {
-            opacity: 1 !important;
-          }
-          .task-item:active {
-            cursor: grabbing !important;
+          .task-item:active .drag-handle {
+            opacity: 0.9 !important;
           }
         `}
       </style>
@@ -424,7 +420,7 @@ const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
                   onDragStart={handleDragStart}
                   onDragEnd={handleDragEnd}
                   onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
+                  onDragLeave={(e) => handleDragLeave(e, task.id)}
                   onDrop={handleDrop}
                 />
               ))
@@ -452,7 +448,7 @@ interface TaskItemProps {
   onDragStart: (e: React.DragEvent, taskId: string) => void;
   onDragEnd: (e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent, taskId: string) => void;
-  onDragLeave: () => void;
+  onDragLeave: (e: React.DragEvent, taskId: string) => void;
   onDrop: (e: React.DragEvent, taskId: string) => void;
 }
 
@@ -529,7 +525,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
       onDragStart={(e) => onDragStart(e, task.id)}
       onDragEnd={onDragEnd}
       onDragOver={(e) => onDragOver(e, task.id)}
-      onDragLeave={onDragLeave}
+      onDragLeave={(e) => onDragLeave(e, task.id)}
       onDrop={(e) => onDrop(e, task.id)}
       onClick={() => {
         if (!isEditing) {
@@ -550,8 +546,8 @@ const TaskItem: React.FC<TaskItemProps> = ({
         display: 'flex',
         flexDirection: 'column',
         gap: isEditing ? '12px' : '8px',
-        cursor: isEditing ? 'default' : 'grab',
-        transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+        cursor: isEditing ? 'default' : (isDragging ? 'grabbing' : 'grab'),
+        transition: isDragging ? 'opacity 0.2s ease' : 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         opacity: isDragging ? 0.5 : (task.isCompleted && !isEditing ? 0.4 : 1),
         width: '100%',
         boxSizing: 'border-box',
@@ -577,31 +573,35 @@ const TaskItem: React.FC<TaskItemProps> = ({
         }} />
       )}
       
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', width: '100%' }}>
-        {/* Drag Handle */}
-        {!isEditing && (
-          <div 
-            className="drag-handle"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '20px',
-              height: '22px',
-              marginTop: '2px',
-              cursor: 'grab',
-              opacity: 0,
-              transition: 'opacity 0.2s ease',
-              flexShrink: 0,
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="3" y1="8" x2="21" y2="8"></line>
-              <line x1="3" y1="16" x2="21" y2="16"></line>
-            </svg>
-          </div>
-        )}
-        
+      {/* Drag Handle - Absolutely positioned to not affect layout */}
+      {!isEditing && (
+        <div 
+          className="drag-handle"
+          style={{
+            position: 'absolute',
+            left: '8px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '16px',
+            height: '24px',
+            cursor: 'grab',
+            opacity: 0,
+            transition: 'opacity 0.2s ease',
+            zIndex: 1,
+            pointerEvents: 'none',
+          }}
+        >
+          <svg width="10" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255, 255, 255, 0.5)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="8" x2="21" y2="8"></line>
+            <line x1="3" y1="16" x2="21" y2="16"></line>
+          </svg>
+        </div>
+      )}
+      
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', width: '100%' }}>
         <button
           onClick={(e) => {
             e.stopPropagation();

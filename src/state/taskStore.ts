@@ -218,6 +218,18 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   hydrate: (saved: Partial<TaskStore>) => {
     if (!saved) return;
+    
+    // Ensure all tasks have an order property (migration for existing data)
+    if (saved.tasks) {
+      const tasksWithOrder = saved.tasks.map((task, index) => {
+        if (task.order === undefined || task.order === null) {
+          return { ...task, order: index };
+        }
+        return task;
+      });
+      saved = { ...saved, tasks: tasksWithOrder };
+    }
+    
     set((state) => ({
       ...state,
       ...saved,

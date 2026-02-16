@@ -1,5 +1,12 @@
 # Changelog
 
+# [2.1.0](https://github.com/saranshbarua/flumen/compare/v2.0.0...v2.1.0) (2026-02-16)
+
+
+### Features
+
+* improve distinction between short and long breaks ([#27](https://github.com/saranshbarua/flumen/issues/27)) ([58fb414](https://github.com/saranshbarua/flumen/commit/58fb41458b827f29cbef75154dae19bd4f283138))
+
 # [2.0.0](https://github.com/saranshbarua/pomodoro/compare/v1.6.2...v2.0.0) (2026-02-05)
 
 

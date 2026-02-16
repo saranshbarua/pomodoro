@@ -4,7 +4,7 @@
 ![Platform](https://img.shields.io/badge/platform-macOS-lightgrey)
 ![License](https://img.shields.io/badge/license-Non--Commercial-red)
 
-A beautiful, native focus companion for macOS designed to help you find your rhythm and stay in flow.
+A beautiful, free focus timer for macOS. Lives in your menu bar, stores data locally, and stays out of your way. No bloat, no paywalls, no cloud.
 
 ![Flumen for macOS](docs/assets/banner.png)
 
@@ -51,7 +51,11 @@ To install and run the app:
 
 | Focus Mode | Task Shelf | Reports & Insights |
 | :---: | :---: | :---: |
-| ![Main Timer](docs/assets/main-timer.png) | ![Task Shelf](docs/assets/task-shelf.png) | ![Reports 1](docs/assets/analytics-report-1.png)
+| ![Main Timer](docs/assets/main-timer.png) | ![Task Shelf](docs/assets/task-shelf.png) | ![Reports](docs/assets/analytics-report-1.png) |
+
+| Long Break | Short Break | Settings |
+| :---: | :---: | :---: |
+| ![Long Break](docs/assets/long-break.png) | ![Short Break](docs/assets/short-break.png) | ![Settings](docs/assets/settings.png) |
 
 ---
 

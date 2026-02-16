@@ -3,8 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flumen — Focus Timer for Mac</title>
-    <meta name="description" content="Flumen is a minimalist focus engine for macOS. Glanceable, elegant, and built to keep you in flow.">
+    <title>Flumen — The Most Beautiful Focus Timer for Mac</title>
+    <meta name="description" content="A free, open-source focus timer for macOS. Beautiful menu bar timer with single-task focus, project analytics, and 100% local data. No accounts, no cloud, no tracking.">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Flumen — Focus Timer for Mac">
+    <meta property="og:description" content="A free, open-source focus timer for macOS. Beautiful menu bar timer, single-task focus, project analytics. 100% local data.">
+    <meta property="og:image" content="https://saranshbarua.github.io/flumen/assets/og-image.png">
+    <meta property="og:url" content="https://saranshbarua.github.io/flumen/">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Flumen — Focus Timer for Mac">
+    <meta name="twitter:description" content="A free, open-source focus timer for macOS. Beautiful menu bar timer, single-task focus, project analytics. 100% local data.">
+    <meta name="twitter:image" content="https://saranshbarua.github.io/flumen/assets/og-image.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="./assets/favicon.png">
+    <link rel="apple-touch-icon" href="./assets/favicon.png">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
@@ -14,32 +32,38 @@
     <nav class="navbar">
         <div class="container nav-content">
             <div class="logo">
+                <img src="./assets/favicon.png" alt="Flumen" class="logo-icon">
                 <span class="logo-text">Flumen</span>
             </div>
             <div class="nav-links">
                 <a href="#philosophy">Philosophy</a>
                 <a href="#features">Features</a>
                 <a href="#setup">Setup</a>
-                <a href="https://github.com/saranshbarua/flumen/releases/latest/download/Flumen_macOS_Universal.zip" class="btn btn-nav">Download</a>
+                <a href="https://github.com/saranshbarua/flumen/releases/latest/download/Flumen_macOS_Universal.zip" class="btn btn-nav">Download Free</a>
             </div>
         </div>
     </nav>
 
+    <!-- Mobile sticky download bar -->
+    <div class="mobile-cta-bar">
+        <a href="https://github.com/saranshbarua/flumen/releases/latest/download/Flumen_macOS_Universal.zip" class="btn btn-primary btn-mobile-download">Download Free for macOS</a>
+    </div>
+
     <header class="hero">
         <div class="container hero-content">
-            <div class="badge fade-in">Available for macOS</div>
-            <h1 class="fade-in">Deep work, refined.<br>Built for the Mac.</h1>
-            <p class="hero-subtitle fade-in">A premium, native macOS companion with an analogue soul. Designed for deep thinkers who value high-fidelity aesthetics and tactile focus.</p>
+            <div class="fade-in" style="color: var(--accent-focus); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 20px;">Free &amp; Open Source for macOS</div>
+            <h1 class="fade-in">The most beautiful focus timer<br>ever made for Mac.</h1>
+            <p class="hero-subtitle fade-in">A menu bar focus timer that's always one click away. Single-task focus, project analytics, and beautiful breaks - all stored locally on your device. No accounts. No cloud. No tracking.</p>
             <div class="hero-ctas fade-in">
                 <div class="cta-group">
                     <div class="cta-row">
                         <a href="https://github.com/saranshbarua/flumen/releases/latest/download/Flumen_macOS_Universal.zip" class="btn btn-primary" id="main-download-btn">
-                            <span>Download for macOS</span>
+                            <span>Download Free for macOS</span>
                             <svg class="btn-icon btn-icon-download" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                         </a>
                         <a href="https://github.com/saranshbarua/flumen" class="btn btn-secondary">View Source on GitHub</a>
                     </div>
-                    <p class="onboarding-tip">Need help opening the app? <a href="#setup">Follow the setup guide</a>.</p>
+                    <p class="onboarding-tip">First launch? <a href="#setup">See the quick setup guide</a>.</p>
                 </div>
             </div>
             <div class="hero-image-container fade-in">
@@ -51,20 +75,20 @@
     <section id="philosophy" class="philosophy section-alt">
         <div class="container">
             <div class="philosophy-content fade-in">
-                <h2 class="section-title">The Philosophy of Flow</h2>
+                <h2 class="section-title">The Philosophy of Flumen</h2>
                 <p class="section-subtitle">In a world of constant distraction, Flumen is built on the belief that true productivity comes from finding your rhythm and staying in flow. No clutter, no noise, just you and your work.</p>
                 <div class="philosophy-grid">
                     <div class="philosophy-item">
-                        <h3>Native by Design</h3>
-                        <p>Built with Swift and AppKit to feel like a part of macOS, not just another app running on it.</p>
+                        <h3>Always One Click Away</h3>
+                        <p>Lives in your menu bar, not in a browser tab or a separate window. Your timer is always accessible without breaking your flow.</p>
                     </div>
                     <div class="philosophy-item">
                         <h3>Single-Task Focus</h3>
                         <p>Our "Task Shelf" ensures you're always focused on exactly one goal at a time.</p>
                     </div>
                     <div class="philosophy-item">
-                        <h3>Privacy First</h3>
-                        <p>Your data is yours. Everything is stored locally on your device, ensuring total privacy.</p>
+                        <h3>Private by Architecture</h3>
+                        <p>Your focus data never leaves your Mac. No accounts, no cloud sync, no telemetry. Privacy guaranteed by design, not just by policy.</p>
                     </div>
                 </div>
             </div>
@@ -77,8 +101,8 @@
             <div class="feature-row fade-in">
                 <div class="feature-text">
                     <div class="badge">The Pulse</div>
-                    <h2>Glanceable, sub-second precision.</h2>
-                    <p>Mirror your focus directly in the macOS menu bar. Our zero-drift engine ensures absolute accuracy, while the 60fps progress ring provides a smooth, analogue sweep that feels alive on your screen.</p>
+                    <h2>Glanceable, always accessible.</h2>
+                    <p>Mirror your focus directly in the macOS menu bar. The animated progress ring provides a smooth, analogue sweep — no need to switch apps or open a browser to check your timer.</p>
                 </div>
                 <div class="feature-visual">
                     <img src="./assets/main-timer.png" alt="Focus Mode" class="feature-img">
@@ -138,20 +162,20 @@
                 <div class="setup-step">
                     <div class="step-number">2</div>
                     <div class="step-content">
-                        <h3>Initialize</h3>
-                        <p>Because the app is ad-hoc signed, <strong>Right-Click</strong> the app and select <strong>Open</strong> for the first launch.</p>
+                        <h3>First Launch</h3>
+                        <p><strong>Right-Click</strong> the app and select <strong>Open</strong>. macOS requires this one-time step for apps downloaded outside the App Store.</p>
                     </div>
                 </div>
                 <div class="setup-step">
                     <div class="step-number">3</div>
                     <div class="step-content">
-                        <h3>Authorize</h3>
-                        <p>Open <strong>System Settings</strong> > <strong>Privacy & Security</strong> and click <strong>Open Anyway</strong> under the Security section.</p>
+                        <h3>Approve</h3>
+                        <p>If prompted, open <strong>System Settings</strong> > <strong>Privacy & Security</strong> and click <strong>Open Anyway</strong>. You only need to do this once.</p>
                     </div>
                 </div>
             </div>
             <div class="setup-note fade-in">
-                <p>Note: Ad-hoc signing is used for this boutique release. This process bypasses the "unidentified developer" warning safely.</p>
+                <p>Like any direct download, macOS asks you to approve the app once. After that, it launches normally. The source code is open on GitHub if you'd like to verify or build it yourself.</p>
             </div>
         </div>
     </section>
@@ -166,7 +190,7 @@
                 </div>
                 <div class="faq-item fade-in">
                     <h3>Where is my data stored?</h3>
-                    <p>Your privacy is paramount. All focus logs, tasks, and project data are stored locally on your Mac in a native database. Nothing ever leaves your machine.</p>
+                    <p>Entirely on your Mac. Focus logs, tasks, and project data live in a local SQLite database. There are no accounts, no cloud sync, no analytics, and no telemetry. Your focus patterns are deeply personal — Flumen keeps them that way by design.</p>
                 </div>
                 <div class="faq-item fade-in">
                     <h3>Can I export my data?</h3>
@@ -180,13 +204,44 @@
         </div>
     </section>
 
+    <section class="final-cta section-alt">
+        <div class="container">
+            <div class="final-cta-content fade-in">
+                <h2 class="section-title">Ready to find your flow?</h2>
+                <p class="section-subtitle">Free, open source, and private by design. No accounts required.</p>
+                <div class="final-cta-buttons">
+                    <a href="https://github.com/saranshbarua/flumen/releases/latest/download/Flumen_macOS_Universal.zip" class="btn btn-primary">
+                        <span>Download Free for macOS</span>
+                        <svg class="btn-icon btn-icon-download" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="maker">
+        <div class="container">
+            <div class="maker-content fade-in">
+                <div class="maker-info">
+                    <h3>Built by Saransh Barua</h3>
+                    <p>I built Flumen because every Pomodoro app I tried was either bloated with features, ugly on macOS, or locked the basics behind a paywall. I wanted a timer that lives in the menu bar - not in a browser tab or a separate window -with my data stored locally, not on someone's cloud. I believe tools like this should be free and open source, especially in an era where anyone can build simple apps. So I made one I'd actually want to use, and gave it away.</p>
+                    <div class="maker-links">
+                        <a href="https://github.com/saranshbarua" class="maker-link">GitHub</a>
+                        <a href="https://x.com/_saranshbarua" class="maker-link">Twitter/X</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <footer class="footer">
         <div class="container footer-content">
             <div class="footer-info">
                 <div class="logo">
+                    <img src="./assets/favicon.png" alt="Flumen" class="logo-icon">
                     <span class="logo-text">Flumen</span>
                 </div>
-                <p>A labor of love for deep thinkers and focus enthusiasts.</p>
+                <p>A focus timer with an analogue soul.</p>
             </div>
             <div class="footer-links">
                 <a href="https://github.com/saranshbarua/flumen">GitHub</a>
@@ -195,9 +250,48 @@
             </div>
         </div>
         <div class="container footer-bottom">
-            <p>&copy; 2025 Saransh Barua. All rights reserved.</p>
+            <p>&copy; 2026 Saransh Barua. All rights reserved.</p>
         </div>
     </footer>
+
+    <!-- Download modal -->
+    <div id="download-modal" class="modal" aria-hidden="true">
+        <div class="modal-backdrop" data-close-modal></div>
+        <div class="modal-content">
+            <button type="button" class="modal-close" data-close-modal aria-label="Close">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <h3 class="modal-title">Thanks for trying Flumen</h3>
+            <p class="modal-thanks">I built this as a solo developer because I couldn't find a focus timer I actually wanted to use. Here's how to get it running.</p>
+            <div class="modal-timeline">
+                <div class="modal-step">
+                    <div class="modal-step-marker">1</div>
+                    <div class="modal-step-body">
+                        <h4>Move to Applications</h4>
+                        <p>Unzip the download and drag <strong>Flumen.app</strong> into your Applications folder.</p>
+                    </div>
+                </div>
+                <div class="modal-step">
+                    <div class="modal-step-marker">2</div>
+                    <div class="modal-step-body">
+                        <h4>Right-click to Open</h4>
+                        <p>Since it's not from the App Store, <strong>right-click</strong> the app and select <strong>Open</strong>. You only need to do this once.</p>
+                    </div>
+                </div>
+                <div class="modal-step">
+                    <div class="modal-step-marker">3</div>
+                    <div class="modal-step-body">
+                        <h4>Approve if prompted</h4>
+                        <p>If macOS asks again, go to <strong>System Settings</strong> → <strong>Privacy & Security</strong> and click <strong>Open Anyway</strong>.</p>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="btn btn-primary modal-download-btn" id="modal-download-btn">
+                <span>Download Flumen</span>
+                <svg class="btn-icon btn-icon-download" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </button>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>

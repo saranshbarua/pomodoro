@@ -6,7 +6,7 @@ A premium, award-winning focus timer built for macOS, focusing on deep work, hig
 - **Focus Cycles**: Built-in logic for Focus (25m), Short Break (5m), and Long Break (15m).
 - **Session Transitions**: Automatic advancement through focus cycles (default: 4 sessions before a long break).
 - **Accurate Timekeeping**: Uses a timestamp-based engine to prevent drift, ensuring sub-second accuracy even if the app is backgrounded.
-- **Smooth Animation**: The circular progress ring updates at 60fps using `requestAnimationFrame`, mimicking a sweep-second hand.
+- **Smooth Animation**: The circular progress ring updates smoothly using `requestAnimationFrame`, mimicking a sweep-second hand.
 - **Layout Shift Prevention**: Uses the Inter typeface with native `tabular-nums` support to ensure timer digits never flicker or shift horizontally.
 
 ## 2. Task Management (Single-Task Focus)

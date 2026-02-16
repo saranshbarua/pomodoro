@@ -521,16 +521,23 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center',
-        gap: '6px', 
-        opacity: 0.3,
-        paddingBottom: '16px', 
-        flexShrink: 0,
-        zIndex: 1,
-        pointerEvents: 'none'
-      }}>
+      <div 
+        style={{ 
+          display: 'flex', 
+          justifyContent: 'center',
+          gap: '6px', 
+          opacity: 0.3,
+          paddingBottom: '16px', 
+          flexShrink: 0,
+          zIndex: 1,
+          cursor: 'default',
+        }}
+        title={
+          sessionType === 'longBreak'
+            ? `Long break – ${config.sessionsUntilLongBreak} focus sessions until next long break`
+            : `${focusInCycleCount} of ${config.sessionsUntilLongBreak} focus sessions completed before long break`
+        }
+      >
         {Array.from({ length: config.sessionsUntilLongBreak }).map((_, i) => (
           <div 
             key={i}

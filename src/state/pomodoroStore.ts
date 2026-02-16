@@ -303,7 +303,7 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     NativeBridge.endTimerActivity();
 
     // Trigger engaging notification
-    const title = currentType === 'focus' ? "Focus Session Complete" : "Break Over";
+    const title = currentType === 'focus' ? "Focus Session Complete" : currentType === 'shortBreak' ? "Short Break Over" : "Long Break Over";
     const body = getRandomMessage(currentType as keyof typeof MESSAGES);
     NativeBridge.showNotification(title, body);
     

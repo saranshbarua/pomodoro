@@ -212,6 +212,42 @@ h1, h2, h3 {
     opacity: 0.9;
 }
 
+/* Product Hunt Badge - Floating corner */
+.ph-badge {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 100;
+    opacity: 0.9;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.ph-badge:hover {
+    opacity: 1;
+    transform: translateY(-2px);
+}
+
+.ph-badge a {
+    display: block;
+}
+
+.ph-badge img {
+    height: 40px;
+    width: auto;
+    display: block;
+}
+
+@media (max-width: 600px) {
+    .ph-badge {
+        bottom: 12px;
+        right: 12px;
+    }
+
+    .ph-badge img {
+        height: 36px;
+    }
+}
+
 .btn {
     padding: 12px 24px;
     border-radius: 12px;
@@ -247,6 +283,9 @@ h1, h2, h3 {
 }
 
 .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     background-color: transparent;
     color: var(--text-secondary);
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -374,9 +413,6 @@ section {
 
 .feature-img {
     width: 100%;
-    border-radius: 24px;
-    border: 1px solid var(--surface-border);
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
 }
 
 /* Removed hover effect on feature images */
@@ -501,11 +537,18 @@ section {
 }
 
 .maker-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     color: var(--accent-focus);
     text-decoration: none;
     font-weight: 600;
     font-size: 14px;
     transition: opacity 0.2s;
+}
+
+.maker-link svg {
+    flex-shrink: 0;
 }
 
 .maker-link:hover {

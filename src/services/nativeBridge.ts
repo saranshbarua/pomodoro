@@ -95,6 +95,10 @@ export const NativeBridge = {
     this.postMessage('db_upsertProject', { name, id, color });
   },
 
+  db_reorderTasks(orderMap: Record<string, number>) {
+    this.postMessage('db_reorderTasks', { orderMap });
+  },
+
   db_exportCSV() {
     this.postMessage('db_exportCSV');
   },

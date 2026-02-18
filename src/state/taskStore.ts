@@ -11,6 +11,7 @@ export interface Task {
   isCompleted: boolean; // Computed from status === 1
   status: number; // 0: Active, 1: Completed, 2: Archived
   createdAt: number;
+  order: number; // Display order
 }
 
 export interface Project {
@@ -32,6 +33,7 @@ interface TaskStore {
   setActiveTask: (id: string | null) => void;
   incrementCompletedPomos: (id: string) => void;
   autoSelectNextTask: () => void;
+  reorderTasks: (taskId: string, newIndex: number) => void;
   
   // Persistence
   hydrate: (saved: Partial<TaskStore>) => void;
@@ -44,6 +46,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   addTask: (title: string, estimatedPomos: number = 1, tag?: string) => {
     const id = crypto.randomUUID();
+    const { tasks } = get();
+    const maxOrder = tasks.length > 0 ? Math.max(...tasks.map(t => t.order)) : -1;
+    
     const newTask: Task = {
       id,
       title,
@@ -53,6 +58,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       isCompleted: false,
       status: 0,
       createdAt: Date.now(),
+      order: maxOrder + 1,
     };
     
     // Expert Fix: Ensure project exists if tag is provided
@@ -181,8 +187,49 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     }
   },
 
+  reorderTasks: (taskId: string, newIndex: number) => {
+    const { tasks } = get();
+    const sortedTasks = [...tasks].sort((a, b) => a.order - b.order);
+    const taskIndex = sortedTasks.findIndex(t => t.id === taskId);
+    
+    if (taskIndex === -1 || taskIndex === newIndex) return;
+    
+    // Remove task from current position
+    const [movedTask] = sortedTasks.splice(taskIndex, 1);
+    // Insert at new position
+    sortedTasks.splice(newIndex, 0, movedTask);
+    
+    // Update order values for all tasks
+    const updatedTasks = sortedTasks.map((task, index) => ({
+      ...task,
+      order: index
+    }));
+    
+    // Notify native bridge
+    const orderMap = updatedTasks.reduce((acc, task) => {
+      acc[task.id] = task.order;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    NativeBridge.db_reorderTasks(orderMap);
+    
+    set({ tasks: updatedTasks });
+  },
+
   hydrate: (saved: Partial<TaskStore>) => {
     if (!saved) return;
+    
+    // Ensure all tasks have an order property (migration for existing data)
+    if (saved.tasks) {
+      const tasksWithOrder = saved.tasks.map((task, index) => {
+        if (task.order === undefined || task.order === null) {
+          return { ...task, order: index };
+        }
+        return task;
+      });
+      saved = { ...saved, tasks: tasksWithOrder };
+    }
+    
     set((state) => ({
       ...state,
       ...saved,

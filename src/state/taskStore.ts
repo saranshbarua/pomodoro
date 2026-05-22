@@ -28,6 +28,7 @@ interface TaskStore {
   addTask: (title: string, estimatedPomos: number, tag?: string) => string;
   toggleTask: (id: string) => void;
   deleteTask: (id: string) => void;
+  clearCompletedTasks: () => void;
   updateTask: (id: string, updates: { title: string; estimatedPomos: number; tag?: string }) => void;
   setActiveTask: (id: string | null) => void;
   incrementCompletedPomos: (id: string) => void;
@@ -122,6 +123,29 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       tasks: state.tasks.filter((t) => t.id !== id),
       activeTaskId: state.activeTaskId === id ? null : state.activeTaskId,
     }));
+  },
+
+  clearCompletedTasks: () => {
+    const { tasks } = get();
+    const hasCompleted = tasks.some((t) => t.status === 1);
+    if (!hasCompleted) return;
+
+    NativeBridge.db_clearCompletedTasks();
+
+    set((state) => {
+      const remainingTasks = state.tasks.filter((t) => t.status !== 1);
+      let nextActiveId = state.activeTaskId;
+
+      if (state.activeTaskId && !remainingTasks.some((t) => t.id === state.activeTaskId)) {
+        const nextTask = remainingTasks.find((t) => t.status === 0);
+        nextActiveId = nextTask ? nextTask.id : null;
+      }
+
+      return {
+        tasks: remainingTasks,
+        activeTaskId: nextActiveId,
+      };
+    });
   },
 
   updateTask: (id: string, updates: { title: string; estimatedPomos: number; tag?: string }) => {

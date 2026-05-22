@@ -71,6 +71,10 @@ export const NativeBridge = {
     this.postMessage('db_deleteTask', { id });
   },
 
+  db_clearCompletedTasks() {
+    this.postMessage('db_clearCompletedTasks');
+  },
+
   db_updateTask(id: string, title: string, estimatedPomos: number, tag?: string, projectId?: string) {
     this.postMessage('db_updateTask', { id, title, estimatedPomos, tag, projectId });
   },

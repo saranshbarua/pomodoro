@@ -119,6 +119,10 @@ class Bridge: NSObject, WKScriptMessageHandler {
             windowController?.forceHide()
         case "quitApp":
             NSApplication.shared.terminate(nil)
+        case "checkForUpdates":
+            if let appDelegate = NSApp.delegate as? AppDelegate {
+                appDelegate.updaterController?.checkForUpdates(nil)
+            }
             
         // --- Pin Window Actions ---
         case "setPinned":

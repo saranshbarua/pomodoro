@@ -125,6 +125,13 @@ export const NativeBridge = {
   },
 
   /**
+   * Triggers the Sparkle check-for-updates flow (same as the menu bar item).
+   */
+  checkForUpdates() {
+    this.postMessage('checkForUpdates');
+  },
+
+  /**
    * Sets the window pinned state.
    * When pinned, the window stays visible even when clicking outside.
    */

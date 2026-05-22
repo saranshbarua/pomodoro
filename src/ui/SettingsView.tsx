@@ -247,29 +247,101 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
         </div>
       </div>
 
-      <div style={{ marginTop: '12px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '4px', flexShrink: 0 }}>
-        <button 
+      <div style={settingsFooterStyle}>
+        <button
+          type="button"
           onClick={() => NativeBridge.quitApp()}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: theme.colors.focus.primary,
-            fontSize: '0.75rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            opacity: 0.6,
-            transition: 'opacity 0.2s ease',
-            padding: '4px',
+          style={quitButtonStyle}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 95, 87, 0.12)';
+            e.currentTarget.style.borderColor = 'rgba(255, 95, 87, 0.35)';
           }}
-          onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-          onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 95, 87, 0.06)';
+            e.currentTarget.style.borderColor = 'rgba(255, 95, 87, 0.22)';
+          }}
         >
           Quit Flumen
         </button>
-        <p style={{ fontSize: '0.55rem', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.08, margin: 0 }}>v{pkg.version}</p>
+        <div style={settingsFooterMetaRowStyle}>
+          <button
+            type="button"
+            onClick={() => NativeBridge.checkForUpdates()}
+            style={footerMetaLinkStyle}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '1';
+              e.currentTarget.style.color = theme.colors.text.secondary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '0.55';
+              e.currentTarget.style.color = theme.colors.text.muted;
+            }}
+          >
+            Check for Updates
+          </button>
+          <span style={settingsFooterMetaSeparatorStyle} aria-hidden="true">•</span>
+          <span style={settingsVersionStyle}>v{pkg.version}</span>
+        </div>
       </div>
     </div>
   );
+};
+
+const settingsFooterStyle: React.CSSProperties = {
+  marginTop: '12px',
+  textAlign: 'center',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '4px',
+  flexShrink: 0,
+};
+
+const quitButtonStyle: React.CSSProperties = {
+  alignSelf: 'center',
+  backgroundColor: 'rgba(255, 95, 87, 0.06)',
+  border: '1px solid rgba(255, 95, 87, 0.22)',
+  borderRadius: '10px',
+  color: theme.colors.focus.primary,
+  fontSize: '0.75rem',
+  fontWeight: '600',
+  cursor: 'pointer',
+  padding: '6px 14px',
+  transition: 'background-color 0.2s ease, border-color 0.2s ease',
+};
+
+const settingsFooterMetaRowStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '6px',
+};
+
+const footerMetaLinkStyle: React.CSSProperties = {
+  background: 'none',
+  border: 'none',
+  fontSize: '0.75rem',
+  fontWeight: '600',
+  cursor: 'pointer',
+  padding: '4px',
+  transition: 'opacity 0.2s ease, color 0.2s ease',
+  color: theme.colors.text.muted,
+  opacity: 0.55,
+};
+
+const settingsFooterMetaSeparatorStyle: React.CSSProperties = {
+  fontSize: '0.65rem',
+  color: theme.colors.text.muted,
+  opacity: 0.35,
+  lineHeight: 1,
+};
+
+const settingsVersionStyle: React.CSSProperties = {
+  fontSize: '0.75rem',
+  fontWeight: '600',
+  color: theme.colors.text.muted,
+  opacity: 0.55,
+  margin: 0,
+  padding: '4px 0',
 };
 
 const miniAdjustButtonStyle: React.CSSProperties = {

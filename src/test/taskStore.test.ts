@@ -8,6 +8,7 @@ vi.mock('../services/nativeBridge', () => ({
     db_addTask: vi.fn(),
     db_updateTaskStatus: vi.fn(),
     db_deleteTask: vi.fn(),
+    db_clearCompletedTasks: vi.fn(),
     db_updateTask: vi.fn(),
     db_incrementPomos: vi.fn(),
     db_upsertProject: vi.fn(),
@@ -85,6 +86,52 @@ describe('TaskStore', () => {
     
     expect(useTaskStore.getState().tasks).toHaveLength(0);
     expect(NativeBridge.db_deleteTask).toHaveBeenCalledWith(taskId);
+  });
+
+  it('should clear all completed tasks and call native bridge', () => {
+    const { addTask, toggleTask, clearCompletedTasks } = useTaskStore.getState();
+
+    addTask('Active', 1);
+    addTask('Done 1', 1);
+    addTask('Done 2', 1);
+    const [activeId, done1Id, done2Id] = useTaskStore.getState().tasks.map((t) => t.id);
+
+    toggleTask(done1Id);
+    toggleTask(done2Id);
+
+    clearCompletedTasks();
+
+    const state = useTaskStore.getState();
+    expect(state.tasks).toHaveLength(1);
+    expect(state.tasks[0].id).toBe(activeId);
+    expect(state.tasks[0].status).toBe(0);
+    expect(state.activeTaskId).toBe(activeId);
+    expect(NativeBridge.db_clearCompletedTasks).toHaveBeenCalledTimes(1);
+  });
+
+  it('should auto-select next active task when clearing completed active task', () => {
+    const { addTask, toggleTask, clearCompletedTasks } = useTaskStore.getState();
+
+    addTask('Next', 1);
+    addTask('Done active', 1);
+    const [nextId, doneActiveId] = useTaskStore.getState().tasks.map((t) => t.id);
+
+    toggleTask(doneActiveId);
+    clearCompletedTasks();
+
+    const state = useTaskStore.getState();
+    expect(state.tasks).toHaveLength(1);
+    expect(state.activeTaskId).toBe(nextId);
+  });
+
+  it('should do nothing when clearing with no completed tasks', () => {
+    const { addTask, clearCompletedTasks } = useTaskStore.getState();
+
+    addTask('Active only', 1);
+    clearCompletedTasks();
+
+    expect(useTaskStore.getState().tasks).toHaveLength(1);
+    expect(NativeBridge.db_clearCompletedTasks).not.toHaveBeenCalled();
   });
 
   it('should auto-select next task on completion', () => {

@@ -10,7 +10,8 @@ interface TaskShelfProps {
 }
 
 const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
-  const { tasks, activeTaskId, addTask, toggleTask, deleteTask, setActiveTask, updateTask } = useTaskStore();
+  const { tasks, activeTaskId, addTask, toggleTask, deleteTask, clearCompletedTasks, setActiveTask, updateTask } = useTaskStore();
+  const completedCount = tasks.filter((t) => t.isCompleted).length;
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskTag, setNewTaskTag] = useState(''); // Added tag state
   const [estimatedPomos, setEstimatedPomos] = useState(1);
@@ -73,6 +74,14 @@ const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
       e.stopPropagation();
     }
     onClose();
+  };
+
+  const handleClearCompleted = () => {
+    if (editingTaskId && tasks.find((t) => t.id === editingTaskId)?.isCompleted) {
+      setEditingTaskId(null);
+    }
+    NativeBridge.playClickSound();
+    clearCompletedTasks();
   };
 
   const shelfStyle: React.CSSProperties = {
@@ -312,6 +321,27 @@ const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
               </div>
             </div>
           </form>
+
+          {completedCount > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px', flexShrink: 0 }}>
+              <button
+                type="button"
+                onClick={handleClearCompleted}
+                aria-label={`Clear ${completedCount} completed ${completedCount === 1 ? 'task' : 'tasks'}`}
+                style={clearDoneButtonStyle}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.85)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.4)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                }}
+              >
+                Clear done
+              </button>
+            </div>
+          )}
 
           {/* List Section - Scrollable */}
           <div 
@@ -820,6 +850,21 @@ const TaskItem: React.FC<TaskItemProps> = ({
       )}
     </div>
   );
+};
+
+const clearDoneButtonStyle: React.CSSProperties = {
+  background: 'rgba(255, 255, 255, 0.04)',
+  border: '1px solid rgba(255, 255, 255, 0.06)',
+  borderRadius: '8px',
+  height: '26px',
+  padding: '0 10px',
+  fontSize: '11px',
+  fontWeight: '600',
+  color: 'rgba(255, 255, 255, 0.4)',
+  cursor: 'pointer',
+  fontFamily: theme.fonts.brand,
+  letterSpacing: '-0.01em',
+  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
 };
 
 const stepperButtonStyle: React.CSSProperties = {

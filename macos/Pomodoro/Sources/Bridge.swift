@@ -71,6 +71,8 @@ class Bridge: NSObject, WKScriptMessageHandler {
             if let id = body["id"] as? String {
                 deleteTask(id: id)
             }
+        case "db_clearCompletedTasks":
+            clearCompletedTasks()
         case "db_updateTask":
             if let id = body["id"] as? String,
                let title = body["title"] as? String,
@@ -282,6 +284,16 @@ class Bridge: NSObject, WKScriptMessageHandler {
             }
         } catch {
             print("Bridge: db_deleteTask failed: \(error)")
+        }
+    }
+
+    private func clearCompletedTasks() {
+        do {
+            try DatabaseManager.shared.dbPool.write { db in
+                try db.execute(sql: "UPDATE tasks SET status = 2 WHERE status = 1")
+            }
+        } catch {
+            print("Bridge: db_clearCompletedTasks failed: \(error)")
         }
     }
     

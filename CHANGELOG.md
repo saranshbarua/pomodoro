@@ -1,5 +1,13 @@
 # Changelog
 
+# [2.2.0](https://github.com/saranshbarua/flumen/compare/v2.1.0...v2.2.0) (2026-05-22)
+
+
+### Features
+
+* **settings:** add check for updates in footer ([#33](https://github.com/saranshbarua/flumen/issues/33)) ([e0e61be](https://github.com/saranshbarua/flumen/commit/e0e61be54c714f4a33512ef8167f80182ebfe5a4))
+* **tasks:** add Clear done button to remove completed tasks at once ([#31](https://github.com/saranshbarua/flumen/issues/31)) ([19f2220](https://github.com/saranshbarua/flumen/commit/19f2220fc30a7a16d2003366b17183af0914b8e9))
+
 # [2.1.0](https://github.com/saranshbarua/flumen/compare/v2.0.0...v2.1.0) (2026-02-16)
 
 

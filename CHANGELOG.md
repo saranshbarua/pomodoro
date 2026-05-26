@@ -1,5 +1,12 @@
 # Changelog
 
+# [2.3.0](https://github.com/saranshbarua/flumen/compare/v2.2.0...v2.3.0) (2026-05-26)
+
+
+### Features
+
+* **pinned-window:** implement drag functionality for pinned windows ([#35](https://github.com/saranshbarua/flumen/issues/35)) ([73812fe](https://github.com/saranshbarua/flumen/commit/73812fe331e755a1b4c997028b74d7c6c7d07435)), closes [#34](https://github.com/saranshbarua/flumen/issues/34)
+
 # [2.2.0](https://github.com/saranshbarua/flumen/compare/v2.1.0...v2.2.0) (2026-05-22)
 
 

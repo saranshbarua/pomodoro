@@ -9,6 +9,17 @@ class PomodoroPanel: NSPanel {
         return true
     }
     
+    /// When pinned, key the panel before dispatching clicks so WebView controls work on first click.
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .leftMouseDown,
+           let wc = windowController as? WindowController,
+           wc.isPinned,
+           (!isKeyWindow || !NSApp.isActive) {
+            wc.activatePanelForPinnedInteraction()
+        }
+        super.sendEvent(event)
+    }
+    
     // Explicitly handle standard edit shortcuts to ensure they work in the WKWebView
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if event.modifierFlags.contains(.command) {
@@ -36,16 +47,78 @@ class PomodoroPanel: NSPanel {
     }
 }
 
+/// Invisible hit target for pinned-window dragging via `performDrag` (no Accessibility permission required).
+private final class PinnedDragHandleView: NSView {
+    weak var windowController: WindowController?
+    private let handleWidth: CGFloat = 112
+    private let handleHeight: CGFloat = 32
+    private var showTooltipTimer: Timer?
+    private let tooltipShowDelay: TimeInterval = 0.7
+    
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        true
+    }
+    
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        for area in trackingAreas {
+            removeTrackingArea(area)
+        }
+        let options: NSTrackingArea.Options = [.mouseEnteredAndExited, .activeAlways, .inVisibleRect]
+        addTrackingArea(NSTrackingArea(rect: bounds, options: options, owner: self, userInfo: nil))
+    }
+    
+    override func resetCursorRects() {
+        discardCursorRects()
+        addCursorRect(bounds, cursor: .openHand)
+    }
+    
+    override func mouseEntered(with event: NSEvent) {
+        showTooltipTimer?.invalidate()
+        showTooltipTimer = Timer.scheduledTimer(withTimeInterval: tooltipShowDelay, repeats: false) { [weak self] _ in
+            self?.windowController?.showDragHandleTooltip()
+        }
+    }
+    
+    override func mouseExited(with event: NSEvent) {
+        showTooltipTimer?.invalidate()
+        showTooltipTimer = nil
+        windowController?.hideDragHandleTooltip()
+    }
+    
+    override func mouseDown(with event: NSEvent) {
+        showTooltipTimer?.invalidate()
+        showTooltipTimer = nil
+        windowController?.hideDragHandleTooltip()
+        guard let window = window else { return }
+        windowController?.activatePanelForPinnedInteraction()
+        window.performDrag(with: event)
+        windowController?.notePinnedWindowDragCompleted()
+    }
+    
+    func layout(in contentBounds: NSRect) {
+        let x = (contentBounds.width - handleWidth) / 2
+        let y = contentBounds.height - handleHeight - 12
+        frame = NSRect(x: x, y: y, width: handleWidth, height: handleHeight)
+    }
+}
+
 class WindowController: NSWindowController {
     var panel: NSPanel!
     var webView: WKWebView!
     var bridge: Bridge!
     weak var statusBarController: StatusBarController?
     private var eventMonitor: Any?
+    private var pinnedDragHandleView: PinnedDragHandleView?
+    /// True after the user drags the pinned window this session; cleared on unpin or relaunch.
+    private var sessionPinnedPositionActive = false
     
     /// Pin state - when true, the window stays visible even when clicking outside
     private(set) var isPinned: Bool = false {
         didSet {
+            if !isPinned {
+                sessionPinnedPositionActive = false
+            }
             updatePinnedState()
         }
     }
@@ -80,8 +153,9 @@ class WindowController: NSWindowController {
         panel.level = .statusBar
         panel.hidesOnDeactivate = false
         
-        // Apply initial collection behavior based on pinned state
+        // Apply initial collection behavior and activation policy from pinned state
         updatePanelCollectionBehavior()
+        updatePanelActivationBehavior()
         
         // Native border radius enforcement
         if let contentView = panel.contentView {
@@ -108,9 +182,22 @@ class WindowController: NSWindowController {
         }
     }
     
+    private func updatePanelActivationBehavior() {
+        if isPinned {
+            // Pinned = floating utility: accept first click on controls without extra activation step
+            panel.styleMask.remove(.nonactivatingPanel)
+            panel.becomesKeyOnlyIfNeeded = false
+        } else {
+            // Unpinned = menu bar popover: avoid stealing focus from the frontmost app
+            panel.styleMask.insert(.nonactivatingPanel)
+            panel.becomesKeyOnlyIfNeeded = true
+        }
+    }
+    
     private func updatePinnedState() {
         // Update panel behavior
         updatePanelCollectionBehavior()
+        updatePanelActivationBehavior()
         
         // Persist the state
         UserDefaults.standard.set(isPinned, forKey: "windowPinned")
@@ -125,6 +212,8 @@ class WindowController: NSWindowController {
         
         // Notify JS about the state change
         bridge?.sendToJS(action: "pinnedStateChanged", data: ["isPinned": isPinned])
+        
+        updatePinnedDragHandle()
         
         print("WindowController: Pinned state changed to \(isPinned)")
     }
@@ -157,6 +246,7 @@ class WindowController: NSWindowController {
         webView.autoresizingMask = [.width, .height]
         
         panel.contentView?.addSubview(webView)
+        updatePinnedDragHandle()
         
         // Improved Dev Mode detection:
         // 1. Check if we're running in Xcode (no bundle identifier)
@@ -188,8 +278,10 @@ class WindowController: NSWindowController {
 
     func show(relativeTo rect: NSRect) {
         panel.alphaValue = 1.0
-        // Only reposition if not pinned (pinned windows keep their position)
-        if !isPinned || !panel.isVisible {
+        let shouldAnchorToMenuBar = !isPinned
+            || !panel.isVisible
+            || (isPinned && !sessionPinnedPositionActive)
+        if shouldAnchorToMenuBar {
             let x = rect.origin.x + (rect.width / 2) - (panel.frame.width / 2)
             let y = rect.origin.y - panel.frame.height - 5
             panel.setFrameOrigin(NSPoint(x: x, y: y))
@@ -197,6 +289,7 @@ class WindowController: NSWindowController {
         
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        updatePinnedDragHandle()
         
         // Only start monitoring if not pinned
         if !isPinned {
@@ -290,6 +383,52 @@ class WindowController: NSWindowController {
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
             eventMonitor = nil
+        }
+    }
+    
+    // MARK: - Pinned interaction
+    
+    func activatePanelForPinnedInteraction() {
+        guard isPinned, panel.isVisible, panel.alphaValue > 0 else { return }
+        panel.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+    
+    // MARK: - Pinned window drag
+    
+    /// Called from Bridge when JS requests drag; native handle uses `performDrag` directly.
+    func beginPinnedDrag() {
+        // Drag is handled by PinnedDragHandleView.mouseDown — kept for bridge compatibility.
+    }
+    
+    func notePinnedWindowDragCompleted() {
+        sessionPinnedPositionActive = true
+    }
+    
+    func showDragHandleTooltip() {
+        guard isPinned else { return }
+        // Position is resolved in JS from the drag-grip element (AppKit→CSS Y flip is unreliable in WKWebView).
+        bridge?.sendToJS(action: "dragHandleTooltip", data: ["show": true])
+    }
+    
+    func hideDragHandleTooltip() {
+        bridge?.sendToJS(action: "dragHandleTooltip", data: ["show": false])
+    }
+    
+    private func updatePinnedDragHandle() {
+        guard let contentView = panel.contentView, webView != nil else { return }
+        
+        if isPinned {
+            if pinnedDragHandleView == nil {
+                let handle = PinnedDragHandleView()
+                handle.windowController = self
+                contentView.addSubview(handle, positioned: .above, relativeTo: webView)
+                pinnedDragHandleView = handle
+            }
+            pinnedDragHandleView?.layout(in: contentView.bounds)
+            pinnedDragHandleView?.isHidden = false
+        } else {
+            pinnedDragHandleView?.isHidden = true
         }
     }
 }

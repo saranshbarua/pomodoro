@@ -154,6 +154,13 @@ export const NativeBridge = {
   },
 
   /**
+   * Begins dragging the pinned window (native global mouse tracking).
+   */
+  beginWindowDrag() {
+    this.postMessage('beginWindowDrag');
+  },
+
+  /**
    * Tells the native app to start an activity to prevent App Nap.
    */
   startTimerActivity() {

@@ -39,9 +39,9 @@ const Controls: React.FC<ControlsProps> = () => {
       <button 
         onClick={() => handleAction(reset)}
         style={secondaryButtonStyle}
-        title="Reset Timer"
+        aria-label="Reset timer"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={iconStrokeWidth} strokeLinecap="round" strokeLinejoin="round">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={iconStrokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
           <path d="M3 3v5h5" />
         </svg>
@@ -51,14 +51,15 @@ const Controls: React.FC<ControlsProps> = () => {
       <button 
         onClick={() => handleAction(isRunning ? pause : start, !isRunning)} 
         style={mainPillButtonStyle}
+        aria-label={isRunning ? 'Pause timer' : 'Start timer'}
       >
         {isRunning ? (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={iconStrokeWidth + 0.5} strokeLinecap="round" strokeLinejoin="round">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={iconStrokeWidth + 0.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <rect x="6" y="4" width="4" height="16" />
             <rect x="14" y="4" width="4" height="16" />
           </svg>
         ) : (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={iconStrokeWidth + 0.5} strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'translateX(1px)' }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={iconStrokeWidth + 0.5} strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'translateX(1px)' }} aria-hidden>
             <polygon points="5 3 19 12 5 21 5 3" />
           </svg>
         )}
@@ -68,9 +69,9 @@ const Controls: React.FC<ControlsProps> = () => {
       <button 
         onClick={() => handleAction(skip)}
         style={secondaryButtonStyle}
-        title="Skip Session"
+        aria-label="Skip session"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={iconStrokeWidth} strokeLinecap="round" strokeLinejoin="round">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={iconStrokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M5 4l10 8L5 20V4z" />
           <line x1="19" y1="5" x2="19" y2="19" />
         </svg>

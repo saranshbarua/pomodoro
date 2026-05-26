@@ -304,6 +304,7 @@ const quitButtonStyle: React.CSSProperties = {
   color: theme.colors.focus.primary,
   fontSize: '0.75rem',
   fontWeight: '600',
+  width: '100%',
   cursor: 'pointer',
   padding: '6px 14px',
   transition: 'background-color 0.2s ease, border-color 0.2s ease',

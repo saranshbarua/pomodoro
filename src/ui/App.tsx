@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { usePomodoroStore } from '../state/pomodoroStore';
 import { useTaskStore } from '../state/taskStore';
 import { initPersistence } from '../services/persistence';
@@ -8,6 +8,7 @@ import Controls from './Controls';
 import SettingsView from './SettingsView';
 import ReportsView from './ReportsView';
 import TaskShelf from './TaskShelf';
+import Tooltip, { FloatingTooltip } from './Tooltip';
 import { theme } from './theme';
 
 const BlobBackground: React.FC<{ color: string; isBreak: boolean }> = ({ color, isBreak }) => {
@@ -108,6 +109,8 @@ const App: React.FC = () => {
   const [showTasks, setShowTasks] = useState(false);
   const [isCelebrating, setIsCelebrating] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
+  const [dragHandleTooltip, setDragHandleTooltip] = useState<{ x: number; y: number } | null>(null);
+  const dragGripRef = useRef<HTMLDivElement>(null);
 
   const handleCloseTasks = () => {
     setShowTasks(false);
@@ -132,11 +135,34 @@ const App: React.FC = () => {
     const handlePinnedStateChanged = (event: any) => {
       const { isPinned: pinned } = event.detail;
       setIsPinned(pinned);
+      if (!pinned) setDragHandleTooltip(null);
     };
 
     window.addEventListener('native:pinnedStateChanged' as any, handlePinnedStateChanged);
     return () => {
       window.removeEventListener('native:pinnedStateChanged' as any, handlePinnedStateChanged);
+    };
+  }, []);
+
+  // Drag-handle tooltip (native overlay blocks React hover; position from grip DOM rect)
+  useEffect(() => {
+    const handleDragHandleTooltip = (event: CustomEvent<{ show: boolean }>) => {
+      if (!event.detail.show) {
+        setDragHandleTooltip(null);
+        return;
+      }
+      const grip = dragGripRef.current;
+      if (!grip) return;
+      const rect = grip.getBoundingClientRect();
+      setDragHandleTooltip({
+        x: rect.left + rect.width / 2,
+        y: rect.bottom,
+      });
+    };
+
+    window.addEventListener('native:dragHandleTooltip' as any, handleDragHandleTooltip);
+    return () => {
+      window.removeEventListener('native:dragHandleTooltip' as any, handleDragHandleTooltip);
     };
   }, []);
 
@@ -172,6 +198,7 @@ const App: React.FC = () => {
       setShowSettings(false);
       setShowReports(false);
       setShowTasks(false);
+      setDragHandleTooltip(null);
     };
 
     window.addEventListener('native:menuAction' as any, handleMenuAction);
@@ -297,69 +324,105 @@ const App: React.FC = () => {
         isBreak={sessionType !== 'focus'} 
       />
 
-      {/* Top Navigation */}
-      <button 
-        onClick={() => setShowReports(true)}
-        style={reportsButtonStyle}
-        title="Reports"
-        onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-        onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.3')}
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
-        </svg>
-      </button>
-
-      {/* Pin Button */}
-      <button 
-        onClick={handleTogglePin}
-        style={{
-          ...pinButtonStyle,
-          opacity: isPinned ? 1 : 0.3,
-          background: isPinned ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.05)',
-        }}
-        title={isPinned ? "Unpin from screen (⇧⌘P)" : "Pin to screen (⇧⌘P)"}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.opacity = '1';
-          e.currentTarget.style.transform = 'scale(1.05)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.opacity = isPinned ? '1' : '0.3';
-          e.currentTarget.style.transform = 'scale(1)';
-        }}
-      >
-        <svg 
-          width="16" 
-          height="16" 
-          viewBox="0 0 24 24" 
-          fill={isPinned ? "currentColor" : "none"}
-          stroke="currentColor" 
-          strokeWidth="2" 
-          strokeLinecap="round" 
-          strokeLinejoin="round"
+      {isPinned && (
+        <div
+          ref={dragGripRef}
+          role="presentation"
+          aria-hidden
           style={{
-            transform: isPinned ? 'rotate(45deg)' : 'rotate(0deg)',
-            transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            position: 'absolute',
+            top: '18px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 5,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            pointerEvents: 'none',
           }}
         >
-          <line x1="12" y1="17" x2="12" y2="22"/>
-          <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/>
-        </svg>
-      </button>
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              style={{
+                width: '3px',
+                height: '3px',
+                borderRadius: '50%',
+                backgroundColor: theme.colors.text.secondary,
+                opacity: 0.45,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Top Navigation */}
+      <Tooltip label="Reports" placement="bottom" wrapperStyle={reportsButtonAnchorStyle}>
+        <button 
+          onClick={() => setShowReports(true)}
+          style={iconButtonStyle}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.3')}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+        </button>
+      </Tooltip>
+
+      {/* Pin Button */}
+      <Tooltip label={isPinned ? 'Unpin from screen (⇧⌘P)' : 'Pin to screen (⇧⌘P)'} placement="bottom" wrapperStyle={pinButtonAnchorStyle}>
+        <button 
+          onClick={handleTogglePin}
+          style={{
+            ...iconButtonStyle,
+            opacity: isPinned ? 1 : 0.3,
+            background: isPinned ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.05)',
+            transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = '1';
+            e.currentTarget.style.transform = 'scale(1.05)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = isPinned ? '1' : '0.3';
+            e.currentTarget.style.transform = 'scale(1)';
+          }}
+        >
+          <svg 
+            width="16" 
+            height="16" 
+            viewBox="0 0 24 24" 
+            fill={isPinned ? "currentColor" : "none"}
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+            style={{
+              transform: isPinned ? 'rotate(45deg)' : 'rotate(0deg)',
+              transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            }}
+          >
+            <line x1="12" y1="17" x2="12" y2="22"/>
+            <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/>
+          </svg>
+        </button>
+      </Tooltip>
 
       {/* Settings Button */}
-      <button 
-        onClick={() => setShowSettings(true)}
-        style={settingsButtonStyle}
-        title="Settings"
-        onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-        onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.4')}
-      >
-        <svg width="18" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="3" />
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-        </svg>
-      </button>
+      <Tooltip label="Settings" placement="bottom" wrapperStyle={settingsButtonAnchorStyle}>
+        <button 
+          onClick={() => setShowSettings(true)}
+          style={iconButtonStyle}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.4')}
+        >
+          <svg width="18" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </button>
+      </Tooltip>
 
       <main style={{ 
         flex: 1, 
@@ -436,9 +499,10 @@ const App: React.FC = () => {
                   <line x1="8" y1="12" x2="16" y2="12"></line>
                 </svg>
               )}
-              <span 
-                title={activeTask?.title || ''}
-                style={{ 
+              {activeTask?.title ? (
+                <Tooltip label={activeTask.title} maxWidth={280}>
+                  <span 
+                    style={{ 
                   fontSize: '14px', 
                   fontWeight: '500', 
                   color: activeTask ? 'white' : 'rgba(255, 255, 255, 0.4)',
@@ -453,14 +517,37 @@ const App: React.FC = () => {
                   minWidth: '50px',
                   lineHeight: '1.4',
                   fontFamily: theme.fonts.brand
-                }}
-              >
-                {activeTask ? activeTask.title : 'What are you working on?'}
-              </span>
-              {activeTask?.tag && (
+                    }}
+                  >
+                    {activeTask.title}
+                  </span>
+                </Tooltip>
+              ) : (
                 <span 
-                  title={activeTask.tag}
                   style={{ 
+                    fontSize: '14px', 
+                    fontWeight: '500', 
+                    color: 'rgba(255, 255, 255, 0.4)',
+                    textAlign: 'center',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    letterSpacing: '0.01em',
+                    flexShrink: 1,
+                    minWidth: '50px',
+                    lineHeight: '1.4',
+                    fontFamily: theme.fonts.brand
+                  }}
+                >
+                  What are you working on?
+                </span>
+              )}
+              {activeTask?.tag && (
+                <Tooltip label={activeTask.tag}>
+                  <span 
+                    style={{ 
                     fontSize: '9px', 
                     fontWeight: '800', 
                     color: theme.colors.focus.primary,
@@ -477,9 +564,10 @@ const App: React.FC = () => {
                     lineHeight: '1.4',
                     marginTop: '1px'
                   }}
-                >
-                  {activeTask.tag}
-                </span>
+                  >
+                    {activeTask.tag}
+                  </span>
+                </Tooltip>
               )}
             </div>
           {activeTask && (
@@ -521,23 +609,27 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      <div 
-        style={{ 
-          display: 'flex', 
-          justifyContent: 'center',
-          gap: '6px', 
-          opacity: 0.3,
-          paddingBottom: '16px', 
-          flexShrink: 0,
-          zIndex: 1,
-          cursor: 'default',
-        }}
-        title={
+      <Tooltip
+        label={
           sessionType === 'longBreak'
             ? `Long break – ${config.sessionsUntilLongBreak} focus sessions until next long break`
             : `${focusInCycleCount} of ${config.sessionsUntilLongBreak} focus sessions completed before long break`
         }
+        multiline
+        maxWidth={260}
+        placement="top"
+        wrapperStyle={{ display: 'flex', justifyContent: 'center', width: '100%', flexShrink: 0 }}
       >
+        <div 
+          style={{ 
+            display: 'flex', 
+            justifyContent: 'center',
+            gap: '6px', 
+            opacity: 0.3,
+            paddingBottom: '16px', 
+            cursor: 'default',
+          }}
+        >
         {Array.from({ length: config.sessionsUntilLongBreak }).map((_, i) => (
           <div 
             key={i}
@@ -552,70 +644,59 @@ const App: React.FC = () => {
             }}
           />
         ))}
-      </div>
+        </div>
+      </Tooltip>
 
       <TaskShelf isOpen={showTasks} onClose={handleCloseTasks} />
       {showSettings && <SettingsView onClose={() => setShowSettings(false)} />}
       {showReports && <ReportsView onClose={() => setShowReports(false)} />}
+      {dragHandleTooltip && (
+        <FloatingTooltip
+          label="Drag to move window"
+          x={dragHandleTooltip.x}
+          y={dragHandleTooltip.y}
+          placement="bottom"
+        />
+      )}
     </div>
   );
 };
 
-const reportsButtonStyle: React.CSSProperties = {
+const iconButtonStyle: React.CSSProperties = {
+  width: '32px',
+  height: '32px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: '50%',
+  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  color: 'white',
+  opacity: 0.3,
+  cursor: 'pointer',
+  transition: 'all 0.2s ease-out',
+  border: 'none',
+  padding: 0,
+};
+
+const reportsButtonAnchorStyle: React.CSSProperties = {
   position: 'absolute',
   top: '24px',
   left: '24px',
   zIndex: 10,
-  width: '32px',
-  height: '32px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  borderRadius: '50%',
-  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  color: 'white',
-  opacity: 0.3,
-  cursor: 'pointer',
-  transition: 'all 0.2s ease-out',
-  border: 'none',
 };
 
-const pinButtonStyle: React.CSSProperties = {
+const pinButtonAnchorStyle: React.CSSProperties = {
   position: 'absolute',
   top: '24px',
   right: '64px',
   zIndex: 10,
-  width: '32px',
-  height: '32px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  borderRadius: '50%',
-  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  color: 'white',
-  opacity: 0.3,
-  cursor: 'pointer',
-  transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
-  border: 'none',
 };
 
-const settingsButtonStyle: React.CSSProperties = {
+const settingsButtonAnchorStyle: React.CSSProperties = {
   position: 'absolute',
   top: '24px',
   right: '24px',
   zIndex: 10,
-  width: '32px',
-  height: '32px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  borderRadius: '50%',
-  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  color: 'white',
-  opacity: 0.3,
-  cursor: 'pointer',
-  transition: 'all 0.2s ease-out',
-  border: 'none',
 };
 
 export default App;

@@ -134,6 +134,8 @@ class Bridge: NSObject, WKScriptMessageHandler {
         case "getPinnedState":
             let isPinned = windowController?.isPinned ?? false
             sendToJS(action: "pinnedStateChanged", data: ["isPinned": isPinned])
+        case "beginWindowDrag":
+            windowController?.beginPinnedDrag()
         case "playClickSound":
             print("Bridge: Playing click sound...")
             if let soundUrl = Bundle.main.url(forResource: "click", withExtension: "mp3") {

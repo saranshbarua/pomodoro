@@ -371,7 +371,7 @@ class Bridge: NSObject, WKScriptMessageHandler {
                     SELECT DATE(timestamp, '+' || timezone_offset || ' minutes') as date, 
                            SUM(duration_seconds) / 3600.0 as hours
                     FROM session_logs
-                    WHERE timestamp >= DATETIME('now', '-7 days')
+                    WHERE timestamp >= DATETIME('now', '-60 days')
                     GROUP BY date
                     ORDER BY date ASC
                     """)

@@ -82,9 +82,12 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
   const stats = useStatsStore();
   const [exportStatus, setExportStatus] = useState<'idle' | 'exporting' | 'success'>('idle');
   const [isProjectExpanded, setIsProjectExpanded] = useState(false);
+  const [isEarlierTasksExpanded, setIsEarlierTasksExpanded] = useState(false);
   const [projectFilter, setProjectFilter] = useState<'all' | 'tagged'>('all');
   const [activityRange, setActivityRange] = useState<FocusActivityRange>(7);
 
+  const EARLIER_TASKS_PREVIEW_COUNT = 5;
+  
   useEffect(() => {
     fetchReports();
   }, [fetchReports]);
@@ -610,8 +613,16 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
             </thead>
             <tbody>
               {taskData.length > 0 ? (
-                Object.entries(groupedTasks).map(([groupName, tasks]) => (
-                  tasks.length > 0 && (
+                Object.entries(groupedTasks).map(([groupName, tasks]) => {
+                  const isEarlierGroup = groupName === 'Earlier';
+                  const visibleTasks = isEarlierGroup && !isEarlierTasksExpanded
+                    ? tasks.slice(0, EARLIER_TASKS_PREVIEW_COUNT)
+                    : tasks;
+                  const hiddenEarlierCount = isEarlierGroup
+                    ? Math.max(tasks.length - EARLIER_TASKS_PREVIEW_COUNT, 0)
+                    : 0;
+
+                  return tasks.length > 0 && (
                     <React.Fragment key={groupName}>
                       <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
                         <td colSpan={3} style={{ 
@@ -625,7 +636,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
                           {groupName}
                         </td>
                       </tr>
-                      {tasks.map((task, i) => {
+                      {visibleTasks.map((task, i) => {
                         const estimatedSeconds = task.estimatedPomos * task.avgSnapshotDuration;
                         const varianceSeconds = task.duration - estimatedSeconds;
                         
@@ -709,9 +720,48 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
                           </tr>
                         );
                       })}
+                      {isEarlierGroup && hiddenEarlierCount > 0 && (
+                        <tr>
+                          <td colSpan={3} style={{ padding: '4px 16px 12px' }}>
+                            <button
+                              onClick={() => setIsEarlierTasksExpanded(!isEarlierTasksExpanded)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: theme.colors.focus.primary,
+                                fontSize: '11px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                padding: '4px 0 0 0',
+                                textAlign: 'left',
+                                fontFamily: theme.fonts.brand,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                opacity: 0.8,
+                                transition: 'opacity 0.2s ease'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                              onMouseLeave={(e) => e.currentTarget.style.opacity = '0.8'}
+                            >
+                              {isEarlierTasksExpanded ? (
+                                <>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                                  Show Less
+                                </>
+                              ) : (
+                                <>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                  Show {hiddenEarlierCount} More Tasks
+                                </>
+                              )}
+                            </button>
+                          </td>
+                        </tr>
+                      )}
                     </React.Fragment>
-                  )
-                ))
+                  );
+                })
               ) : (
                   <tr>
                     <td colSpan={3} style={{ ...tdStyle, textAlign: 'center', color: theme.colors.text.muted, padding: '24px' }}>

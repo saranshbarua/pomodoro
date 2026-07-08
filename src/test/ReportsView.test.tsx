@@ -388,5 +388,75 @@ describe('ReportsView and Helpers', () => {
       const timeElements = screen.getAllByText('0m');
       expect(timeElements.length).toBeGreaterThan(0);
     });
+
+    it('should collapse Earlier tasks by default and expand on show more', () => {
+      const { hydrateReports } = useStatsStore.getState();
+      const earlierDate = new Date();
+      earlierDate.setDate(earlierDate.getDate() - 10);
+      const dateStr = earlierDate.toISOString().split('T')[0];
+
+      const taskBreakdown = Array.from({ length: 6 }, (_, i) => ({
+        title: `Older Task ${i + 1}`,
+        tag: 'Test Project',
+        duration: 1800,
+        estimatedPomos: 1,
+        avgSnapshotDuration: 1500,
+        date: dateStr,
+      }));
+
+      hydrateReports({
+        dailyStats: [],
+        projectDistribution: [],
+        totalFocusTime: 10800,
+        totalSessions: 6,
+        taskBreakdown,
+        streak: 1
+      });
+
+      render(<ReportsView onClose={() => {}} />);
+
+      expect(screen.getByText('Earlier')).toBeDefined();
+      expect(screen.getByText('Older Task 1')).toBeDefined();
+      expect(screen.getByText('Older Task 5')).toBeDefined();
+      expect(screen.queryByText('Older Task 6')).toBeNull();
+      expect(screen.getByText('Show 1 More Tasks')).toBeDefined();
+
+      fireEvent.click(screen.getByText('Show 1 More Tasks'));
+
+      expect(screen.getByText('Older Task 6')).toBeDefined();
+      expect(screen.getByText('Show Less')).toBeDefined();
+    });
+
+    it('should show all Earlier tasks when there are five or fewer', () => {
+      const { hydrateReports } = useStatsStore.getState();
+      const earlierDate = new Date();
+      earlierDate.setDate(earlierDate.getDate() - 10);
+      const dateStr = earlierDate.toISOString().split('T')[0];
+
+      const taskBreakdown = Array.from({ length: 3 }, (_, i) => ({
+        title: `Older Task ${i + 1}`,
+        tag: 'Test Project',
+        duration: 1800,
+        estimatedPomos: 1,
+        avgSnapshotDuration: 1500,
+        date: dateStr,
+      }));
+
+      hydrateReports({
+        dailyStats: [],
+        projectDistribution: [],
+        totalFocusTime: 5400,
+        totalSessions: 3,
+        taskBreakdown,
+        streak: 1
+      });
+
+      render(<ReportsView onClose={() => {}} />);
+
+      expect(screen.getByText('Older Task 1')).toBeDefined();
+      expect(screen.getByText('Older Task 2')).toBeDefined();
+      expect(screen.getByText('Older Task 3')).toBeDefined();
+      expect(screen.queryByText(/Show \d+ More Tasks/)).toBeNull();
+    });
   });
 });

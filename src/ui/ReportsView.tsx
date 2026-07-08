@@ -49,6 +49,16 @@ export const formatActivityDate = (
   });
 };
 
+// Compact two-line label (weekday initial + day number) used for the 7-day
+// view, where every bar gets its own tick and horizontal space is tight.
+export const getAxisTickParts = (dateStr: string) => {
+  const date = parseActivityDate(dateStr);
+  return {
+    weekday: date.toLocaleDateString(undefined, { weekday: 'narrow' }),
+    day: date.getDate().toString(),
+  };
+};
+
 export const buildFocusActivityChartData = (
   dailyStats: { date: string; hours: number }[],
   rangeDays: FocusActivityRange
@@ -60,7 +70,7 @@ export const buildFocusActivityChartData = (
   const start = new Date(end);
   start.setDate(start.getDate() - (rangeDays - 1));
 
-  const result: { date: string; hours: number; dateLabel: string }[] = [];
+  const result: { date: string; hours: number }[] = [];
   const current = new Date(start);
   while (current <= end) {
     const year = current.getFullYear();
@@ -70,12 +80,59 @@ export const buildFocusActivityChartData = (
     result.push({
       date: dateKey,
       hours: hoursByDate.get(dateKey) ?? 0,
-      dateLabel: formatActivityDate(dateKey, rangeDays <= 7 ? 'axis' : 'axisCompact'),
     });
     current.setDate(current.getDate() + 1);
   }
   return result;
 };
+
+// Two-line tick for the 7-day view: weekday initial on top, day number
+// beneath. Guaranteed to fit under a narrow bar regardless of container
+// width, since a single character line can never collide with its neighbor.
+const WeekdayAxisTick: React.FC<any> = ({ x, y, payload }) => {
+  const { weekday, day } = getAxisTickParts(payload.value);
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        textAnchor="middle"
+        y={11}
+        fill="rgba(255, 255, 255, 0.3)"
+        fontSize={9}
+        fontWeight={700}
+        fontFamily={theme.fonts.display}
+      >
+        {weekday}
+      </text>
+      <text
+        textAnchor="middle"
+        y={24}
+        fill="rgba(255, 255, 255, 0.55)"
+        fontSize={10}
+        fontWeight={700}
+        fontFamily={theme.fonts.display}
+      >
+        {day}
+      </text>
+    </g>
+  );
+};
+
+// Single-line compact tick for 30/60-day views, where only a sparse subset
+// of ticks render (see `interval` below), so "Jul 2" always has room.
+const CompactAxisTick: React.FC<any> = ({ x, y, payload }) => (
+  <g transform={`translate(${x},${y})`}>
+    <text
+      textAnchor="middle"
+      y={13}
+      fill="rgba(255, 255, 255, 0.35)"
+      fontSize={9}
+      fontWeight={600}
+      fontFamily={theme.fonts.display}
+    >
+      {formatActivityDate(payload.value, 'axisCompact')}
+    </text>
+  </g>
+);
 
 const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
   const fetchReports = useStatsStore(state => state.fetchReports);
@@ -345,7 +402,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
             </div>
           </div>
           <div style={{ 
-            height: '160px', 
+            height: '172px', 
             width: '100%', 
             background: 'rgba(255,255,255,0.02)', 
             borderRadius: '20px', 
@@ -356,12 +413,12 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dailyData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                 <XAxis
-                  dataKey="dateLabel"
+                  dataKey="date"
                   axisLine={false}
                   tickLine={false}
                   interval={activityRange === 7 ? 0 : activityRange === 30 ? 4 : 9}
-                  tick={{ fill: 'rgba(255, 255, 255, 0.35)', fontSize: 9, fontFamily: theme.fonts.display }}
-                  dy={4}
+                  height={activityRange === 7 ? 34 : 22}
+                  tick={activityRange === 7 ? <WeekdayAxisTick /> : <CompactAxisTick />}
                 />
                 <Tooltip
                   contentStyle={{ background: '#141414', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', fontSize: '12px', fontFamily: theme.fonts.display }}

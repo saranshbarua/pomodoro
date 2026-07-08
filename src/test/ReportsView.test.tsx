@@ -88,7 +88,7 @@ describe('ReportsView and Helpers', () => {
       expect(data).toHaveLength(7);
       expect(data[data.length - 1].hours).toBe(2);
       expect(data[data.length - 2].hours).toBe(0);
-      expect(data.every((d) => d.dateLabel.length > 0)).toBe(true);
+      expect(data.every((d) => d.date.length > 0)).toBe(true);
     });
   });
 

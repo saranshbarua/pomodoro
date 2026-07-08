@@ -26,6 +26,57 @@ export const formatDuration = (seconds: number) => {
   return `${(seconds / 3600).toFixed(2)}h`;
 };
 
+export type FocusActivityRange = 7 | 30 | 60;
+
+const parseActivityDate = (dateStr: string) => new Date(`${dateStr}T12:00:00`);
+
+export const formatActivityDate = (
+  dateStr: string,
+  style: 'tooltip' | 'axis' | 'axisCompact' = 'tooltip'
+) => {
+  const date = parseActivityDate(dateStr);
+  if (style === 'axisCompact') {
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+  if (style === 'axis') {
+    return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  return date.toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
+export const buildFocusActivityChartData = (
+  dailyStats: { date: string; hours: number }[],
+  rangeDays: FocusActivityRange
+) => {
+  const hoursByDate = new Map(dailyStats.map((d) => [d.date, d.hours]));
+  const end = new Date();
+  end.setHours(0, 0, 0, 0);
+
+  const start = new Date(end);
+  start.setDate(start.getDate() - (rangeDays - 1));
+
+  const result: { date: string; hours: number; dateLabel: string }[] = [];
+  const current = new Date(start);
+  while (current <= end) {
+    const year = current.getFullYear();
+    const month = String(current.getMonth() + 1).padStart(2, '0');
+    const day = String(current.getDate()).padStart(2, '0');
+    const dateKey = `${year}-${month}-${day}`;
+    result.push({
+      date: dateKey,
+      hours: hoursByDate.get(dateKey) ?? 0,
+      dateLabel: formatActivityDate(dateKey, rangeDays <= 7 ? 'axis' : 'axisCompact'),
+    });
+    current.setDate(current.getDate() + 1);
+  }
+  return result;
+};
+
 const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
   const fetchReports = useStatsStore(state => state.fetchReports);
   const stats = useStatsStore();
@@ -33,6 +84,8 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
   const [isProjectExpanded, setIsProjectExpanded] = useState(false);
   const [isEarlierTasksExpanded, setIsEarlierTasksExpanded] = useState(false);
   const [projectFilter, setProjectFilter] = useState<'all' | 'tagged'>('all');
+  const [activityRange, setActivityRange] = useState<FocusActivityRange>(7);
+
   const EARLIER_TASKS_PREVIEW_COUNT = 5;
   
   useEffect(() => {
@@ -67,7 +120,12 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
     }, 60000);
   };
 
-  const dailyData = selectDailyFocusStats(stats);
+  const dailyStats = selectDailyFocusStats(stats);
+  const dailyData = React.useMemo(
+    () => buildFocusActivityChartData(dailyStats, activityRange),
+    [dailyStats, activityRange]
+  );
+  const activityBarSize = activityRange === 7 ? 20 : activityRange === 30 ? 8 : 4;
   const projectDataRaw = selectProjectDistribution(stats);
   
   const taskData = selectTaskBreakdown(stats);
@@ -253,30 +311,74 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
 
         {/* Focus Hours Chart */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', flexShrink: 0 }}>
-          <h4 style={sectionHeaderStyle}>Focus Activity</h4>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px' }}>
+            <h4 style={sectionHeaderStyle}>Focus Activity</h4>
+            <div style={{
+              display: 'flex',
+              background: 'rgba(255, 255, 255, 0.05)',
+              padding: '2px',
+              borderRadius: '8px',
+              border: '1px solid rgba(255, 255, 255, 0.05)',
+            }}>
+              {([7, 30, 60] as const).map((days) => (
+                <button
+                  key={days}
+                  type="button"
+                  onClick={() => setActivityRange(days)}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    fontSize: '9px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    background: activityRange === days ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
+                    color: activityRange === days ? 'white' : 'rgba(255, 255, 255, 0.4)',
+                    transition: 'all 0.2s ease',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  {days}D
+                </button>
+              ))}
+            </div>
+          </div>
           <div style={{ 
             height: '160px', 
             width: '100%', 
             background: 'rgba(255,255,255,0.02)', 
             borderRadius: '20px', 
-            padding: '16px 12px 8px 12px', 
+            padding: '16px 8px 4px 4px', 
             border: '1px solid rgba(255,255,255,0.05)',
             boxSizing: 'border-box' 
           }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dailyData}>
-                <XAxis dataKey="date" hide />
-                <Tooltip 
+              <BarChart data={dailyData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                <XAxis
+                  dataKey="dateLabel"
+                  axisLine={false}
+                  tickLine={false}
+                  interval={activityRange === 7 ? 0 : activityRange === 30 ? 4 : 9}
+                  tick={{ fill: 'rgba(255, 255, 255, 0.35)', fontSize: 9, fontFamily: theme.fonts.display }}
+                  dy={4}
+                />
+                <Tooltip
                   contentStyle={{ background: '#141414', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', fontSize: '12px', fontFamily: theme.fonts.display }}
                   itemStyle={{ color: 'white' }}
+                  labelStyle={{ color: 'rgba(255, 255, 255, 0.6)', marginBottom: '4px' }}
                   cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
-                  formatter={(value: any) => [formatDuration(Number(value) * 3600), 'Focus Time']}
+                  labelFormatter={(_, payload) => {
+                    const date = payload?.[0]?.payload?.date as string | undefined;
+                    return date ? formatActivityDate(date, 'tooltip') : '';
+                  }}
+                  formatter={(value) => [formatDuration(Number(value ?? 0) * 3600), 'Focus Time']}
                 />
-                <Bar 
-                  dataKey="hours" 
-                  fill={theme.colors.focus.primary} 
-                  radius={[4, 4, 0, 0]} 
-                  barSize={20}
+                <Bar
+                  dataKey="hours"
+                  fill={theme.colors.focus.primary}
+                  radius={[4, 4, 0, 0]}
+                  barSize={activityBarSize}
                 />
               </BarChart>
             </ResponsiveContainer>

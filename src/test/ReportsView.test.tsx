@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import ReportsView, { formatDuration } from '../ui/ReportsView';
+import ReportsView, {
+  formatDuration,
+  formatActivityDate,
+  buildFocusActivityChartData,
+} from '../ui/ReportsView';
 import { useStatsStore } from '../state/statsStore';
 import { NativeBridge } from '../services/nativeBridge';
 import React from 'react';
@@ -51,6 +55,43 @@ describe('ReportsView and Helpers', () => {
     vi.clearAllMocks();
   });
 
+  describe('formatActivityDate', () => {
+    it('should format dates for tooltip display', () => {
+      const formatted = formatActivityDate('2026-01-10', 'tooltip');
+      expect(formatted).toContain('2026');
+      expect(formatted).toMatch(/10/);
+    });
+
+    it('should format dates for axis display', () => {
+      const formatted = formatActivityDate('2026-01-10', 'axis');
+      expect(formatted).toMatch(/10/);
+    });
+  });
+
+  describe('buildFocusActivityChartData', () => {
+    it('should fill missing days with zero hours', () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const toKey = (d: Date) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      };
+
+      const data = buildFocusActivityChartData(
+        [{ date: toKey(today), hours: 2 }],
+        7
+      );
+
+      expect(data).toHaveLength(7);
+      expect(data[data.length - 1].hours).toBe(2);
+      expect(data[data.length - 2].hours).toBe(0);
+      expect(data.every((d) => d.dateLabel.length > 0)).toBe(true);
+    });
+  });
+
   describe('formatDuration', () => {
     it('should format seconds as minutes if under 1 hour', () => {
       expect(formatDuration(0)).toBe('0m');
@@ -99,6 +140,34 @@ describe('ReportsView and Helpers', () => {
     it('should call fetchReports on mount', () => {
       render(<ReportsView onClose={() => {}} />);
       expect(NativeBridge.db_getReports).toHaveBeenCalled();
+    });
+
+    it('should render focus activity range toggles', () => {
+      const { hydrateReports } = useStatsStore.getState();
+      const today = new Date();
+      const toKey = (d: Date) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      };
+
+      hydrateReports({
+        dailyStats: [{ date: toKey(today), hours: 1.5 }],
+        projectDistribution: [],
+        totalFocusTime: 5400,
+        totalSessions: 1,
+        taskBreakdown: [],
+        streak: 1,
+      });
+
+      render(<ReportsView onClose={() => {}} />);
+
+      expect(screen.getByRole('button', { name: '7D' })).toBeDefined();
+      expect(screen.getByRole('button', { name: '30D' })).toBeDefined();
+      expect(screen.getByRole('button', { name: '60D' })).toBeDefined();
+
+      fireEvent.click(screen.getByRole('button', { name: '30D' }));
     });
 
     it('should show empty state when no reports or logs exist', () => {

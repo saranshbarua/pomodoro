@@ -1,5 +1,15 @@
 # Changelog
 
+# [2.4.0](https://github.com/saranshbarua/flumen/compare/v2.3.0...v2.4.0) (2026-07-09)
+
+
+### Features
+
+* **reports:** add new date formatting and tick generation functions ([#42](https://github.com/saranshbarua/flumen/issues/42)) ([feb4960](https://github.com/saranshbarua/flumen/commit/feb496042660c15d48d8cd3dabdd2c692d90924d))
+* **reports:** add show more collapsible for Earlier task breakdown ([#40](https://github.com/saranshbarua/flumen/issues/40)) ([e235af0](https://github.com/saranshbarua/flumen/commit/e235af051397a76b7635aa2fb28ed75b440a1d81))
+* **reports:** format Focus Activity dates and add range toggle ([#38](https://github.com/saranshbarua/flumen/issues/38)) ([09e466e](https://github.com/saranshbarua/flumen/commit/09e466e53af9d23b229cff9818c69956ed67bf12))
+* **taskStore:** enhance project management with tag resolution and suggestion filtering ([#43](https://github.com/saranshbarua/flumen/issues/43)) ([49a2d11](https://github.com/saranshbarua/flumen/commit/49a2d11a41897ac562937f9e302d4fd51ed9474f))
+
 # [2.3.0](https://github.com/saranshbarua/flumen/compare/v2.2.0...v2.3.0) (2026-05-26)
 
 

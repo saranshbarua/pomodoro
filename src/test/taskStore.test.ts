@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { useTaskStore } from '../state/taskStore';
+import {
+  useTaskStore,
+  resolveProjectTag,
+  filterProjectSuggestions,
+} from '../state/taskStore';
 import { NativeBridge } from '../services/nativeBridge';
 
 // Mock NativeBridge
@@ -38,6 +42,72 @@ describe('TaskStore', () => {
     vi.clearAllMocks();
   });
 
+  describe('resolveProjectTag', () => {
+    it('should return none for empty or whitespace tags', () => {
+      expect(resolveProjectTag(undefined, [])).toEqual({ kind: 'none' });
+      expect(resolveProjectTag('   ', [])).toEqual({ kind: 'none' });
+    });
+
+    it('should reuse existing project with canonical casing', () => {
+      const projects = [{ id: 'p1', name: 'Flumen' }];
+      const resolved = resolveProjectTag('flumen', projects);
+      expect(resolved).toEqual({
+        kind: 'existing',
+        tag: 'Flumen',
+        projectId: 'p1',
+      });
+    });
+
+    it('should create a new project preserving typed casing', () => {
+      const resolved = resolveProjectTag('  iOS  ', []);
+      expect(resolved.kind).toBe('create');
+      if (resolved.kind === 'create') {
+        expect(resolved.tag).toBe('iOS');
+        expect(resolved.project.name).toBe('iOS');
+        expect(resolved.projectId).toBeTruthy();
+      }
+    });
+  });
+
+  describe('filterProjectSuggestions', () => {
+    const projects = [
+      { id: '1', name: 'Alpha' },
+      { id: '2', name: 'Flumen' },
+      { id: '3', name: 'Flow' },
+      { id: '4', name: 'Beta' },
+    ];
+
+    it('should prefer prefix matches and cap at 8', () => {
+      const many = Array.from({ length: 12 }, (_, i) => ({
+        id: String(i),
+        name: `Project ${i}`,
+      }));
+      const { suggestions } = filterProjectSuggestions(many, 'project');
+      expect(suggestions).toHaveLength(8);
+    });
+
+    it('should rank prefix matches before substring matches', () => {
+      const mixed = [
+        { id: '1', name: 'DeepFlow' },
+        { id: '2', name: 'Flumen' },
+        { id: '3', name: 'Alpha' },
+      ];
+      const { suggestions } = filterProjectSuggestions(mixed, 'fl');
+      expect(suggestions.map((p) => p.name)).toEqual(['Flumen', 'DeepFlow']);
+    });
+
+    it('should hide Create when an exact case-insensitive match exists', () => {
+      const { showCreate } = filterProjectSuggestions(projects, 'flumen');
+      expect(showCreate).toBe(false);
+    });
+
+    it('should show Create when query has no exact match', () => {
+      const { showCreate, suggestions } = filterProjectSuggestions(projects, 'Flu');
+      expect(showCreate).toBe(true);
+      expect(suggestions.some((p) => p.name === 'Flumen')).toBe(true);
+    });
+  });
+
   it('should add a task and call native bridge', () => {
     const { addTask } = useTaskStore.getState();
     
@@ -57,6 +127,42 @@ describe('TaskStore', () => {
       expect.any(String) // projectId
     );
     expect(NativeBridge.db_upsertProject).toHaveBeenCalled();
+  });
+
+  it('should reuse existing project and persist canonical tag casing', () => {
+    useTaskStore.setState({
+      projects: [{ id: 'proj-flumen', name: 'Flumen' }],
+    });
+    const { addTask } = useTaskStore.getState();
+
+    addTask('Ship combobox', 1, 'flumen');
+
+    const state = useTaskStore.getState();
+    expect(state.projects).toHaveLength(1);
+    expect(state.tasks[0].tag).toBe('Flumen');
+    expect(state.tasks[0].projectId).toBe('proj-flumen');
+    expect(NativeBridge.db_upsertProject).not.toHaveBeenCalled();
+    expect(NativeBridge.db_addTask).toHaveBeenCalledWith(
+      state.tasks[0].id,
+      'Ship combobox',
+      1,
+      'Flumen',
+      'proj-flumen'
+    );
+  });
+
+  it('should create a new project with typed casing when no match exists', () => {
+    const { addTask } = useTaskStore.getState();
+    addTask('New work', 1, 'iOS');
+
+    const state = useTaskStore.getState();
+    expect(state.projects).toHaveLength(1);
+    expect(state.projects[0].name).toBe('iOS');
+    expect(state.tasks[0].tag).toBe('iOS');
+    expect(NativeBridge.db_upsertProject).toHaveBeenCalledWith(
+      'iOS',
+      state.projects[0].id
+    );
   });
 
   it('should toggle task status and call native bridge', () => {
@@ -184,6 +290,29 @@ describe('TaskStore', () => {
         1, 
         'New Tag', 
         expect.any(String)
+      );
+    });
+
+    it('should normalize casing to canonical project name on update', () => {
+      useTaskStore.setState({
+        projects: [{ id: 'proj-flumen', name: 'Flumen' }],
+      });
+      const { addTask, updateTask } = useTaskStore.getState();
+      const id = addTask('Task', 1);
+      vi.clearAllMocks();
+
+      updateTask(id, { title: 'Task', estimatedPomos: 1, tag: 'FLUMEN' });
+
+      const task = useTaskStore.getState().tasks.find((t) => t.id === id);
+      expect(task?.tag).toBe('Flumen');
+      expect(task?.projectId).toBe('proj-flumen');
+      expect(NativeBridge.db_upsertProject).not.toHaveBeenCalled();
+      expect(NativeBridge.db_updateTask).toHaveBeenCalledWith(
+        id,
+        'Task',
+        1,
+        'Flumen',
+        'proj-flumen'
       );
     });
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { theme } from './theme';
-import { useTaskStore, Task } from '../state/taskStore';
+import { useTaskStore, Task, Project, filterProjectSuggestions } from '../state/taskStore';
 import { usePomodoroStore } from '../state/pomodoroStore';
 import { NativeBridge } from '../services/nativeBridge';
 
@@ -9,8 +9,201 @@ interface TaskShelfProps {
   onClose: () => void;
 }
 
+interface ProjectTagComboboxProps {
+  value: string;
+  onChange: (value: string) => void;
+  projects: Project[];
+  placeholder?: string;
+  maxLength?: number;
+  inputStyle?: React.CSSProperties;
+  containerStyle?: React.CSSProperties;
+  onRequestSubmit?: () => void;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
+}
+
+const ProjectTagCombobox: React.FC<ProjectTagComboboxProps> = ({
+  value,
+  onChange,
+  projects,
+  placeholder = 'Project tag (optional)',
+  maxLength = 20,
+  inputStyle,
+  containerStyle,
+  onRequestSubmit,
+  inputRef: externalRef,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState(0);
+  const internalRef = useRef<HTMLInputElement>(null);
+  const inputRef = externalRef ?? internalRef;
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const { suggestions, showCreate } = filterProjectSuggestions(projects, value);
+  const rows: Array<{ type: 'project'; project: Project } | { type: 'create'; label: string }> = [
+    ...suggestions.map((project) => ({ type: 'project' as const, project })),
+  ];
+  if (showCreate) {
+    rows.push({ type: 'create', label: value.trim() });
+  }
+
+  const shouldShowList =
+    isOpen && (suggestions.length > 0 || showCreate) && (projects.length > 0 || value.trim().length > 0);
+
+  useEffect(() => {
+    setHighlightIndex(0);
+  }, [value, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handlePointerDown = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [isOpen]);
+
+  const selectProject = (name: string) => {
+    onChange(name);
+    setIsOpen(false);
+    inputRef.current?.focus();
+  };
+
+  const selectHighlighted = () => {
+    if (!shouldShowList || rows.length === 0) return false;
+    const row = rows[Math.min(highlightIndex, rows.length - 1)];
+    if (row.type === 'project') {
+      selectProject(row.project.name);
+    } else {
+      selectProject(row.label);
+    }
+    return true;
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') {
+      if (!shouldShowList) {
+        if (projects.length > 0 || value.trim()) setIsOpen(true);
+        return;
+      }
+      e.preventDefault();
+      setHighlightIndex((i) => Math.min(i + 1, rows.length - 1));
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      if (!shouldShowList) return;
+      e.preventDefault();
+      setHighlightIndex((i) => Math.max(i - 1, 0));
+      return;
+    }
+    if (e.key === 'Escape') {
+      if (isOpen) {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsOpen(false);
+      }
+      return;
+    }
+    if (e.key === 'Enter') {
+      if (shouldShowList && rows.length > 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        selectHighlighted();
+        return;
+      }
+      onRequestSubmit?.();
+      return;
+    }
+    if (e.key === 'Tab' && shouldShowList && rows.length > 0) {
+      selectHighlighted();
+    }
+  };
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', width: '100%', ...containerStyle }}>
+      <input
+        ref={inputRef}
+        type="text"
+        role="combobox"
+        aria-expanded={shouldShowList}
+        aria-autocomplete="list"
+        placeholder={placeholder}
+        value={value}
+        maxLength={maxLength}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setIsOpen(true);
+        }}
+        onFocus={() => {
+          if (projects.length > 0 || value.trim()) setIsOpen(true);
+        }}
+        onKeyDown={handleKeyDown}
+        style={inputStyle}
+      />
+      {shouldShowList && (
+        <div
+          role="listbox"
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 'calc(100% + 6px)',
+            zIndex: 40,
+            background: 'rgba(20, 20, 20, 0.98)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '12px',
+            padding: '4px',
+            maxHeight: '220px',
+            overflowY: 'auto',
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.55)',
+          }}
+        >
+          {rows.map((row, index) => {
+            const isHighlighted = index === highlightIndex;
+            const label = row.type === 'project' ? row.project.name : `Create “${row.label}”`;
+            return (
+              <button
+                key={row.type === 'project' ? row.project.id : `create-${row.label}`}
+                type="button"
+                role="option"
+                aria-selected={isHighlighted}
+                onMouseEnter={() => setHighlightIndex(index)}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  if (row.type === 'project') selectProject(row.project.name);
+                  else selectProject(row.label);
+                }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  textAlign: 'left',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '8px 10px',
+                  background: isHighlighted ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                  color:
+                    row.type === 'create'
+                      ? 'rgba(255, 255, 255, 0.45)'
+                      : 'rgba(255, 255, 255, 0.75)',
+                  fontSize: '12px',
+                  fontWeight: row.type === 'create' ? 500 : 600,
+                  fontFamily: theme.fonts.brand,
+                  cursor: 'pointer',
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
-  const { tasks, activeTaskId, addTask, toggleTask, deleteTask, clearCompletedTasks, setActiveTask, updateTask } = useTaskStore();
+  const { tasks, projects, activeTaskId, addTask, toggleTask, deleteTask, clearCompletedTasks, setActiveTask, updateTask } = useTaskStore();
   const completedCount = tasks.filter((t) => t.isCompleted).length;
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskTag, setNewTaskTag] = useState(''); // Added tag state
@@ -227,13 +420,13 @@ const TaskShelf: React.FC<TaskShelfProps> = ({ isOpen, onClose }) => {
                     letterSpacing: '-0.01em',
                   }}
                 />
-                <input
-                  type="text"
-                  placeholder="Project tag (optional)"
+                <ProjectTagCombobox
                   value={newTaskTag}
-                  onChange={(e) => setNewTaskTag(e.target.value)}
+                  onChange={setNewTaskTag}
+                  projects={projects}
+                  placeholder="Project tag (optional)"
                   maxLength={20}
-                  style={{
+                  inputStyle={{
                     background: 'none',
                     border: 'none',
                     color: 'rgba(255, 255, 255, 0.4)',
@@ -426,6 +619,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
   const [editTag, setEditTag] = useState(task.tag || '');
   const [editEst, setEditEst] = useState(task.estimatedPomos);
   const editInputRef = useRef<HTMLInputElement>(null);
+  const projects = useTaskStore((state) => state.projects);
   
   const isTimerRunning = usePomodoroStore(state => state.timer.status === 'running');
   const activeTaskId = useTaskStore(state => state.activeTaskId);
@@ -737,24 +931,26 @@ const TaskItem: React.FC<TaskItemProps> = ({
               width: '55px',
               flexShrink: 0
             }}>Project</span>
-            <input
-              type="text"
-              placeholder="Add project tag..."
+            <ProjectTagCombobox
               value={editTag}
-              onChange={(e) => setEditTag(e.target.value)}
-              onKeyDown={handleKeyDown}
+              onChange={setEditTag}
+              projects={projects}
+              placeholder="Add project tag..."
               maxLength={20}
-              style={{
+              onRequestSubmit={handleSave}
+              containerStyle={{ flex: 1, minWidth: 0, width: 'auto' }}
+              inputStyle={{
                 background: 'rgba(255, 255, 255, 0.03)',
                 border: '1px solid rgba(255, 255, 255, 0.05)',
                 color: theme.colors.focus.primary,
                 fontSize: '11px',
                 fontWeight: '600',
                 outline: 'none',
-                flex: 1,
+                width: '100%',
                 padding: '6px 10px',
                 borderRadius: '8px',
                 fontFamily: theme.fonts.brand,
+                boxSizing: 'border-box',
               }}
             />
           </div>

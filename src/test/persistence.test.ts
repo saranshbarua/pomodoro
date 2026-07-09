@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { initPersistence } from '../services/persistence';
-import { NativeBridge } from '../services/nativeBridge';
+
+const hydrateMock = vi.fn();
+const hydratePomodoroMock = vi.fn();
+const hydrateReportsMock = vi.fn();
 
 // Mock NativeBridge
 vi.mock('../services/nativeBridge', () => ({
@@ -33,7 +36,7 @@ vi.mock('../services/nativeBridge', () => ({
 vi.mock('../state/pomodoroStore', () => ({
   usePomodoroStore: {
     getState: () => ({
-      hydrate: vi.fn(),
+      hydrate: hydratePomodoroMock,
     }),
     subscribe: vi.fn(),
   },
@@ -43,7 +46,7 @@ vi.mock('../state/pomodoroStore', () => ({
 vi.mock('../state/taskStore', () => ({
   useTaskStore: {
     getState: () => ({
-      hydrate: vi.fn(),
+      hydrate: hydrateMock,
     }),
   },
 }));
@@ -52,7 +55,7 @@ vi.mock('../state/taskStore', () => ({
 vi.mock('../state/statsStore', () => ({
   useStatsStore: {
     getState: () => ({
-      hydrateReports: vi.fn(),
+      hydrateReports: hydrateReportsMock,
     }),
   },
 }));
@@ -60,10 +63,6 @@ vi.mock('../state/statsStore', () => ({
 describe('Persistence Initialization Guard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // We can't easily reset the module-level variable isPersistenceInitialized 
-    // unless we use a fresh import for each test or export a reset function.
-    // However, we can test that calling it twice doesn't add duplicate listeners
-    // if we mock window.addEventListener.
   });
 
   it('should only add listeners once even if initPersistence is called multiple times', () => {
@@ -79,5 +78,21 @@ describe('Persistence Initialization Guard', () => {
     expect(addEventListenerSpy.mock.calls.length).toBe(initialCallCount);
     
     addEventListenerSpy.mockRestore();
+  });
+
+  it('should hydrate tasks and projects from db_initialData', () => {
+    // Guard may already be set from previous test; listener is still registered.
+    initPersistence();
+
+    const tasks = [{ id: 't1', title: 'Ship', estimatedPomos: 1, completedPomos: 0, isCompleted: false, status: 0, createdAt: 1 }];
+    const projects = [{ id: 'p1', name: 'Flumen' }];
+
+    window.dispatchEvent(
+      new CustomEvent('native:db_initialData', {
+        detail: { tasks, projects },
+      })
+    );
+
+    expect(hydrateMock).toHaveBeenCalledWith({ tasks, projects });
   });
 });

@@ -86,9 +86,12 @@ export const initPersistence = () => {
 
   // 2. Listen for Database Initial Data (SQLite)
   window.addEventListener('native:db_initialData', (event: any) => {
-    const { tasks } = event.detail;
-    if (tasks) {
-      taskStore.hydrate({ tasks });
+    const { tasks, projects } = event.detail;
+    const patch: { tasks?: typeof tasks; projects?: typeof projects } = {};
+    if (tasks) patch.tasks = tasks;
+    if (projects) patch.projects = projects;
+    if (patch.tasks || patch.projects) {
+      taskStore.hydrate(patch);
     }
   });
 

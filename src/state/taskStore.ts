@@ -19,6 +19,65 @@ export interface Project {
   color?: string;
 }
 
+export type ResolvedProjectTag =
+  | { kind: 'none'; tag?: undefined; projectId?: undefined }
+  | { kind: 'existing'; tag: string; projectId: string }
+  | { kind: 'create'; tag: string; projectId: string; project: Project };
+
+/** Trim + case-insensitive project match. On match, returns canonical name. */
+export const resolveProjectTag = (
+  rawTag: string | undefined,
+  projects: Project[]
+): ResolvedProjectTag => {
+  const trimmed = rawTag?.trim();
+  if (!trimmed) return { kind: 'none' };
+
+  const existing = projects.find(
+    (p) => p.name.toLowerCase() === trimmed.toLowerCase()
+  );
+  if (existing) {
+    return { kind: 'existing', tag: existing.name, projectId: existing.id };
+  }
+
+  const projectId = crypto.randomUUID();
+  return {
+    kind: 'create',
+    tag: trimmed,
+    projectId,
+    project: { id: projectId, name: trimmed },
+  };
+};
+
+const SUGGESTION_LIMIT = 8;
+
+/** Case-insensitive filter: prefix matches first, then alphabetical. Cap 8. */
+export const filterProjectSuggestions = (
+  projects: Project[],
+  query: string
+): { suggestions: Project[]; showCreate: boolean } => {
+  const trimmed = query.trim();
+  const lower = trimmed.toLowerCase();
+
+  const matched = projects
+    .filter((p) => !lower || p.name.toLowerCase().includes(lower))
+    .sort((a, b) => {
+      if (lower) {
+        const aPrefix = a.name.toLowerCase().startsWith(lower) ? 0 : 1;
+        const bPrefix = b.name.toLowerCase().startsWith(lower) ? 0 : 1;
+        if (aPrefix !== bPrefix) return aPrefix - bPrefix;
+      }
+      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+    })
+    .slice(0, SUGGESTION_LIMIT);
+
+  const hasExact = projects.some(
+    (p) => p.name.toLowerCase() === lower
+  );
+  const showCreate = trimmed.length > 0 && !hasExact;
+
+  return { suggestions: matched, showCreate };
+};
+
 interface TaskStore {
   tasks: Task[];
   projects: Project[];
@@ -45,35 +104,30 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   addTask: (title: string, estimatedPomos: number = 1, tag?: string) => {
     const id = crypto.randomUUID();
+    const resolved = resolveProjectTag(tag, get().projects);
+
+    if (resolved.kind === 'create') {
+      set((state) => ({ projects: [...state.projects, resolved.project] }));
+      NativeBridge.db_upsertProject(resolved.tag, resolved.projectId);
+    }
+
+    const canonicalTag = resolved.kind === 'none' ? undefined : resolved.tag;
+    const projectId = resolved.kind === 'none' ? undefined : resolved.projectId;
+
     const newTask: Task = {
       id,
       title,
-      tag,
+      tag: canonicalTag,
+      projectId,
       estimatedPomos,
       completedPomos: 0,
       isCompleted: false,
       status: 0,
       createdAt: Date.now(),
     };
-    
-    // Expert Fix: Ensure project exists if tag is provided
-    let projectId: string | undefined;
-    if (tag) {
-      const { projects } = get();
-      let project = projects.find(p => p.name.toLowerCase() === tag.toLowerCase());
-      if (!project) {
-        projectId = crypto.randomUUID();
-        const newProject = { id: projectId, name: tag };
-        set(state => ({ projects: [...state.projects, newProject] }));
-        NativeBridge.db_upsertProject(tag, projectId);
-      } else {
-        projectId = project.id;
-      }
-      newTask.projectId = projectId;
-    }
 
     // Native call
-    NativeBridge.db_addTask(id, title, estimatedPomos, tag, projectId);
+    NativeBridge.db_addTask(id, title, estimatedPomos, canonicalTag, projectId);
 
     set((state) => ({
       tasks: [...state.tasks, newTask],
@@ -154,28 +208,24 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     const task = tasks.find(t => t.id === id);
     if (!task) return;
 
-    let projectId = task.projectId;
-    if (tag && tag !== task.tag) {
-      // Upsert project if tag changed
-      let project = projects.find(p => p.name.toLowerCase() === tag.toLowerCase());
-      if (!project) {
-        projectId = crypto.randomUUID();
-        const newProject = { id: projectId, name: tag };
-        set(state => ({ projects: [...state.projects, newProject] }));
-        NativeBridge.db_upsertProject(tag, projectId);
-      } else {
-        projectId = project.id;
-      }
-    } else if (!tag) {
-      projectId = undefined;
+    const resolved = resolveProjectTag(tag, projects);
+    const canonicalTag = resolved.kind === 'none' ? undefined : resolved.tag;
+    let projectId = resolved.kind === 'none' ? undefined : resolved.projectId;
+
+    // Only upsert when the resolved project is new
+    if (resolved.kind === 'create') {
+      set((state) => ({ projects: [...state.projects, resolved.project] }));
+      NativeBridge.db_upsertProject(resolved.tag, resolved.projectId);
+    } else if (resolved.kind === 'existing') {
+      projectId = resolved.projectId;
     }
 
-    // Native call
-    NativeBridge.db_updateTask(id, title, estimatedPomos, tag, projectId);
+    // Native call — always persist canonical tag
+    NativeBridge.db_updateTask(id, title, estimatedPomos, canonicalTag, projectId);
 
     set((state) => ({
-      tasks: state.tasks.map((t) => 
-        t.id === id ? { ...t, title, estimatedPomos, tag, projectId } : t
+      tasks: state.tasks.map((t) =>
+        t.id === id ? { ...t, title, estimatedPomos, tag: canonicalTag, projectId } : t
       ),
     }));
   },

@@ -3,12 +3,12 @@
     <channel>
         <title>Flumen</title>
         <item>
-            <title>2.3.0</title>
-            <pubDate>Tue, 26 May 2026 09:28:23 +0000</pubDate>
-            <sparkle:version>20260526.092821</sparkle:version>
-            <sparkle:shortVersionString>2.3.0</sparkle:shortVersionString>
+            <title>2.4.0</title>
+            <pubDate>Thu, 09 Jul 2026 14:53:17 +0000</pubDate>
+            <sparkle:version>20260709.145315</sparkle:version>
+            <sparkle:shortVersionString>2.4.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>10.13</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/saranshbarua/flumen/releases/download/v2.3.0/Flumen_macOS_Universal.zip" length="8268476" type="application/octet-stream" sparkle:edSignature="hoCBLabxEpO3T3x7TdaUJnuqLSDCPHi3tp8CvkhQ8OngD4Eko56CDBnG6Jy28AhCD8yefFNC/5/LTMzbyrEVAA=="/>
+            <enclosure url="https://github.com/saranshbarua/flumen/releases/download/v2.4.0/Flumen_macOS_Universal.zip" length="8273476" type="application/octet-stream" sparkle:edSignature="wOCSgKXDmbTkGmuedpKGXSoZAarnhy/hm97BwBUssb2kiENZn3j0UxFwIZ6QBBVIi3Ih17gRa3INafqTm6ORCQ=="/>
         </item>
     </channel>
 </rss>

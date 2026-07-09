@@ -49,6 +49,40 @@ export const formatActivityDate = (
   });
 };
 
+export const formatWeekdayShortLabel = (dateStr: string) => {
+  const date = parseActivityDate(dateStr);
+  return date.toLocaleDateString(undefined, { weekday: 'short' });
+};
+
+// Four evenly spaced anchors (start → end) so 30D/60D stay scannable
+// without crowding. Exact day detail lives in the tooltip on hover.
+export const getEvenlySpacedTickDates = (
+  data: { date: string }[],
+  tickCount = 4
+): string[] => {
+  if (data.length === 0) return [];
+  if (data.length <= tickCount) return data.map((d) => d.date);
+
+  const last = data.length - 1;
+  const indices: number[] = [];
+  for (let i = 0; i < tickCount; i++) {
+    const index = Math.round((i * last) / (tickCount - 1));
+    if (indices[indices.length - 1] !== index) {
+      indices.push(index);
+    }
+  }
+  return indices.map((i) => data[i].date);
+};
+
+export const getEdgeTickAnchor = (
+  index: number,
+  totalCount: number
+): 'start' | 'middle' | 'end' => {
+  if (index === 0) return 'start';
+  if (index === totalCount - 1) return 'end';
+  return 'middle';
+};
+
 export const buildFocusActivityChartData = (
   dailyStats: { date: string; hours: number }[],
   rangeDays: FocusActivityRange
@@ -60,7 +94,7 @@ export const buildFocusActivityChartData = (
   const start = new Date(end);
   start.setDate(start.getDate() - (rangeDays - 1));
 
-  const result: { date: string; hours: number; dateLabel: string }[] = [];
+  const result: { date: string; hours: number }[] = [];
   const current = new Date(start);
   while (current <= end) {
     const year = current.getFullYear();
@@ -70,11 +104,42 @@ export const buildFocusActivityChartData = (
     result.push({
       date: dateKey,
       hours: hoursByDate.get(dateKey) ?? 0,
-      dateLabel: formatActivityDate(dateKey, rangeDays <= 7 ? 'axis' : 'axisCompact'),
     });
     current.setDate(current.getDate() + 1);
   }
   return result;
+};
+
+const axisTickTextStyle = {
+  fill: 'rgba(255, 255, 255, 0.4)',
+  fontSize: 9,
+  fontWeight: 600,
+  fontFamily: theme.fonts.display,
+} as const;
+
+const WeekdayAxisTick = ({ x, y, payload, index, visibleTicksCount }: any) => {
+  const totalCount = visibleTicksCount ?? 7;
+  const textAnchor = getEdgeTickAnchor(index, totalCount);
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text textAnchor={textAnchor} y={13} {...axisTickTextStyle}>
+        {formatWeekdayShortLabel(payload.value)}
+      </text>
+    </g>
+  );
+};
+
+// Sparse 30/60D anchors: always full "May 11" style, only 4 ticks so they
+// never collide. Edge-aware anchoring keeps first/last labels inside the card.
+const CompactAxisTick = ({ x, y, payload, index, visibleTicksCount }: any) => {
+  const textAnchor = getEdgeTickAnchor(index, visibleTicksCount ?? 4);
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text textAnchor={textAnchor} y={13} {...axisTickTextStyle}>
+        {formatActivityDate(payload.value, 'axisCompact')}
+      </text>
+    </g>
+  );
 };
 
 const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
@@ -126,6 +191,10 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
     [dailyStats, activityRange]
   );
   const activityBarSize = activityRange === 7 ? 20 : activityRange === 30 ? 8 : 4;
+  const sparseTickDates = React.useMemo(
+    () => (activityRange === 7 ? [] : getEvenlySpacedTickDates(dailyData, 4)),
+    [dailyData, activityRange]
+  );
   const projectDataRaw = selectProjectDistribution(stats);
   
   const taskData = selectTaskBreakdown(stats);
@@ -349,19 +418,20 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
             width: '100%', 
             background: 'rgba(255,255,255,0.02)', 
             borderRadius: '20px', 
-            padding: '16px 8px 4px 4px', 
+            padding: '16px 8px 8px 8px', 
             border: '1px solid rgba(255,255,255,0.05)',
             boxSizing: 'border-box' 
           }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dailyData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+              <BarChart data={dailyData} margin={{ top: 4, right: 8, left: 8, bottom: 2 }}>
                 <XAxis
-                  dataKey="dateLabel"
+                  dataKey="date"
                   axisLine={false}
                   tickLine={false}
-                  interval={activityRange === 7 ? 0 : activityRange === 30 ? 4 : 9}
-                  tick={{ fill: 'rgba(255, 255, 255, 0.35)', fontSize: 9, fontFamily: theme.fonts.display }}
-                  dy={4}
+                  interval={0}
+                  ticks={activityRange === 7 ? undefined : sparseTickDates}
+                  height={24}
+                  tick={activityRange === 7 ? WeekdayAxisTick : CompactAxisTick}
                 />
                 <Tooltip
                   contentStyle={{ background: '#141414', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', fontSize: '12px', fontFamily: theme.fonts.display }}

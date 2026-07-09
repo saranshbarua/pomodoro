@@ -4,6 +4,9 @@ import ReportsView, {
   formatDuration,
   formatActivityDate,
   buildFocusActivityChartData,
+  formatWeekdayShortLabel,
+  getEvenlySpacedTickDates,
+  getEdgeTickAnchor,
 } from '../ui/ReportsView';
 import { useStatsStore } from '../state/statsStore';
 import { NativeBridge } from '../services/nativeBridge';
@@ -68,6 +71,63 @@ describe('ReportsView and Helpers', () => {
     });
   });
 
+  describe('formatWeekdayShortLabel', () => {
+    it('should return a short weekday abbreviation', () => {
+      const label = formatWeekdayShortLabel('2026-01-10');
+      expect(label.length).toBeGreaterThan(1);
+      expect(label).not.toMatch(/^\d+$/);
+    });
+  });
+
+  describe('getEvenlySpacedTickDates', () => {
+    it('should return 4 evenly spaced dates including start and end', () => {
+      const data = Array.from({ length: 30 }, (_, i) => ({
+        date: `2026-06-${String(i + 1).padStart(2, '0')}`,
+      }));
+      const ticks = getEvenlySpacedTickDates(data, 4);
+      expect(ticks).toHaveLength(4);
+      expect(ticks[0]).toBe('2026-06-01');
+      expect(ticks[3]).toBe('2026-06-30');
+      expect(ticks[1]).toBe('2026-06-11');
+      expect(ticks[2]).toBe('2026-06-20');
+    });
+
+    it('should space 60-day ranges evenly', () => {
+      const data = Array.from({ length: 60 }, (_, i) => {
+        const d = new Date(2026, 4, 11); // May 11
+        d.setDate(d.getDate() + i);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return { date: `${y}-${m}-${day}` };
+      });
+      const ticks = getEvenlySpacedTickDates(data, 4);
+      expect(ticks).toHaveLength(4);
+      expect(ticks[0]).toBe(data[0].date);
+      expect(ticks[3]).toBe(data[59].date);
+      // Roughly equal gaps (~20 days between anchors)
+      const toDay = (s: string) => new Date(`${s}T12:00:00`).getTime() / 86400000;
+      const gaps = [1, 2, 3].map((i) => toDay(ticks[i]) - toDay(ticks[i - 1]));
+      expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThanOrEqual(1);
+    });
+
+    it('should return all dates when data is shorter than tick count', () => {
+      const data = [{ date: '2026-06-01' }, { date: '2026-06-02' }];
+      expect(getEvenlySpacedTickDates(data, 4)).toEqual([
+        '2026-06-01',
+        '2026-06-02',
+      ]);
+    });
+  });
+
+  describe('getEdgeTickAnchor', () => {
+    it('should anchor first, middle, and last ticks correctly', () => {
+      expect(getEdgeTickAnchor(0, 4)).toBe('start');
+      expect(getEdgeTickAnchor(1, 4)).toBe('middle');
+      expect(getEdgeTickAnchor(3, 4)).toBe('end');
+    });
+  });
+
   describe('buildFocusActivityChartData', () => {
     it('should fill missing days with zero hours', () => {
       const today = new Date();
@@ -88,7 +148,7 @@ describe('ReportsView and Helpers', () => {
       expect(data).toHaveLength(7);
       expect(data[data.length - 1].hours).toBe(2);
       expect(data[data.length - 2].hours).toBe(0);
-      expect(data.every((d) => d.dateLabel.length > 0)).toBe(true);
+      expect(data.every((d) => d.date.length > 0)).toBe(true);
     });
   });
 

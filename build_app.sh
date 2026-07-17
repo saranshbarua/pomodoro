@@ -12,8 +12,10 @@ VERSION=$(grep '"version":' package.json | cut -d'"' -f4)
 APP_BUNDLE="$APP_NAME.app"
 CONTENTS_DIR="$APP_BUNDLE/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
+HELPERS_DIR="$CONTENTS_DIR/Helpers"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
 ZIP_NAME="${APP_NAME}_macOS_Universal.zip"
+SIGNING_IDENTITY="${FLUMEN_SIGNING_IDENTITY:--}"
 
 echo "🚀 Starting Production Build for $APP_NAME v$VERSION..."
 
@@ -34,12 +36,20 @@ cd macos/Pomodoro
 # We force a clean build of the native code to ensure fresh architecture slices
 rm -rf .build
 swift build -c release --arch arm64 --arch x86_64
-BINARY_PATH=$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/Flumen
+SWIFT_BIN_PATH=$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)
+BINARY_PATH="$SWIFT_BIN_PATH/Flumen"
+MCP_HELPER_PATH="$SWIFT_BIN_PATH/flumen-mcp"
 cd ../../
+
+if [ ! -x "$MCP_HELPER_PATH" ]; then
+    echo "❌ Error: MCP helper was not produced at $MCP_HELPER_PATH"
+    exit 1
+fi
 
 # 3. Create the .app structure
 echo "📂 Creating .app bundle structure..."
 mkdir -p "$MACOS_DIR"
+mkdir -p "$HELPERS_DIR"
 mkdir -p "$RESOURCES_DIR"
 mkdir -p "$CONTENTS_DIR/Frameworks"
 
@@ -47,6 +57,14 @@ mkdir -p "$CONTENTS_DIR/Frameworks"
 echo "📄 Copying Universal binary..."
 cp "$BINARY_PATH" "$MACOS_DIR/$APP_NAME"
 chmod +x "$MACOS_DIR/$APP_NAME"
+
+echo "📄 Copying MCP helper..."
+cp "$MCP_HELPER_PATH" "$HELPERS_DIR/flumen-mcp"
+chmod +x "$HELPERS_DIR/flumen-mcp"
+
+echo "🔎 Verifying universal binaries..."
+lipo "$MACOS_DIR/$APP_NAME" -verify_arch arm64 x86_64
+lipo "$HELPERS_DIR/flumen-mcp" -verify_arch arm64 x86_64
 
 # 4.0.1 Set RPATH for Sparkle
 # This tells the binary to look in the Frameworks folder for Sparkle
@@ -98,17 +116,28 @@ mkdir -p "$RESOURCES_DIR/dist"
 cp -R dist/* "$RESOURCES_DIR/dist/"
 cp src/assets/click.mp3 "$RESOURCES_DIR/"
 
-# 7. Ad-hoc Sign the bundle (Required for notifications/haptics on modern macOS)
-echo "🔐 Ad-hoc signing the app components..."
+# 7. Sign nested components before the app bundle.
+if [ "$SIGNING_IDENTITY" = "-" ]; then
+    echo "🔐 Ad-hoc signing the app components..."
+    CODESIGN_ARGS=(--force --sign -)
+else
+    echo "🔐 Developer ID signing the app components..."
+    CODESIGN_ARGS=(--force --timestamp --options runtime --sign "$SIGNING_IDENTITY")
+fi
+
+echo "  -> Signing flumen-mcp..."
+codesign "${CODESIGN_ARGS[@]}" "$HELPERS_DIR/flumen-mcp"
+
 # First, sign any bundled frameworks
 if [ -d "$CONTENTS_DIR/Frameworks/Sparkle.framework" ]; then
     echo "  -> Signing Sparkle.framework..."
-    codesign --force --sign - "$CONTENTS_DIR/Frameworks/Sparkle.framework"
+    codesign "${CODESIGN_ARGS[@]}" "$CONTENTS_DIR/Frameworks/Sparkle.framework"
 fi
 
 # Then sign the main bundle
 echo "  -> Signing $APP_BUNDLE..."
-codesign --force --deep --sign - "$APP_BUNDLE"
+codesign --deep "${CODESIGN_ARGS[@]}" "$APP_BUNDLE"
+codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE"
 
 # 8. Create ZIP archive for distribution
 echo "📦 Creating distribution archive..."
@@ -122,10 +151,16 @@ echo "✅ SUCCESS! Build complete."
 echo "-----------------------------------------------------------"
 echo "📂 App Bundle: $APP_BUNDLE"
 echo "📦 Dist Zip:   $ZIP_NAME"
+echo "📏 Bundle Size: $(du -sh "$APP_BUNDLE" | awk '{print $1}')"
+echo "📏 ZIP Size:    $(du -sh "$ZIP_NAME" | awk '{print $1}')"
 echo "-----------------------------------------------------------"
 echo "🚀 To Distribute:"
 echo "Upload $ZIP_NAME to GitHub Releases or Product Hunt."
 echo ""
-echo "⚠️  Reminder for Users:"
-echo "Since the app is ad-hoc signed, users must Right-Click > Open"
-echo "the first time to bypass the 'Unidentified Developer' warning."
+if [ "$SIGNING_IDENTITY" = "-" ]; then
+  echo "⚠️  Reminder for Users:"
+  echo "Since the app is ad-hoc signed, users must Right-Click > Open"
+  echo "the first time to bypass the 'Unidentified Developer' warning."
+else
+  echo "✅ Developer ID signing complete. Notarize the ZIP before distribution."
+fi

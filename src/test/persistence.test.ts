@@ -48,6 +48,7 @@ vi.mock('../state/taskStore', () => ({
     getState: () => ({
       hydrate: hydrateMock,
     }),
+    subscribe: vi.fn(),
   },
 }));
 

@@ -140,7 +140,8 @@ describe('Reporting Integration Flow', () => {
 
     // Verify first log has 25m snapshot
     expect(NativeBridge.db_logActivity).toHaveBeenCalledWith(
-      expect.any(Number), taskId, 'Variable Duration Task', null, true, null, 2, 1500
+      expect.any(Number), taskId, 'Variable Duration Task', null, true, null, 2, 1500,
+      expect.objectContaining({ origin: 'timer', durationSource: 'observed' })
     );
 
     // 3. Change duration to 40m mid-way
@@ -187,7 +188,8 @@ describe('Reporting Integration Flow', () => {
 
     // 4. Verify log still uses the LOCKED 25m snapshot
     expect(NativeBridge.db_logActivity).toHaveBeenCalledWith(
-      600, taskId, 'Mid-session Change Task', null, false, null, 1, 1500
+      600, taskId, 'Mid-session Change Task', null, false, null, 1, 1500,
+      expect.objectContaining({ origin: 'timer', durationSource: 'observed' })
     );
 
     vi.restoreAllMocks();

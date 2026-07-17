@@ -48,12 +48,14 @@ This document outlines the testing strategy for the Flumen macOS app, covering f
 | V-5.4 | Input Focus | Open Task Shelf and try to type immediately. | Input is auto-focused; keyboard events are captured by native NSPanel. |
 
 ## 7. Automated Tests
-The app includes a suite of automated unit and integration tests powered by **Vitest** and **React Testing Library**.
+The app includes a suite of automated unit and integration tests powered by **Vitest** and **React Testing Library**, plus native Swift tests and an MCP helper smoke test.
 
 ### Running Tests
-To run the full test suite once:
 ```bash
-npm test -- --run
+npm test -- --run          # TypeScript / UI
+npm run test:native        # Swift package tests
+npm run test:mcp           # flumen-mcp protocol smoke (lists tools/resources; optional live call)
+npm run test:all           # TypeScript + native + MCP smoke
 ```
 
 ### Test Coverage
@@ -61,4 +63,25 @@ npm test -- --run
 - **`sessionManager.test.ts`**: Validates focus cycle transitions (Focus -> Break -> Long Break).
 - **`taskStore.test.ts`**: Ensures tasks can be added, completed, and auto-selected.
 - **`statsStore.test.ts`**: Checks activity logging, streak calculation, and report data generation.
+- **`agentCommandAdapter.test.ts`**: Timer bridge command handling for agent status/start/pause/finish.
 - **`app.test.tsx`**: Integration tests for UI interactions like opening Settings and Task Shelf.
+- **`FlumenTests`**: AppRepository provenance, idempotency, revision conflicts, and IPC protocol.
+
+## 8. Agent Access / MCP Regression Matrix
+
+| Case ID | Area | Description | Expected Result |
+| :--- | :--- | :--- | :--- |
+| M-8.1 | Off by default | Launch with Agent Access disabled | No Unix socket listener; helper exits / fails initialize — Cursor must not stay healthy green |
+| M-8.2 | Read tools | Enable Agent Access; call `get_focus_status`, `list_tasks` | Structured local data; no writes |
+| M-8.3 | Write confirmation | Call `log_time` | Flumen proposal UI + notification; decline leaves DB unchanged |
+| M-8.4 | Ad-hoc metrics | Confirm agent `log_time` | Totals/streak increase; completedCycles unchanged |
+| M-8.5 | Idempotency | Retry same idempotency key | Same activity id/result; no duplicate row |
+| M-8.6 | Overlap | Propose overlapping interval | Rejected with `activity_overlap` |
+| M-8.7 | Future time | Propose start far in the future | Validation error |
+| M-8.8 | Multi-client | Two helpers connected | Serialized writes; connections listed informationally |
+| M-8.9 | Packaging | Universal release build | `flumen-mcp` in `Contents/Helpers`, both arch slices signed |
+| M-8.10 | Staging isolation | Staging app Agent Access | Staging socket/helper only; production data untouched |
+| M-8.11 | Turn Off while live | Disable Agent Access during an active Cursor session | Socket closes; helper exits within a few seconds; Cursor drops healthy connection |
+
+### Manual client matrix
+Verify `tools/list` + `get_server_status` against current Cursor, Claude Code, Codex, and Gemini CLI versions after helper packaging changes. Setup instructions live in [MCP-SETUP.md](MCP-SETUP.md).

@@ -1,5 +1,14 @@
 import { create } from 'zustand';
-import { NativeBridge } from '../services/nativeBridge';
+import { ActivityProvenance, NativeBridge } from '../services/nativeBridge';
+
+export type ActivityOrigin = 'timer' | 'manual' | 'agent';
+export type DurationSource = 'observed' | 'user_supplied' | 'inferred';
+
+export interface LogActivityOptions extends ActivityProvenance {
+  origin?: ActivityOrigin;
+  durationSource?: DurationSource;
+  timestamp?: number;
+}
 
 export interface SessionLog {
   id: string;
@@ -12,6 +21,12 @@ export interface SessionLog {
   isCompletion?: boolean;
   estimatedPomos?: number;
   snapshotFocusDuration?: number;
+  origin?: ActivityOrigin;
+  durationSource?: DurationSource;
+  createdAt?: number;
+  startedAt?: number;
+  endedAt?: number;
+  proposalId?: string;
 }
 
 export interface ReportsData {
@@ -28,7 +43,7 @@ interface StatsStore {
   logs: SessionLog[]; // Local cache of recent logs for optimistic updates and testing
   
   // Actions
-  logActivity: (duration: number, taskId: string | null, taskTitle: string | null, tag: string | null, isCompletion?: boolean, projectId?: string | null, estimatedPomos?: number, snapshotFocusDuration?: number) => void;
+  logActivity: (duration: number, taskId: string | null, taskTitle: string | null, tag: string | null, isCompletion?: boolean, projectId?: string | null, estimatedPomos?: number, snapshotFocusDuration?: number, options?: LogActivityOptions) => void;
   fetchReports: () => void;
   hydrateReports: (data: ReportsData) => void;
 }
@@ -37,10 +52,19 @@ export const useStatsStore = create<StatsStore>((set, get) => ({
   reports: null,
   logs: [],
 
-  logActivity: (duration, taskId, taskTitle, tag, isCompletion = false, projectId = null, estimatedPomos = 1, snapshotFocusDuration = 1500) => {
+  logActivity: (duration, taskId, taskTitle, tag, isCompletion = false, projectId = null, estimatedPomos = 1, snapshotFocusDuration = 1500, options = {}) => {
+    const createdAt = options.createdAt ?? Date.now();
+    const provenance: ActivityProvenance = {
+      origin: options.origin ?? 'timer',
+      durationSource: options.durationSource ?? 'observed',
+      createdAt,
+      startedAt: options.startedAt,
+      endedAt: options.endedAt,
+      proposalId: options.proposalId,
+    };
     const newLog: SessionLog = {
       id: crypto.randomUUID(),
-      timestamp: Date.now(),
+      timestamp: options.timestamp ?? options.startedAt ?? createdAt,
       durationSeconds: duration,
       taskId,
       taskTitle,
@@ -48,7 +72,8 @@ export const useStatsStore = create<StatsStore>((set, get) => ({
       projectId,
       isCompletion,
       estimatedPomos,
-      snapshotFocusDuration
+      snapshotFocusDuration,
+      ...provenance,
     };
 
     // Update local state for immediate feedback
@@ -57,7 +82,7 @@ export const useStatsStore = create<StatsStore>((set, get) => ({
     }));
 
     // Native call for permanent SQLite storage
-    NativeBridge.db_logActivity(duration, taskId, taskTitle, tag, isCompletion, projectId, estimatedPomos, snapshotFocusDuration);
+    NativeBridge.db_logActivity(duration, taskId, taskTitle, tag, isCompletion, projectId, estimatedPomos, snapshotFocusDuration, provenance);
   },
 
   fetchReports: () => {

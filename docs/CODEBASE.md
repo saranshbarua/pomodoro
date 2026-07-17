@@ -8,9 +8,13 @@ The app uses a **Hybrid Architecture** combining a native Swift wrapper with a R
 ### High-Level Flow
 ```mermaid
 graph LR
+    Agent[Agent client] -->|"MCP stdio"| Helper[flumen-mcp]
+    Helper -->|"Unix socket IPC"| Coordinator[AgentAccessCoordinator]
     Swift[Swift Native Wrapper] <--> Bridge[WKScriptMessageHandler]
     Bridge <--> React[React Frontend]
-    Swift --> DB[SQLite Database]
+    Coordinator --> Bridge
+    Coordinator --> Repo[AppRepository / GRDB]
+    Swift --> Repo
     Swift --> NS[NSStatusItem / NSPanel]
 ```
 
@@ -18,16 +22,17 @@ graph LR
 ```text
 .
 ├── macos/Pomodoro/         # Native Swift Project (Swift Package Manager)
-│   ├── Sources/            # Native source code
-│   │   ├── Bridge.swift    # Handle messages from JS to Swift
-│   │   ├── DatabaseManager.swift # SQLite persistence layer
-│   │   ├── WindowController.swift # NSPanel & WKWebView setup
-│   │   └── StatusBarController.swift # Tray icon & right-click menu
+│   ├── Sources/            # App UI, Bridge, AgentAccessCoordinator
+│   ├── AppCore/            # DatabaseManager + AppRepository
+│   ├── IPC/                # Versioned Unix-socket protocol
+│   ├── MCP/                # flumen-mcp stdio helper (MCP SDK 0.12.1)
+│   └── Tests/              # Native unit tests
 ├── src/                    # React Frontend
 │   ├── core/               # Pure logic (Timer, Session logic)
 │   ├── state/              # Global state (Zustand stores)
-│   ├── services/           # Bridge & Persistence abstractions
-│   └── ui/                 # React components & Design System
+│   ├── services/           # Bridge, persistence, agentCommandAdapter
+│   └── ui/                 # React components (incl. Agent Access)
+├── docs/                   # PRD, architecture, setup, testing
 ├── build_app.sh            # Universal build & bundle script
 └── index.html              # Entry point with SVG grain filter
 ```
@@ -57,17 +62,25 @@ The app uses **Zustand** for state, split into three focused stores:
 
 **Persistence**: The `PersistenceService` subscribes to all three stores and debounces saves by 1 second. It bundles the state into a single JSON object which is then passed to the Swift layer for permanent storage.
 
-## 5. Build & Distribution
+## 5. Agent Access (MCP)
+- Off by default. Enabling starts a private Unix socket under Application Support.
+- `flumen-mcp` (bundled in `Contents/Helpers`) speaks MCP over stdio and proxies tools to the app via IPC. It never opens SQLite directly.
+- Timer reads/writes reuse Zustand through `agentCommand` / `agentCommandResult`.
+- Writes create Flumen-side proposals; confirmation is mandatory.
+- Setup UX: Add to Cursor deeplink, Copy Configuration, Setup Guide — no client picker.
+- Docs: [MCP-SETUP.md](MCP-SETUP.md), [MCP-ARCHITECTURE.md](MCP-ARCHITECTURE.md), [TESTING.md](TESTING.md) §8.
+
+## 6. Build & Distribution
 The project is built using a custom `build_app.sh` script which automates:
 1. Building the React frontend via Vite.
-2. Compiling the Swift executable.
-3. Creating the `.app` bundle structure.
+2. Compiling the Swift executable **and** `flumen-mcp` helper.
+3. Creating the `.app` bundle structure with `Contents/Helpers/flumen-mcp`.
 4. Converting `icon.png` into a native `.icns` file.
-5. Ad-hoc signing the bundle (`codesign`) to enable system notifications.
+5. Signing nested helper code before the app bundle (`codesign`) for release.
 
 **Developer Mode**: In `WindowController.swift`, the app detects if it's running in Xcode or a debug build and automatically loads `localhost:5173` instead of the bundled files for Hot Module Replacement.
 
-## 6. Design System
+## 7. Design System
 - **Grid**: Base-8 grid system for all spacing and dimensions.
 - **Typography**:
     - **DM Sans**: Used for branding, headers, and reports.

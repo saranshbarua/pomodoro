@@ -31,6 +31,12 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Run frontend tests
+        run: npm test -- --run
+
+      - name: Run native tests
+        run: swift test --package-path macos/Pomodoro
+
       - name: Set Environment Variables
         run: |
           if [[ "${{ github.ref_name }}" == *"-staging"* ]]; then
@@ -46,9 +52,42 @@ jobs:
           fi
 
       - name: Build App
+        env:
+          FLUMEN_SIGNING_IDENTITY: ${{ secrets.FLUMEN_SIGNING_IDENTITY }}
         run: |
           chmod +x build_app.sh
           ./build_app.sh
+
+      - name: Verify universal signed bundle
+        run: |
+          test -x Flumen.app/Contents/MacOS/Flumen
+          test -x Flumen.app/Contents/Helpers/flumen-mcp
+          lipo -verify_arch arm64 x86_64 Flumen.app/Contents/MacOS/Flumen
+          lipo -verify_arch arm64 x86_64 Flumen.app/Contents/Helpers/flumen-mcp
+          codesign --verify --deep --strict --verbose=2 Flumen.app
+          npm run test:mcp
+
+      - name: Notarize Developer ID build
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          FLUMEN_SIGNING_IDENTITY: ${{ secrets.FLUMEN_SIGNING_IDENTITY }}
+        run: |
+          if [ -z "$FLUMEN_SIGNING_IDENTITY" ] || [ -z "$APPLE_ID" ] || [ -z "$APPLE_TEAM_ID" ] || [ -z "$APPLE_APP_SPECIFIC_PASSWORD" ]; then
+            echo "Developer ID notarization credentials are not configured; retaining the existing ad-hoc release path."
+            exit 0
+          fi
+
+          xcrun notarytool submit Flumen_macOS_Universal.zip \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --wait
+          xcrun stapler staple Flumen.app
+          rm -f Flumen_macOS_Universal.zip
+          ditto -c -k --keepParent Flumen.app Flumen_macOS_Universal.zip
 
       - name: Setup Sparkle Tools
         run: |
@@ -84,17 +123,12 @@ jobs:
           ./sparkle_tools/bin/generate_appcast \
             --download-url-prefix "$REPO_URL" \
             --ed-key-file sparkle_key.priv \
+            --output "$GITHUB_WORKSPACE/$APPCAST_FILE" \
             appcast_work/
           
-          # 5. Verify and Move
-          # The tool generates appcast.xml by default in the work dir.
-          # We rename it to our environment-specific filename.
-          if [ -f "appcast_work/appcast.xml" ]; then
-            mv "appcast_work/appcast.xml" "./$APPCAST_FILE"
-            echo "✅ appcast.xml generated and moved to $APPCAST_FILE."
-          elif [ -f "appcast_work/$APPCAST_FILE" ]; then
-            mv "appcast_work/$APPCAST_FILE" "./$APPCAST_FILE"
-            echo "✅ $APPCAST_FILE found in work dir and moved successfully."
+          # 5. Verify environment-specific output
+          if [ -f "$APPCAST_FILE" ]; then
+            echo "✅ $APPCAST_FILE generated successfully."
           else
             echo "❌ Error: Could not find generated appcast file!"
             ls -R appcast_work/

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePomodoroStore } from '../state/pomodoroStore';
 import { theme } from './theme';
 import { NativeBridge } from '../services/nativeBridge';
 import pkg from '../../package.json';
+import AgentAccessView, { AgentAccessStatus } from './AgentAccessView';
 
 interface SettingsViewProps {
   onClose: () => void;
@@ -11,6 +12,38 @@ interface SettingsViewProps {
 const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
   const config = usePomodoroStore((state) => state.config);
   const updateConfig = usePomodoroStore((state) => state.updateConfig);
+  const [showAgentAccess, setShowAgentAccess] = useState(false);
+  const [agentStatus, setAgentStatus] = useState<AgentAccessStatus>('off');
+  const [connectedAgent, setConnectedAgent] = useState('');
+
+  useEffect(() => {
+    const handleSettings = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      const settings = detail?.settings ?? detail ?? {};
+      if (settings.enabled === false) setAgentStatus('off');
+      else if (settings.enabled === true) setAgentStatus((current) => current === 'connected' ? current : 'ready');
+    };
+    const handleStatus = (event: Event) => {
+      const detail = (event as CustomEvent).detail ?? {};
+      const connections = detail.connections ?? detail.activeConnections ?? detail.clients ?? [];
+      const active = Array.isArray(connections) ? connections.find((item) => item?.active !== false) : null;
+      if (detail.error || detail.status === 'error') setAgentStatus('error');
+      else if (detail.status === 'starting') setAgentStatus('starting');
+      else if (active || detail.status === 'connected') {
+        setAgentStatus('connected');
+        setConnectedAgent(active?.name ?? active?.clientName ?? 'Local MCP Client');
+      } else if (detail.enabled === false || detail.status === 'off') setAgentStatus('off');
+      else setAgentStatus('ready');
+    };
+    window.addEventListener('native:agentAccessSettings', handleSettings);
+    window.addEventListener('native:agentConnectionStatus', handleStatus);
+    NativeBridge.getAgentAccessSettings();
+    NativeBridge.getAgentConnectionStatus();
+    return () => {
+      window.removeEventListener('native:agentAccessSettings', handleSettings);
+      window.removeEventListener('native:agentConnectionStatus', handleStatus);
+    };
+  }, []);
 
   const adjustDuration = (key: keyof typeof config, delta: number) => {
     const currentValue = config[key] as number;
@@ -32,6 +65,73 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
     { label: 'Short Break', value: config.shortBreakDuration, key: 'shortBreakDuration' as const },
     { label: 'Long Break', value: config.longBreakDuration, key: 'longBreakDuration' as const },
   ];
+
+  const agentStatusColor = agentStatus === 'off'
+    ? theme.colors.text.muted
+    : agentStatus === 'starting'
+      ? '#FF9F0A'
+      : agentStatus === 'error'
+        ? '#FF453A'
+        : '#30D158';
+  const agentStatusText = agentStatus === 'off'
+    ? 'Off'
+    : agentStatus === 'starting'
+      ? 'Starting'
+      : agentStatus === 'ready'
+        ? 'Ready'
+        : agentStatus === 'connected'
+          ? 'Connected'
+          : 'Needs Attention';
+  const agentSubtitle = agentStatus === 'off'
+    ? 'Connect agents to Flumen'
+    : agentStatus === 'connected'
+      ? `${connectedAgent || 'Agent'} connected locally`
+      : agentStatus === 'error'
+        ? 'Flumen could not start agent access'
+        : agentStatus === 'starting'
+          ? 'Preparing the local helper'
+          : 'Waiting for a local connection';
+
+  const agentAccessSection = (
+    <section aria-labelledby="agent-access-heading" style={{ padding: '4px 0 8px' }}>
+      <div id="agent-access-heading" style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '.12em', color: theme.colors.text.muted, marginBottom: '8px' }}>
+        AGENT ACCESS
+      </div>
+      <button
+        type="button"
+        onClick={() => setShowAgentAccess(true)}
+        aria-label={`Agent Access, ${agentStatusText}`}
+        style={agentAccessRowStyle}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, textAlign: 'left', minWidth: 0 }}>
+          <span
+            aria-hidden
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              marginTop: 5,
+              flexShrink: 0,
+              background: agentStatusColor,
+              boxShadow: 'inset 0 0 0 1px rgba(255,255,255,.12)',
+            }}
+          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 }}>
+            <span style={{ fontSize: '0.86rem', fontWeight: 650, color: 'white' }}>Agent Access</span>
+            <span style={{ fontSize: '0.7rem', color: theme.colors.text.muted }}>{agentSubtitle}</span>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: agentStatus === 'error' ? '#FF6961' : theme.colors.text.secondary }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 650 }}>{agentStatusText}</span>
+          <span aria-hidden style={{ fontSize: 20, opacity: .55 }}>›</span>
+        </div>
+      </button>
+    </section>
+  );
+
+  if (showAgentAccess) {
+    return <AgentAccessView onBack={() => setShowAgentAccess(false)} />;
+  }
 
   return (
     <div style={{
@@ -148,10 +248,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
               </div>
             </div>
           ))}
-        </div>
 
-        {/* Auto-Pilot Settings */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '12px', paddingTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               <span style={{ fontSize: '0.85rem', fontWeight: '500', color: 'white' }}>Long Break Interval</span>
@@ -192,7 +289,14 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
               </button>
             </div>
           </div>
+        </div>
 
+        <div style={{ paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
+          {agentAccessSection}
+        </div>
+
+        {/* Behavior toggles */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '4px', paddingTop: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               <span style={{ fontSize: '0.85rem', fontWeight: '500', color: 'white' }}>Global Shortcut</span>
@@ -358,6 +462,21 @@ const miniAdjustButtonStyle: React.CSSProperties = {
   justifyContent: 'center',
   transition: 'all 0.2s ease',
   padding: 0,
+};
+
+const agentAccessRowStyle: React.CSSProperties = {
+  width: '100%',
+  minHeight: '56px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '12px',
+  padding: '10px 12px',
+  border: '1px solid rgba(255,255,255,.07)',
+  borderRadius: '13px',
+  background: 'rgba(255,255,255,.035)',
+  cursor: 'pointer',
+  fontFamily: theme.fonts.display,
 };
 
 const toggleButtonStyle = (enabled: boolean): React.CSSProperties => ({

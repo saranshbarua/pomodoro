@@ -39,3 +39,12 @@ A premium, award-winning focus timer built for macOS, focusing on deep work, hig
 - **Auto-Pilot Mode**: Configurable settings to auto-start focus sessions and breaks for a hands-off experience.
 - **Customizable Durations**: Fine-tune Focus, Short Break, and Long Break lengths down to the minute.
 - **Native macOS Logic**: Built as a hybrid Swift + React app to ensure genuine Apple-style window management and performance.
+- **Log Time**: Manually record meetings or short work without running a timer (counts toward focus totals and streaks, not completed focus cycles).
+
+## 6. Agent Access (MCP)
+- **Local stdio helper**: Agents connect through `flumen-mcp` bundled inside the app; Flumen must be open.
+- **Off by default**: Enable in Settings → Agent Access with an explicit privacy acknowledgement.
+- **Permissions**: Read Focus Data (required while on) and Allow Proposals (optional).
+- **Confirmed writes**: Agents may propose tasks, time logs, and timer actions; every change is confirmed in Flumen.
+- **Setup without a picker**: Add to Cursor, Copy Configuration, and Setup Guide for Claude Code, Codex, Gemini CLI, and other MCP clients.
+- **Provenance**: Activity records track timer vs manual vs agent sources with idempotent retries.

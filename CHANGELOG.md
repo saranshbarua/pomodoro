@@ -1,5 +1,70 @@
 # Changelog
 
+# [2.0.0-staging.5](https://github.com/saranshbarua/flumen/compare/v2.4.0...v2.0.0-staging.5) (2026-07-21)
+
+
+### Features
+
+* **macos:** add MenuBar icons and update build script ([75f3c24](https://github.com/saranshbarua/flumen/commit/75f3c2452b5b0250465461ad9015cde7b619b26f))
+* **mcp:** implement flumen-mcp helper and Agent Access functionality ([c5c6553](https://github.com/saranshbarua/flumen/commit/c5c65536c86a40911c62131cd25fe086cfa1bbb0))
+
+
+
+# [2.0.0-staging.4](https://github.com/saranshbarua/flumen/compare/v2.4.0...v2.0.0-staging.5) (2026-02-05)
+
+
+### Bug Fixes
+
+* remove duplicate error block in release workflow ([ea19062](https://github.com/saranshbarua/flumen/commit/ea190625cc8aef45fbd9fe10f83ca00ef97343a7))
+
+
+
+# [2.0.0-staging.3](https://github.com/saranshbarua/flumen/compare/v2.4.0...v2.0.0-staging.5) (2026-02-05)
+
+
+### Bug Fixes
+
+* remove unsupported --output flag and handle default appcast.xml naming ([9d00e2d](https://github.com/saranshbarua/flumen/commit/9d00e2da8d0586196bac95d1edd1250e572c3b47))
+
+
+
+# [2.0.0-staging.2](https://github.com/saranshbarua/flumen/compare/v2.4.0...v2.0.0-staging.5) (2026-02-05)
+
+
+### Bug Fixes
+
+* update release workflow to handle staging appcast filename correctly ([5df0d43](https://github.com/saranshbarua/flumen/commit/5df0d43fcdaceb19202264d2d924c841575c67f0))
+
+
+
+# [2.0.0-staging.1](https://github.com/saranshbarua/flumen/compare/v2.4.0...v2.0.0-staging.5) (2026-02-05)
+
+
+
+## [1.6.3-staging.3](https://github.com/saranshbarua/flumen/compare/v2.4.0...v2.0.0-staging.5) (2026-02-05)
+
+
+
+## [1.6.3-staging.2](https://github.com/saranshbarua/flumen/compare/v2.4.0...v2.0.0-staging.5) (2026-02-05)
+
+
+### Bug Fixes
+
+* dynamically resolve database path using bundle identifier ([b6e4fef](https://github.com/saranshbarua/flumen/commit/b6e4fef0794084954cabd0b8113ea932353b43d5))
+
+
+
+## [1.6.3-staging.1](https://github.com/saranshbarua/flumen/compare/v2.4.0...v2.0.0-staging.5) (2026-02-05)
+
+
+### Bug Fixes
+
+* fix CI appcast path and add branch safety ([273353a](https://github.com/saranshbarua/flumen/commit/273353aacefc5b8d1014f51c5b8087f0ffa712c8))
+
+
+
+## [1.6.3-staging.0](https://github.com/saranshbarua/flumen/compare/v2.4.0...v2.0.0-staging.5) (2026-02-05)
+
 # [2.4.0](https://github.com/saranshbarua/flumen/compare/v2.3.0...v2.4.0) (2026-07-09)
 
 

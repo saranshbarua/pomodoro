@@ -1,8 +1,6 @@
 {
   "github": {
-    "release": true,
-    "draft": true,
-    "preRelease": "staging"
+    "release": false
   },
   "git": {
     "commitMessage": "chore: release v${version}",

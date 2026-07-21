@@ -8,6 +8,10 @@ on:
       - 'v*'
   workflow_dispatch:
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: macos-latest
@@ -191,12 +195,22 @@ jobs:
             exit 1
           fi
 
+          if [ -z "${TARGET_BRANCH:-}" ]; then
+            echo "❌ Error: TARGET_BRANCH is unset."
+            exit 1
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Commit the appcast on top of the release tag tip, then fast-forward
-          # the environment branch (staging or main) to that commit.
+          # Preserve the generated appcast across the branch switch (checkout
+          # starts from the tag tip in a detached HEAD).
+          APPCAST_TEMP="$RUNNER_TEMP/$APPCAST_FILE"
+          cp "$APPCAST_FILE" "$APPCAST_TEMP"
+
           git fetch origin "$TARGET_BRANCH"
+          git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
+          cp "$APPCAST_TEMP" "./$APPCAST_FILE"
           git add -- "$APPCAST_FILE"
 
           if git diff --cached --quiet; then
@@ -205,7 +219,22 @@ jobs:
             git commit -m "chore: update $APPCAST_FILE [skip ci]"
           fi
 
-          git push origin "HEAD:refs/heads/$TARGET_BRANCH"
+          # Rebase-retry so a concurrent branch tip advance does not fail the job.
+          pushed=false
+          for attempt in 1 2 3; do
+            if git push origin "$TARGET_BRANCH"; then
+              pushed=true
+              break
+            fi
+            echo "Push rejected (attempt $attempt); fetching and rebasing onto origin/$TARGET_BRANCH..."
+            git fetch origin "$TARGET_BRANCH"
+            git rebase "origin/$TARGET_BRANCH"
+          done
+
+          if [ "$pushed" != true ]; then
+            echo "❌ Error: failed to push appcast commit to $TARGET_BRANCH after retries."
+            exit 1
+          fi
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -216,6 +245,7 @@ jobs:
             ${{ env.APPCAST_FILE }}
           draft: false
           prerelease: ${{ env.PRERELEASE == 'true' }}
+          generate_release_notes: true
           fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

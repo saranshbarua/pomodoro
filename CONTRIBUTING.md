@@ -46,11 +46,39 @@ Commit messages should be formatted as follows:
 
 ## Release Process
 
-Releases are automated using `release-it`. When a maintainer runs `npm run release`, the following happens:
-1. Version is bumped in `package.json`.
-2. `CHANGELOG.md` is updated.
-3. A new Git tag is created and pushed.
-4. GitHub Actions builds the Universal Binary and attaches it to a new GitHub Release.
+`release-it` bumps the version, updates the changelog, and pushes a git tag.
+GitHub Actions (triggered by the tag) builds the Universal Binary, generates
+the Sparkle appcast, publishes the GitHub Release with artifacts, and commits
+the updated appcast back to the target branch.
+
+### Staging
+
+```bash
+git checkout staging
+git pull origin staging
+# merge feature branch(es) as needed; ensure release workflow fixes are present
+npm run release:staging
+```
+
+### Production
+
+```bash
+git checkout main
+git pull origin main
+# merge staging/feature into main; ensure release workflow fixes are present
+npm run release
+```
+
+### Verify
+
+- Exactly one GitHub Release exists for the tag, with `Flumen_macOS_Universal.zip` and the appcast attached.
+- The target branch (`staging` or `main`) has a follow-up `chore: update …appcast… [skip ci]` commit.
+- Staging feed: `https://raw.githubusercontent.com/saranshbarua/flumen/staging/flumen-appcast-staging.xml`
+- Production feed: `https://raw.githubusercontent.com/saranshbarua/flumen/main/flumen-appcast.xml`
+
+> GitHub runs the workflow YAML from the tagged commit. Land pipeline fixes on
+> the branch **before** cutting the next tag; re-running an old tag will not
+> pick up newer workflow changes.
 
 ---
 

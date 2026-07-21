@@ -14,6 +14,7 @@ import {
 } from '../state/statsStore';
 import { theme } from './theme';
 import { NativeBridge } from '../services/nativeBridge';
+import LogTimeView from './LogTimeView';
 
 interface ReportsViewProps {
   onClose: () => void;
@@ -146,6 +147,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
   const fetchReports = useStatsStore(state => state.fetchReports);
   const stats = useStatsStore();
   const [exportStatus, setExportStatus] = useState<'idle' | 'exporting' | 'success'>('idle');
+  const [showLogTime, setShowLogTime] = useState(false);
   const [isProjectExpanded, setIsProjectExpanded] = useState(false);
   const [isEarlierTasksExpanded, setIsEarlierTasksExpanded] = useState(false);
   const [projectFilter, setProjectFilter] = useState<'all' | 'tagged'>('all');
@@ -607,65 +609,80 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
 
         {/* Task Breakdown Table */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', flexShrink: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingRight: '4px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingRight: '4px', gap: 12 }}>
           <h4 style={sectionHeaderStyle}>Task Breakdown</h4>
-          <button 
-            onClick={handleExport}
-            disabled={exportStatus === 'exporting'}
-            style={{
-              background: exportStatus === 'success' ? 'rgba(40, 200, 64, 0.1)' : 'rgba(255, 255, 255, 0.05)',
-              border: `1px solid ${exportStatus === 'success' ? 'rgba(40, 200, 64, 0.2)' : 'rgba(255, 255, 255, 0.1)'}`,
-              color: exportStatus === 'success' ? '#28C840' : 'rgba(255, 255, 255, 0.5)',
-              cursor: exportStatus === 'exporting' ? 'default' : 'pointer',
-              padding: '4px 10px',
-              borderRadius: '8px',
-              fontSize: '10px',
-              fontWeight: '800',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              backdropFilter: 'blur(10px)',
-              outline: 'none'
-            }}
-            onMouseOver={(e) => {
-              if (exportStatus === 'idle') {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                e.currentTarget.style.color = 'white';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (exportStatus === 'idle') {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.5)';
-              }
-            }}
-          >
-            {exportStatus === 'exporting' ? (
-              <>
-                <div className="spinner" />
-                <span>Exporting...</span>
-              </>
-            ) : exportStatus === 'success' ? (
-              <>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                <span>Saved</span>
-              </>
-            ) : (
-              <>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"></path>
-                  <polyline points="7 10 12 15 17 10"></polyline>
-                  <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-                <span>CSV</span>
-              </>
-            )}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={() => setShowLogTime(true)}
+              style={logTimeActionStyle}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.85)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.45)';
+              }}
+            >
+              Log time
+            </button>
+            <button 
+              onClick={handleExport}
+              disabled={exportStatus === 'exporting'}
+              style={{
+                background: exportStatus === 'success' ? 'rgba(40, 200, 64, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                border: `1px solid ${exportStatus === 'success' ? 'rgba(40, 200, 64, 0.2)' : 'rgba(255, 255, 255, 0.1)'}`,
+                color: exportStatus === 'success' ? '#28C840' : 'rgba(255, 255, 255, 0.5)',
+                cursor: exportStatus === 'exporting' ? 'default' : 'pointer',
+                padding: '4px 10px',
+                borderRadius: '8px',
+                fontSize: '10px',
+                fontWeight: '800',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                backdropFilter: 'blur(10px)',
+                outline: 'none'
+              }}
+              onMouseOver={(e) => {
+                if (exportStatus === 'idle') {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                  e.currentTarget.style.color = 'white';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (exportStatus === 'idle') {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.5)';
+                }
+              }}
+            >
+              {exportStatus === 'exporting' ? (
+                <>
+                  <div className="spinner" />
+                  <span>Exporting...</span>
+                </>
+              ) : exportStatus === 'success' ? (
+                <>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  <span>Saved</span>
+                </>
+              ) : (
+                <>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  <span>CSV</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
         <div style={{ 
           background: 'rgba(255,255,255,0.02)', 
@@ -834,8 +851,23 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
                 })
               ) : (
                   <tr>
-                    <td colSpan={3} style={{ ...tdStyle, textAlign: 'center', color: theme.colors.text.muted, padding: '24px' }}>
-                      No tasks logged yet
+                    <td colSpan={3} style={{ ...tdStyle, textAlign: 'center', color: theme.colors.text.muted, padding: '28px 24px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                        <span>No tasks logged yet</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowLogTime(true)}
+                          style={emptyLogTimeHintStyle}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color = 'rgba(255, 255, 255, 0.35)';
+                          }}
+                        >
+                          Missing time? Log time
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )}
@@ -845,6 +877,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
         </div>
 
       </div>
+      {showLogTime && <LogTimeView onClose={() => setShowLogTime(false)} />}
     </div>
   );
 };
@@ -873,6 +906,34 @@ const sectionHeaderStyle: React.CSSProperties = {
   letterSpacing: '0.12em',
   margin: 0,
   paddingLeft: '4px'
+};
+
+/** Quiet section CTA — readable, not competing with charts or Export utility. */
+const logTimeActionStyle: React.CSSProperties = {
+  background: 'transparent',
+  border: 'none',
+  padding: '2px 0',
+  color: 'rgba(255, 255, 255, 0.45)',
+  fontSize: '11px',
+  fontWeight: 600,
+  letterSpacing: '-0.01em',
+  cursor: 'pointer',
+  transition: 'color 0.15s ease',
+  fontFamily: theme.fonts.display,
+  outline: 'none',
+};
+
+const emptyLogTimeHintStyle: React.CSSProperties = {
+  background: 'transparent',
+  border: 'none',
+  padding: 0,
+  color: 'rgba(255, 255, 255, 0.35)',
+  fontSize: '11px',
+  fontWeight: 500,
+  cursor: 'pointer',
+  transition: 'color 0.15s ease',
+  fontFamily: theme.fonts.display,
+  outline: 'none',
 };
 
 const thStyle: React.CSSProperties = {

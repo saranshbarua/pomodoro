@@ -47,18 +47,21 @@ describe('shouldShowAgentEnableConsent', () => {
 });
 
 describe('connectionDetailEntries', () => {
-  it('omits static Transport/Availability duplicates and formats remaining labels', () => {
+  it('surfaces only the helper path for Advanced support', () => {
     expect(connectionDetailEntries({
       transport: 'Local stdio',
       availability: 'While Flumen is open',
       enabled: true,
-      helperPath: '/Applications/Flumen.app/Contents/MacOS/flumen-mcp',
+      helperPath: '/Applications/Flumen.app/Contents/Helpers/flumen-mcp',
       protocolVersion: 1,
       server: 'Flumen MCP',
+      socketPath: '/tmp/flumen.sock',
     })).toEqual([
-      { key: 'helperPath', label: 'Helper Path', value: '/Applications/Flumen.app/Contents/MacOS/flumen-mcp' },
-      { key: 'protocolVersion', label: 'Protocol', value: '1' },
-      { key: 'server', label: 'Server', value: 'Flumen MCP' },
+      {
+        key: 'helperPath',
+        label: 'Helper Path',
+        value: '/Applications/Flumen.app/Contents/Helpers/flumen-mcp',
+      },
     ]);
   });
 });

@@ -67,7 +67,7 @@ The app uses **Zustand** for state, split into three focused stores:
 - `flumen-mcp` (bundled in `Contents/Helpers`) speaks MCP over stdio and proxies tools to the app via IPC. It never opens SQLite directly.
 - Timer reads/writes reuse Zustand through `agentCommand` / `agentCommandResult`.
 - Writes create Flumen-side proposals; confirmation is mandatory.
-- Setup UX: Add to Cursor deeplink, Copy Configuration, Setup Guide — no client picker.
+- Setup UX: Copy configuration, Install in Cursor deeplink, Setup Guide — no client picker. Advanced reveals helper path only.
 - Docs: [MCP-SETUP.md](MCP-SETUP.md), [MCP-ARCHITECTURE.md](MCP-ARCHITECTURE.md), [TESTING.md](TESTING.md) §8.
 
 ## 6. Build & Distribution

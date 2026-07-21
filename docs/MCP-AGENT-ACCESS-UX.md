@@ -39,7 +39,7 @@ The first thing users should understand is whether access is off, ready, connect
 
 ### Progressive disclosure
 
-Most users start with **Add to Cursor** or **Copy Configuration**. Raw connection details belong behind **Connection Details**. Flumen does not detect installed agents or edit their config files.
+Most users start with **Copy configuration** or **Install in Cursor**. Raw helper path and support tools belong behind **Advanced**. Flumen does not detect installed agents or edit their config files.
 
 ### Private by architecture, clear in language
 
@@ -56,18 +56,16 @@ Settings
 └── Agent Access
     ├── Access status and master control
     ├── Connect an Agent
-    │   ├── Add to Cursor
-    │   ├── Copy Configuration
-    │   └── Open Setup Guide
+    │   ├── Copy configuration
+    │   ├── Install in Cursor
+    │   └── Setup Guide
     ├── Permissions
     │   ├── Read Focus Data
     │   └── Allow Proposals
     ├── Active Connections
-    └── Connection Details
-        ├── Transport / helper path
-        ├── Copy Server Command
-        ├── Test Connection
-        └── Disconnect Sessions
+    └── Advanced
+        ├── Helper path
+        └── Copy helper command
 ```
 
 ## 4. Main Settings Entry
@@ -147,12 +145,12 @@ The master control belongs here rather than in the main Settings list because en
 ### Primary actions
 
 ```text
-[ Add to Cursor ]
-[ Copy Configuration ]   [ Setup Guide ]
+[ Copy configuration ]
+[ Install in Cursor ]   [ Setup Guide ]
 ```
 
-- **Add to Cursor** opens Cursor’s supported install deeplink and also copies it.
-- **Copy Configuration** copies a generic stdio MCP JSON block for Claude Code, Codex, Gemini CLI, and other clients.
+- **Copy configuration** copies a generic stdio MCP JSON block for Claude Code, Codex, Gemini CLI, Cursor, and other clients.
+- **Install in Cursor** opens Cursor’s supported install deeplink (and copies it) for one-click Cursor setup.
 - **Setup Guide** opens [MCP-SETUP.md](MCP-SETUP.md).
 
 Do not show a client picker, detect installed apps, or edit client config files.
@@ -221,7 +219,7 @@ Primary action: **Turn On Agent Access**
 
 Do not use a long legal document. Link to **Learn About Agent Privacy** for details.
 
-After activation, keep the user on the Agent Access screen with **Add to Cursor**, **Copy Configuration**, and **Setup Guide** visible. Do not leave them on a technically enabled but unconfigured screen without a next action.
+After activation, keep the user on the Agent Access screen with **Copy configuration**, **Install in Cursor**, and **Setup Guide** visible. Do not leave them on a technically enabled but unconfigured screen without a next action.
 
 ## 7. Connect an Agent
 
@@ -230,40 +228,39 @@ There is no client picker in v2. Setup is explicit and user-driven.
 ### Preferred setup flow
 
 1. Show a short explanation that Flumen stays local and must remain open.
-2. Offer **Add to Cursor** for Cursor users.
-3. Offer **Copy Configuration** as the universal path for every other MCP client.
-4. Provide **Open Setup Guide** for Claude Code, Codex, Gemini CLI, and troubleshooting.
+2. Offer **Copy configuration** as the primary, universal path for every MCP client.
+3. Offer **Install in Cursor** as a secondary shortcut for Cursor users.
+4. Provide **Setup Guide** for Claude Code, Codex, Gemini CLI, and troubleshooting.
 5. Show **No agent is connected right now** until a handshake succeeds.
 6. Confirm success by listing the self-reported client under Active Connections.
 
 Example:
 
 ```text
-Connect Cursor
+Connect an Agent
 
-Add Flumen as a local MCP server in Cursor.
+Paste this into your agent’s MCP settings. Flumen stays on this Mac and must remain open.
 
-[ Copy Configuration ]
-[ Open Cursor Setup Guide ]
+[ Copy configuration ]
+[ Install in Cursor ]   [ Setup Guide ]
 
-○ Waiting for Cursor…
+ACTIVE CONNECTIONS
+No agent is connected right now.
 ```
 
 On success:
 
 ```text
-✓ Cursor connected
-
-Flumen can now share focus data when you ask.
-
-[ Done ]
+ACTIVE CONNECTIONS
+Cursor                                  Active now
+[ Disconnect Sessions ]
 ```
 
 Do not require users to manually understand ports, tokens, or JSON unless the known-client flow fails.
 
-## 8. Connection Details
+## 8. Advanced
 
-Place **Connection Details** in a collapsed disclosure near the bottom of the Agent Access view.
+Place **Advanced** in a collapsed disclosure near the bottom of the Agent Access view. It is support/diagnostics, not the primary setup path.
 
 ### Recommended v2 transport
 
@@ -271,26 +268,20 @@ Use a local **stdio** MCP helper for broad desktop-agent compatibility and to pr
 
 With stdio, the client starts the helper process. The Agent Access control does not literally start a listening server; it authorizes or rejects local helper connections. The UI should therefore say **Turn On Agent Access**, not “Start Server.”
 
-The app should provide a client-ready configuration rather than asking users to assemble a command:
+Primary setup stays in Connect an Agent (**Copy configuration**). Advanced only reveals:
 
 ```text
-CONNECTION DETAILS
+ADVANCED
 
-Transport                              Local stdio
-Server                                 Flumen MCP
-Availability                           While Flumen is open
+For support or manual MCP setup.
 
-[ Copy MCP Configuration ]
-[ Test Connection ]
-```
-
-An advanced disclosure may reveal the executable command:
-
-```text
+Helper Path
 /Applications/Flumen.app/Contents/Helpers/flumen-mcp
+
+[ Copy helper command ]
 ```
 
-The exact path is illustrative and must be confirmed by engineering.
+Do not show Transport, Availability, or Test Connection on this surface. Real connection success is **Active Connections** after the client handshakes.
 
 v2 ships stdio only. Do not expose ports, tokens, or HTTP endpoints in the Agent Access UI.
 
@@ -347,7 +338,7 @@ Actions: **Turn Off**, **Cancel**
 
 ### Reset access
 
-Keep this in Connection Details as a destructive secondary action.
+Keep Disconnect Sessions on Active Connections as a destructive secondary action.
 
 **Reset Agent Access?**
 
@@ -385,8 +376,7 @@ Offer:
 
 - **Copy Configuration Again**
 - **Open Setup Guide**
-- **Test Connection**
-- **Show Technical Details**
+- **Show Advanced**
 
 Do not blame the user or display raw process errors first.
 
@@ -423,7 +413,7 @@ The agent should receive:
 - Read Focus Data
 - Allow Proposals
 - Connect an Agent
-- Connection Details
+- Advanced
 - Turn Off Agent Access
 
 ### Avoid

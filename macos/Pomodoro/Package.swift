@@ -40,7 +40,10 @@ let package = Package(
             path: "Sources",
             exclude: ["AppIcon.icns"],
             resources: [
-                .copy("dist"), .process("click.mp3")
+                .copy("dist"),
+                .process("click.mp3"),
+                .process("MenuBarIcon.png"),
+                .process("MenuBarIcon@2x.png")
             ],
             // AppKit/WKWebView UI remains on Swift 5 concurrency until fully audited.
             // IPC/Core/MCP targets use Swift 6.

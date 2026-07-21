@@ -195,6 +195,23 @@ describe('ReportsView and Helpers', () => {
       expect(screen.getByText('Special Task')).toBeDefined();
       const projectElements = screen.getAllByText('Test Project');
       expect(projectElements.length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByRole('button', { name: 'Log time' })).toBeDefined();
+    });
+
+    it('should offer Log time from empty Task Breakdown', () => {
+      const { hydrateReports } = useStatsStore.getState();
+      hydrateReports({
+        dailyStats: [],
+        projectDistribution: [],
+        totalFocusTime: 0,
+        totalSessions: 0,
+        taskBreakdown: [],
+        streak: 0,
+      });
+
+      render(<ReportsView onClose={() => {}} />);
+      expect(screen.getByRole('button', { name: 'Missing time? Log time' })).toBeDefined();
+      expect(screen.getByRole('button', { name: 'Log time' })).toBeDefined();
     });
 
     it('should call fetchReports on mount', () => {

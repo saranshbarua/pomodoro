@@ -8,7 +8,6 @@ import Controls from './Controls';
 import SettingsView from './SettingsView';
 import ReportsView from './ReportsView';
 import TaskShelf from './TaskShelf';
-import LogTimeView from './LogTimeView';
 import AgentProposalOverlay, { AgentProposal } from './AgentProposalOverlay';
 import { handleNativeAgentCommand } from '../services/agentCommandAdapter';
 import Tooltip, { FloatingTooltip } from './Tooltip';
@@ -110,7 +109,6 @@ const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showReports, setShowReports] = useState(false);
   const [showTasks, setShowTasks] = useState(false);
-  const [showLogTime, setShowLogTime] = useState(false);
   const [agentProposal, setAgentProposal] = useState<AgentProposal | null>(null);
   const [isCelebrating, setIsCelebrating] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
@@ -203,7 +201,6 @@ const App: React.FC = () => {
       setShowSettings(false);
       setShowReports(false);
       setShowTasks(false);
-      setShowLogTime(false);
       setDragHandleTooltip(null);
     };
 
@@ -374,27 +371,13 @@ const App: React.FC = () => {
       )}
 
       {/* Top Navigation */}
-      <Tooltip label="Log Time" placement="bottom" wrapperStyle={logTimeButtonAnchorStyle}>
-        <button
-          onClick={() => setShowLogTime(true)}
-          style={iconButtonStyle}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.3')}
-          aria-label="Log Time"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="9" />
-            <polyline points="12 7 12 12 15 14" />
-          </svg>
-        </button>
-      </Tooltip>
-
       <Tooltip label="Reports" placement="bottom" wrapperStyle={reportsButtonAnchorStyle}>
         <button 
           onClick={() => setShowReports(true)}
           style={iconButtonStyle}
           onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
           onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.3')}
+          aria-label="Reports"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
@@ -682,7 +665,6 @@ const App: React.FC = () => {
       <TaskShelf isOpen={showTasks} onClose={handleCloseTasks} />
       {showSettings && <SettingsView onClose={() => setShowSettings(false)} />}
       {showReports && <ReportsView onClose={() => setShowReports(false)} />}
-      {showLogTime && <LogTimeView onClose={() => setShowLogTime(false)} />}
       {agentProposal && (
         <AgentProposalOverlay
           proposal={agentProposal}
@@ -719,17 +701,10 @@ const iconButtonStyle: React.CSSProperties = {
   padding: 0,
 };
 
-const logTimeButtonAnchorStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: '24px',
-  left: '24px',
-  zIndex: 10,
-};
-
 const reportsButtonAnchorStyle: React.CSSProperties = {
   position: 'absolute',
   top: '24px',
-  left: '64px',
+  left: '24px',
   zIndex: 10,
 };
 

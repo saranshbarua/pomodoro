@@ -88,6 +88,8 @@ fi
 echo "📄 Copying Info.plist and Icon..."
 cp "macos/Pomodoro/Info.plist" "$CONTENTS_DIR/"
 cp "macos/Pomodoro/Sources/AppIcon.icns" "$RESOURCES_DIR/"
+cp "macos/Pomodoro/Sources/MenuBarIcon.png" "$RESOURCES_DIR/"
+cp "macos/Pomodoro/Sources/MenuBarIcon@2x.png" "$RESOURCES_DIR/"
 
 # 5.1 Inject Version into Info.plist
 # This ensures CFBundleShortVersionString always matches package.json

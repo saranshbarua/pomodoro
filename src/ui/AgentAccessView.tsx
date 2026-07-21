@@ -77,6 +77,13 @@ interface AgentAccessViewProps {
   onBack: () => void;
 }
 
+/** Cursor brand mark from Simple Icons (MIT), filled for dark secondary buttons. */
+const CursorMarkIcon: React.FC = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <path d="M11.503.131 1.891 5.678a.84.84 0 0 0-.42.726v11.188c0 .3.162.575.42.724l9.609 5.55a1 1 0 0 0 .998 0l9.61-5.55a.84.84 0 0 0 .42-.724V6.404a.84.84 0 0 0-.42-.726L12.497.131a1.01 1.01 0 0 0-.996 0M2.657 6.338h18.55c.263 0 .43.287.297.515L12.23 22.918c-.062.107-.229.064-.229-.06V12.335a.59.59 0 0 0-.295-.51l-9.11-5.257c-.109-.063-.064-.23.061-.23" />
+  </svg>
+);
+
 const AgentAccessView: React.FC<AgentAccessViewProps> = ({ onBack }) => {
   const [settings, setSettings] = useState(initialSettings);
   const [status, setStatus] = useState<AgentAccessStatus>('off');
@@ -184,6 +191,12 @@ const AgentAccessView: React.FC<AgentAccessViewProps> = ({ onBack }) => {
     setFeedback(message);
   };
 
+  useEffect(() => {
+    if (!feedback) return;
+    const timer = window.setTimeout(() => setFeedback(''), 2500);
+    return () => window.clearTimeout(timer);
+  }, [feedback]);
+
   const copy = statusCopy[status];
   const connectedName = connections[0]?.name || 'Local MCP Client';
 
@@ -197,7 +210,11 @@ const AgentAccessView: React.FC<AgentAccessViewProps> = ({ onBack }) => {
       `}</style>
 
       <header style={headerStyle}>
-        <button className="agent-control" onClick={onBack} aria-label="Back to Settings" style={backButtonStyle}>‹</button>
+        <button className="agent-control" onClick={onBack} aria-label="Back to Settings" style={backButtonStyle}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
         <h3 style={titleStyle}>Agent Access</h3>
         <div style={{ width: 32 }} aria-hidden />
       </header>
@@ -241,7 +258,16 @@ const AgentAccessView: React.FC<AgentAccessViewProps> = ({ onBack }) => {
         {status === 'error' && (
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="agent-control" onClick={() => { setStatus('starting'); NativeBridge.retryAgentAccess(); }} style={primaryButtonStyle}>Try Again</button>
-            <button className="agent-control" onClick={() => setDetailsOpen(true)} style={secondaryButtonStyle}>Show Details</button>
+            <button
+              className="agent-control"
+              onClick={() => {
+                setDetailsOpen(true);
+                NativeBridge.getAgentConnectionDetails();
+              }}
+              style={secondaryButtonStyle}
+            >
+              Show Details
+            </button>
           </div>
         )}
 
@@ -251,14 +277,30 @@ const AgentAccessView: React.FC<AgentAccessViewProps> = ({ onBack }) => {
               <div>
                 <div id="connect-agent-title" style={sectionLabelStyle}>CONNECT AN AGENT</div>
                 <p style={{ ...secondaryTextStyle, margin: '6px 0 14px' }}>
-                  Add Flumen to Cursor directly, or copy a standard stdio configuration for another agent.
+                  Paste this into your agent’s MCP settings. Flumen stays on this Mac and must remain open.
                 </p>
               </div>
-              <button className="agent-control" onClick={() => NativeBridge.addToCursor()} style={primaryButtonStyle}>Add to Cursor</button>
+              <button
+                className="agent-control"
+                onClick={() => copyAction(() => NativeBridge.copyAgentConfiguration(), 'MCP configuration copied.')}
+                style={primaryButtonStyle}
+              >
+                Copy configuration
+              </button>
               <div style={twoColumnStyle}>
-                <button className="agent-control" onClick={() => copyAction(() => NativeBridge.copyAgentConfiguration(), 'MCP configuration copied.')} style={secondaryButtonStyle}>Copy Configuration</button>
-                <button className="agent-control" onClick={() => NativeBridge.openAgentSetupGuide()} style={secondaryButtonStyle}>Setup Guide</button>
+                <button
+                  className="agent-control"
+                  onClick={() => NativeBridge.addToCursor()}
+                  style={iconButtonStyle}
+                >
+                  <CursorMarkIcon />
+                  Install in Cursor
+                </button>
+                <button className="agent-control" onClick={() => NativeBridge.openAgentSetupGuide()} style={secondaryButtonStyle}>
+                  Setup Guide
+                </button>
               </div>
+              {feedback && <div role="status" aria-live="polite" style={feedbackStyle}>{feedback}</div>}
             </section>
 
             <section style={sectionStyle} aria-labelledby="permissions-title">
@@ -315,40 +357,48 @@ const AgentAccessView: React.FC<AgentAccessViewProps> = ({ onBack }) => {
                 </>
               )}
             </section>
-
-            <section style={sectionStyle}>
-              <button
-                className="agent-control"
-                aria-expanded={detailsOpen}
-                onClick={() => {
-                  const next = !detailsOpen;
-                  setDetailsOpen(next);
-                  if (next) NativeBridge.getAgentConnectionDetails();
-                }}
-                style={disclosureButtonStyle}
-              >
-                <span>Connection Details</span><span aria-hidden>{detailsOpen ? '⌄' : '›'}</span>
-              </button>
-              {detailsOpen && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <dl style={detailsListStyle}>
-                    <div><dt style={detailTermStyle}>Transport</dt><dd style={detailValueStyle}>Local stdio</dd></div>
-                    <div><dt style={detailTermStyle}>Availability</dt><dd style={detailValueStyle}>While Flumen is open</dd></div>
-                    {connectionDetailEntries(details).map((entry) => (
-                      <div key={entry.key}><dt style={detailTermStyle}>{entry.label}</dt><dd style={detailValueStyle}>{entry.value}</dd></div>
-                    ))}
-                  </dl>
-                  <div style={twoColumnStyle}>
-                    <button className="agent-control" onClick={() => copyAction(() => NativeBridge.copyAgentServerCommand(), 'Server command copied.')} style={secondaryButtonStyle}>Copy Server Command</button>
-                    <button className="agent-control" onClick={() => NativeBridge.testAgentConnection()} style={secondaryButtonStyle}>Test Connection</button>
-                  </div>
-                </div>
-              )}
-            </section>
           </>
         )}
 
-        {feedback && <div role="status" aria-live="polite" style={feedbackStyle}>{feedback}</div>}
+        {settings.enabled && (
+          <section style={sectionStyle}>
+            <button
+              className="agent-control"
+              aria-expanded={detailsOpen}
+              onClick={() => {
+                const next = !detailsOpen;
+                setDetailsOpen(next);
+                if (next) NativeBridge.getAgentConnectionDetails();
+              }}
+              style={disclosureButtonStyle}
+            >
+              <span>Advanced</span><span aria-hidden>{detailsOpen ? '⌄' : '›'}</span>
+            </button>
+            {detailsOpen && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <p style={{ ...secondaryTextStyle, margin: 0 }}>For support or manual MCP setup.</p>
+                <dl style={detailsListStyle}>
+                  {connectionDetailEntries(details).map((entry) => (
+                    <div key={entry.key}>
+                      <dt style={detailTermStyle}>{entry.label}</dt>
+                      <dd style={detailValueStyle}>{entry.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <button
+                  className="agent-control"
+                  onClick={() => copyAction(() => NativeBridge.copyAgentServerCommand(), 'Helper command copied.')}
+                  style={secondaryButtonStyle}
+                >
+                  Copy helper command
+                </button>
+                {status === 'error' && feedback && (
+                  <div role="status" aria-live="polite" style={feedbackStyle}>{feedback}</div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
       </div>
 
       {consentStep > 0 && (
@@ -406,7 +456,20 @@ const AgentAccessView: React.FC<AgentAccessViewProps> = ({ onBack }) => {
 const panelStyle: React.CSSProperties = { position: 'absolute', inset: 0, zIndex: 120, background: theme.colors.background, borderRadius: theme.radii.window, padding: 24, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', color: 'white', fontFamily: theme.fonts.display };
 const headerStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 };
 const titleStyle: React.CSSProperties = { margin: 0, fontFamily: theme.fonts.brand, fontSize: '1.1rem', letterSpacing: '-0.02em' };
-const backButtonStyle: React.CSSProperties = { width: 32, height: 32, borderRadius: 16, border: '1px solid rgba(255,255,255,.08)', background: 'rgba(255,255,255,.05)', color: 'white', fontSize: 25, lineHeight: 1, cursor: 'pointer' };
+const backButtonStyle: React.CSSProperties = {
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  border: 'none',
+  background: 'rgba(255,255,255,.05)',
+  color: 'white',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  padding: 0,
+  flexShrink: 0,
+};
 const scrollStyle: React.CSSProperties = { overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 12 };
 const statusCardStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '16px', background: 'linear-gradient(145deg, rgba(255,255,255,.075), rgba(255,255,255,.025))', border: '1px solid rgba(255,255,255,.09)', borderRadius: 18 };
 const statusDotStyle: React.CSSProperties = {
@@ -426,7 +489,20 @@ const rowTitleStyle: React.CSSProperties = { color: 'white', fontSize: 12, fontW
 const allowedPillStyle: React.CSSProperties = { color: '#8BE69B', background: 'rgba(48,209,88,.1)', padding: '3px 7px', borderRadius: 6, fontSize: 9, fontWeight: 700, whiteSpace: 'nowrap' };
 const twoColumnStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 };
 const primaryButtonStyle: React.CSSProperties = { minHeight: 38, borderRadius: 11, border: 'none', background: 'white', color: '#0A0A0A', fontWeight: 750, fontSize: 12, cursor: 'pointer', padding: '0 14px' };
-const secondaryButtonStyle: React.CSSProperties = { ...primaryButtonStyle, color: 'rgba(255,255,255,.8)', background: 'rgba(255,255,255,.065)', border: '1px solid rgba(255,255,255,.075)' };
+const secondaryButtonStyle: React.CSSProperties = {
+  ...primaryButtonStyle,
+  color: 'rgba(255,255,255,.8)',
+  background: 'rgba(255,255,255,.065)',
+  border: '1px solid rgba(255,255,255,.075)',
+  whiteSpace: 'nowrap',
+};
+const iconButtonStyle: React.CSSProperties = {
+  ...secondaryButtonStyle,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 7,
+};
 const smallButtonStyle: React.CSSProperties = { ...secondaryButtonStyle, minHeight: 32 };
 const dangerButtonStyle: React.CSSProperties = { ...smallButtonStyle, background: 'rgba(255,69,58,.16)', color: '#FF6961' };
 const warningCardStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 9, padding: 13, borderRadius: 12, background: 'rgba(255,69,58,.08)', border: '1px solid rgba(255,69,58,.16)' };

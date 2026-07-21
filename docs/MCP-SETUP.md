@@ -18,16 +18,16 @@ If Agent Access is off or Flumen is closed, `flumen-mcp` refuses to stay connect
 
 ## Add to Cursor
 
-1. Open Flumen → Settings → Agent Access → Turn On
-2. Choose **Add to Cursor**
-3. Confirm the install prompt in Cursor
-4. Ask Cursor to call `get_server_status` or `get_focus_status`
+Cursor users can use **Install in Cursor** from Agent Access for a one-click deeplink, or paste **Copy configuration** into Cursor’s MCP settings.
 
-If the deeplink is unavailable, use **Copy Configuration** and paste it into Cursor’s MCP settings.
+1. Open Flumen → Settings → Agent Access → Turn On
+2. Prefer **Copy configuration**, or choose **Install in Cursor**
+3. Confirm in Cursor if using the deeplink
+4. Ask Cursor to call `get_server_status` or `get_focus_status`
 
 ## Generic MCP configuration
 
-Use the path shown in Agent Access → Connection Details → helper path. Example:
+Use **Copy configuration** in Agent Access, or the helper path under **Advanced**. Example:
 
 ```json
 {
@@ -56,7 +56,7 @@ Add an MCP server entry that launches the `flumen-mcp` helper over stdio. Prefer
 
 ## Gemini CLI
 
-Register Flumen as a local stdio MCP server using the helper path from Connection Details. Restart the CLI after saving the config.
+Register Flumen as a local stdio MCP server using the helper path from Advanced. Restart the CLI after saving the config.
 
 ## Other MCP clients
 
@@ -85,7 +85,7 @@ Flumen never edits client config files for you.
 | `agent_access_disabled` | Settings → Agent Access → Turn On |
 | `permission_denied` for writes | Enable Allow Proposals |
 | `user_declined` / `proposal_expired` | Approve the proposal in Flumen within two minutes |
-| Helper not found | Reinstall/update Flumen; copy the server command again from Connection Details |
+| Helper not found | Reinstall/update Flumen; copy the helper command again from Advanced |
 | Staging/production mismatch | Use the helper from the same app that is running |
 
 ## Privacy boundary

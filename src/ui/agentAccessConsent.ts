@@ -3,11 +3,14 @@ import { AgentAccessSettings } from '../services/nativeBridge';
 /** Current privacy/consent generation. Bump when consent copy must be re-shown. */
 export const AGENT_ACCESS_CONSENT_VERSION = 1;
 
-/** Keys already shown as static Connection Details rows; omit from the dynamic dump. */
-export const CONNECTION_DETAIL_STATIC_KEYS = new Set([
+/** Keys hidden from Advanced — setup status already covers these. */
+export const CONNECTION_DETAIL_HIDDEN_KEYS = new Set([
   'transport',
   'availability',
   'enabled',
+  'server',
+  'socketPath',
+  'protocolVersion',
 ]);
 
 /**
@@ -25,6 +28,7 @@ export function shouldShowAgentEnableConsent(settings: Partial<AgentAccessSettin
   return !(optedOut && hasCurrentConsent);
 }
 
+/** Advanced support fields only (helper path). */
 export function connectionDetailEntries(
   details: Record<string, unknown>,
 ): Array<{ key: string; label: string; value: string }> {
@@ -32,19 +36,18 @@ export function connectionDetailEntries(
     switch (key) {
       case 'helperPath':
         return 'Helper Path';
-      case 'socketPath':
-        return 'Socket Path';
-      case 'protocolVersion':
-        return 'Protocol';
-      case 'server':
-        return 'Server';
       default:
         return key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
     }
   };
 
   return Object.entries(details)
-    .filter(([key, value]) => !CONNECTION_DETAIL_STATIC_KEYS.has(key) && (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'))
+    .filter(([key, value]) => {
+      if (CONNECTION_DETAIL_HIDDEN_KEYS.has(key)) return false;
+      // Advanced surfaces the helper path for support / manual MCP setup only.
+      if (key !== 'helperPath') return false;
+      return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+    })
     .map(([key, value]) => ({
       key,
       label: labelFor(key),

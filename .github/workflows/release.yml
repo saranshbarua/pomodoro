@@ -72,8 +72,8 @@ jobs:
         run: |
           test -x Flumen.app/Contents/MacOS/Flumen
           test -x Flumen.app/Contents/Helpers/flumen-mcp
-          lipo -verify_arch arm64 x86_64 Flumen.app/Contents/MacOS/Flumen
-          lipo -verify_arch arm64 x86_64 Flumen.app/Contents/Helpers/flumen-mcp
+          lipo Flumen.app/Contents/MacOS/Flumen -verify_arch arm64 x86_64
+          lipo Flumen.app/Contents/Helpers/flumen-mcp -verify_arch arm64 x86_64
           codesign --verify --deep --strict --verbose=2 Flumen.app
           npm run test:mcp
 

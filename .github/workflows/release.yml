@@ -49,16 +49,19 @@ jobs:
 
       - name: Set Environment Variables
         run: |
+          set -euo pipefail
           if [[ "${{ github.ref_name }}" == *"-staging"* ]]; then
-            echo "IS_STAGING=true" >> $GITHUB_ENV
-            echo "TARGET_BRANCH=staging" >> $GITHUB_ENV
-            echo "APPCAST_FILE=flumen-appcast-staging.xml" >> $GITHUB_ENV
-            echo "PRERELEASE=true" >> $GITHUB_ENV
+            echo "IS_STAGING=true" >> "$GITHUB_ENV"
+            echo "TARGET_BRANCH=staging" >> "$GITHUB_ENV"
+            echo "APPCAST_FILE=flumen-appcast-staging.xml" >> "$GITHUB_ENV"
+            echo "PRERELEASE=true" >> "$GITHUB_ENV"
+            echo "Detected staging release tag: ${{ github.ref_name }}"
           else
-            echo "IS_STAGING=false" >> $GITHUB_ENV
-            echo "TARGET_BRANCH=main" >> $GITHUB_ENV
-            echo "APPCAST_FILE=flumen-appcast.xml" >> $GITHUB_ENV
-            echo "PRERELEASE=false" >> $GITHUB_ENV
+            echo "IS_STAGING=false" >> "$GITHUB_ENV"
+            echo "TARGET_BRANCH=main" >> "$GITHUB_ENV"
+            echo "APPCAST_FILE=flumen-appcast.xml" >> "$GITHUB_ENV"
+            echo "PRERELEASE=false" >> "$GITHUB_ENV"
+            echo "Detected production release tag/ref: ${{ github.ref_name }}"
           fi
 
       - name: Build App
@@ -70,11 +73,14 @@ jobs:
 
       - name: Verify universal signed bundle
         run: |
+          set -euo pipefail
           test -x Flumen.app/Contents/MacOS/Flumen
           test -x Flumen.app/Contents/Helpers/flumen-mcp
           lipo Flumen.app/Contents/MacOS/Flumen -verify_arch arm64 x86_64
           lipo Flumen.app/Contents/Helpers/flumen-mcp -verify_arch arm64 x86_64
           codesign --verify --deep --strict --verbose=2 Flumen.app
+          /usr/bin/file Flumen.app/Contents/MacOS/Flumen
+          /usr/bin/file Flumen.app/Contents/Helpers/flumen-mcp
           npm run test:mcp
 
       - name: Notarize Developer ID build
@@ -100,64 +106,107 @@ jobs:
           ditto -c -k --keepParent Flumen.app Flumen_macOS_Universal.zip
 
       - name: Setup Sparkle Tools
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
+          set -euo pipefail
+          # Keep generate_appcast aligned with the Sparkle release we historically ship tools from.
+          # Flag note: this CLI supports `-o <filename>`, not `--output`.
+          SPARKLE_TOOLS_VERSION="2.8.1"
           mkdir -p sparkle_tools
-          # We use the same Sparkle version as in Package.resolved (2.8.1)
-          curl -L https://github.com/sparkle-project/Sparkle/releases/download/2.8.1/Sparkle-2.8.1.tar.xz | tar -xJ -C sparkle_tools
-          echo "$(pwd)/sparkle_tools/bin" >> $GITHUB_PATH
+          curl -fsSL "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_TOOLS_VERSION}/Sparkle-${SPARKLE_TOOLS_VERSION}.tar.xz" \
+            | tar -xJ -C sparkle_tools
+          test -x sparkle_tools/bin/generate_appcast
+          echo "$(pwd)/sparkle_tools/bin" >> "$GITHUB_PATH"
 
       - name: Sign and Generate Appcast
         if: startsWith(github.ref, 'refs/tags/')
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
-          # 1. Verify file exists
+          set -euo pipefail
+
           if [ ! -f Flumen_macOS_Universal.zip ]; then
             echo "❌ Error: Flumen_macOS_Universal.zip not found!"
             exit 1
           fi
 
-          # 2. Securely create the key file
-          printf "%s" "$SPARKLE_PRIVATE_KEY" > sparkle_key.priv
-          chmod 600 sparkle_key.priv
-          
-          # 3. Create workspace for appcast
-          mkdir -p appcast_work
-          cp Flumen_macOS_Universal.zip appcast_work/
-
-          # 4. Generate the signed appcast
-          echo "🌐 Generating signed $APPCAST_FILE..."
-          # Use a trailing slash to ensure the filename is appended correctly
-          REPO_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/"
-          
-          ./sparkle_tools/bin/generate_appcast \
-            --download-url-prefix "$REPO_URL" \
-            --ed-key-file sparkle_key.priv \
-            --output "$GITHUB_WORKSPACE/$APPCAST_FILE" \
-            appcast_work/
-          
-          # 5. Verify environment-specific output
-          if [ -f "$APPCAST_FILE" ]; then
-            echo "✅ $APPCAST_FILE generated successfully."
-          else
-            echo "❌ Error: Could not find generated appcast file!"
-            ls -R appcast_work/
-            rm -f sparkle_key.priv
+          if [ -z "${SPARKLE_PRIVATE_KEY:-}" ]; then
+            echo "❌ Error: SPARKLE_PRIVATE_KEY secret is empty."
             exit 1
           fi
 
-          # 6. Cleanup
-          rm -f sparkle_key.priv
+          if [ -z "${APPCAST_FILE:-}" ]; then
+            echo "❌ Error: APPCAST_FILE is unset (staging/production env step failed)."
+            exit 1
+          fi
+
+          printf '%s' "$SPARKLE_PRIVATE_KEY" > sparkle_key.priv
+          chmod 600 sparkle_key.priv
+          trap 'rm -f sparkle_key.priv' EXIT
+
+          rm -rf appcast_work
+          mkdir -p appcast_work
+          cp Flumen_macOS_Universal.zip appcast_work/
+
+          # Re-use the existing feed when present so prior items are preserved/updated.
+          if [ -f "$APPCAST_FILE" ]; then
+            cp "$APPCAST_FILE" "appcast_work/$APPCAST_FILE"
+          fi
+
+          REPO_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/"
+          echo "🌐 Generating signed $APPCAST_FILE..."
+          echo "   download-url-prefix: $REPO_URL"
+
+          ./sparkle_tools/bin/generate_appcast \
+            --download-url-prefix "$REPO_URL" \
+            --ed-key-file sparkle_key.priv \
+            -o "$APPCAST_FILE" \
+            appcast_work/
+
+          if [ -f "appcast_work/$APPCAST_FILE" ]; then
+            cp "appcast_work/$APPCAST_FILE" "./$APPCAST_FILE"
+          elif [ -f "appcast_work/appcast.xml" ]; then
+            # Fallback if -o was ignored by an older binary
+            cp "appcast_work/appcast.xml" "./$APPCAST_FILE"
+          else
+            echo "❌ Error: Could not find generated appcast file!"
+            ls -laR appcast_work/
+            exit 1
+          fi
+
+          echo "🔎 Validating $APPCAST_FILE..."
+          grep -q '<rss ' "$APPCAST_FILE"
+          grep -q '<enclosure ' "$APPCAST_FILE"
+          grep -q 'sparkle:edSignature=' "$APPCAST_FILE"
+          grep -q "releases/download/${{ github.ref_name }}/Flumen_macOS_Universal.zip" "$APPCAST_FILE"
+          echo "✅ $APPCAST_FILE generated and validated."
+          head -n 40 "$APPCAST_FILE"
 
       - name: Commit Appcast
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin $TARGET_BRANCH:$TARGET_BRANCH
-          git add "$APPCAST_FILE"
-          git commit -m "chore: update $APPCAST_FILE [skip ci]" || echo "No changes to appcast"
-          git push origin HEAD:$TARGET_BRANCH
+          set -euo pipefail
+
+          if [ ! -f "$APPCAST_FILE" ]; then
+            echo "❌ Error: $APPCAST_FILE missing before commit step."
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Commit the appcast on top of the release tag tip, then fast-forward
+          # the environment branch (staging or main) to that commit.
+          git fetch origin "$TARGET_BRANCH"
+          git add -- "$APPCAST_FILE"
+
+          if git diff --cached --quiet; then
+            echo "No appcast content changes to commit."
+          else
+            git commit -m "chore: update $APPCAST_FILE [skip ci]"
+          fi
+
+          git push origin "HEAD:refs/heads/$TARGET_BRANCH"
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -168,5 +217,6 @@ jobs:
             ${{ env.APPCAST_FILE }}
           draft: false
           prerelease: ${{ env.PRERELEASE == 'true' }}
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

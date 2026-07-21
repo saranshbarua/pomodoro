@@ -110,7 +110,6 @@ jobs:
         run: |
           set -euo pipefail
           # Keep generate_appcast aligned with the Sparkle release we historically ship tools from.
-          # Flag note: this CLI supports `-o <filename>`, not `--output`.
           SPARKLE_TOOLS_VERSION="2.8.1"
           mkdir -p sparkle_tools
           curl -fsSL "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_TOOLS_VERSION}/Sparkle-${SPARKLE_TOOLS_VERSION}.tar.xz" \
@@ -157,16 +156,16 @@ jobs:
           echo "🌐 Generating signed $APPCAST_FILE..."
           echo "   download-url-prefix: $REPO_URL"
 
+          # Write in place inside appcast_work/ (do not use -o with a bare filename;
+          # Sparkle treats that as repo-root output, not appcast_work/).
           ./sparkle_tools/bin/generate_appcast \
             --download-url-prefix "$REPO_URL" \
             --ed-key-file sparkle_key.priv \
-            -o "$APPCAST_FILE" \
             appcast_work/
 
           if [ -f "appcast_work/$APPCAST_FILE" ]; then
             cp "appcast_work/$APPCAST_FILE" "./$APPCAST_FILE"
           elif [ -f "appcast_work/appcast.xml" ]; then
-            # Fallback if -o was ignored by an older binary
             cp "appcast_work/appcast.xml" "./$APPCAST_FILE"
           else
             echo "❌ Error: Could not find generated appcast file!"

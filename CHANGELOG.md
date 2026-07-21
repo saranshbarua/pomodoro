@@ -1,5 +1,12 @@
 # Changelog
 
+# [2.0.0-staging.7](https://github.com/saranshbarua/flumen/compare/v2.0.0-staging.6...v2.0.0-staging.7) (2026-07-21)
+
+
+### Features
+
+* **build:** sync frontend resources for SPM and ensure web resource stub in CI ([84619f9](https://github.com/saranshbarua/flumen/commit/84619f9feb97ef47f8bf437bdbdb80a87aa89d32))
+
 # [2.0.0-staging.6](https://github.com/saranshbarua/flumen/compare/v2.0.0-staging.5...v2.0.0-staging.6) (2026-07-21)
 
 

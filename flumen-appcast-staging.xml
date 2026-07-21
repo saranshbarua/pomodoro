@@ -3,6 +3,14 @@
     <channel>
         <title>Flumen</title>
         <item>
+            <title>2.0.0-staging.10</title>
+            <pubDate>Tue, 21 Jul 2026 06:40:12 +0000</pubDate>
+            <sparkle:version>20260721.064007</sparkle:version>
+            <sparkle:shortVersionString>2.0.0-staging.10</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>10.13</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/saranshbarua/flumen/releases/download/v2.0.0-staging.10/Flumen_macOS_Universal.zip" length="12843461" type="application/octet-stream" sparkle:edSignature="PzJQZupQ4VKVSnjA0833BKNRi5WcaRoxdFEGcVSkaNzJdSyXC2eamzA2FX9sKB/JtoU3EQIu0i0wwud5T5EhAA=="/>
+        </item>
+        <item>
             <title>2.0.0-staging.9</title>
             <pubDate>Tue, 21 Jul 2026 05:43:23 +0000</pubDate>
             <sparkle:version>20260721.054319</sparkle:version>

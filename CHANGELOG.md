@@ -1,5 +1,7 @@
 # Changelog
 
+# [2.0.0-staging.8](https://github.com/saranshbarua/flumen/compare/v2.0.0-staging.7...v2.0.0-staging.8) (2026-07-21)
+
 # [2.0.0-staging.7](https://github.com/saranshbarua/flumen/compare/v2.0.0-staging.6...v2.0.0-staging.7) (2026-07-21)
 
 

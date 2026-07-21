@@ -34,6 +34,16 @@ jobs:
       - name: Run frontend tests
         run: npm test -- --run
 
+      # Flumen SPM target copies Sources/dist; that folder is gitignored and only
+      # needed so the package graph can build. Native unit tests use FlumenCore/IPC.
+      - name: Ensure SPM web resource stub
+        run: |
+          mkdir -p macos/Pomodoro/Sources/dist
+          if [ ! -f macos/Pomodoro/Sources/dist/index.html ]; then
+            printf '%s\n' '<!doctype html><html><body>Flumen</body></html>' \
+              > macos/Pomodoro/Sources/dist/index.html
+          fi
+
       - name: Run native tests
         run: swift test --package-path macos/Pomodoro
 

@@ -30,6 +30,14 @@ echo "📦 Building React frontend..."
 npm install --silent
 npm run build -- --logLevel error
 
+# SPM Flumen target requires Sources/dist as a bundled resource (.copy("dist")).
+# Production still serves UI from Contents/Resources/dist (copied below); this sync
+# is what lets `swift build` succeed on a clean checkout.
+echo "📎 Syncing frontend into SPM Sources/dist..."
+rm -rf macos/Pomodoro/Sources/dist
+mkdir -p macos/Pomodoro/Sources/dist
+cp -R dist/* macos/Pomodoro/Sources/dist/
+
 # 2. Build the Swift binary (Universal)
 echo "🍎 Building Swift native binary (Intel + Apple Silicon)..."
 cd macos/Pomodoro

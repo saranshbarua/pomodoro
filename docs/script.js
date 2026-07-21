@@ -39,15 +39,57 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Dynamic Download Link (Optional: Can be used to detect OS, though we focus on Mac)
-    const downloadBtns = document.querySelectorAll('a[href*="releases/latest"]');
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    // Download modal: show setup guide first, then download on button click
+    const downloadUrl = 'https://github.com/saranshbarua/flumen/releases/latest/download/Flumen_macOS_Universal.zip';
+    const downloadLinks = document.querySelectorAll('a[href*="releases/latest"]');
+    const modal = document.getElementById('download-modal');
+    const modalDownloadBtn = document.getElementById('modal-download-btn');
+    const closeTriggers = document.querySelectorAll('[data-close-modal]');
 
-    if (!isMac) {
-        downloadBtns.forEach(btn => {
-            // Optional: Show warning or change text if not on Mac
-            // btn.innerText = "Download for macOS (Universal)";
-        });
+    function openModal() {
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
     }
+
+    function closeModal() {
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    }
+
+    function triggerDownload() {
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = 'Flumen_macOS_Universal.zip';
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    // Open modal when any download link is clicked
+    downloadLinks.forEach((link) => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal();
+        });
+    });
+
+    // Trigger download when the modal button is clicked
+    modalDownloadBtn.addEventListener('click', () => {
+        triggerDownload();
+        closeModal();
+    });
+
+    closeTriggers.forEach((el) => {
+        el.addEventListener('click', closeModal);
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('is-open')) {
+            closeModal();
+        }
+    });
 });
 

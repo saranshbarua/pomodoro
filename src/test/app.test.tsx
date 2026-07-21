@@ -20,8 +20,7 @@ describe('App Integration', () => {
   it('should toggle settings view', async () => {
     render(<App />);
     
-    // Find settings button (it has a title "Settings")
-    const settingsBtn = screen.getByTitle('Settings');
+    const settingsBtn = screen.getByRole('button', { name: 'Settings' });
     fireEvent.click(settingsBtn);
     
     // Settings title should be visible

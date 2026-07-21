@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import ReportsView, { formatDuration } from '../ui/ReportsView';
+import ReportsView, {
+  formatDuration,
+  formatActivityDate,
+  buildFocusActivityChartData,
+  formatWeekdayShortLabel,
+  getEvenlySpacedTickDates,
+  getEdgeTickAnchor,
+} from '../ui/ReportsView';
 import { useStatsStore } from '../state/statsStore';
 import { NativeBridge } from '../services/nativeBridge';
 import React from 'react';
@@ -51,6 +58,100 @@ describe('ReportsView and Helpers', () => {
     vi.clearAllMocks();
   });
 
+  describe('formatActivityDate', () => {
+    it('should format dates for tooltip display', () => {
+      const formatted = formatActivityDate('2026-01-10', 'tooltip');
+      expect(formatted).toContain('2026');
+      expect(formatted).toMatch(/10/);
+    });
+
+    it('should format dates for axis display', () => {
+      const formatted = formatActivityDate('2026-01-10', 'axis');
+      expect(formatted).toMatch(/10/);
+    });
+  });
+
+  describe('formatWeekdayShortLabel', () => {
+    it('should return a short weekday abbreviation', () => {
+      const label = formatWeekdayShortLabel('2026-01-10');
+      expect(label.length).toBeGreaterThan(1);
+      expect(label).not.toMatch(/^\d+$/);
+    });
+  });
+
+  describe('getEvenlySpacedTickDates', () => {
+    it('should return 4 evenly spaced dates including start and end', () => {
+      const data = Array.from({ length: 30 }, (_, i) => ({
+        date: `2026-06-${String(i + 1).padStart(2, '0')}`,
+      }));
+      const ticks = getEvenlySpacedTickDates(data, 4);
+      expect(ticks).toHaveLength(4);
+      expect(ticks[0]).toBe('2026-06-01');
+      expect(ticks[3]).toBe('2026-06-30');
+      expect(ticks[1]).toBe('2026-06-11');
+      expect(ticks[2]).toBe('2026-06-20');
+    });
+
+    it('should space 60-day ranges evenly', () => {
+      const data = Array.from({ length: 60 }, (_, i) => {
+        const d = new Date(2026, 4, 11); // May 11
+        d.setDate(d.getDate() + i);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return { date: `${y}-${m}-${day}` };
+      });
+      const ticks = getEvenlySpacedTickDates(data, 4);
+      expect(ticks).toHaveLength(4);
+      expect(ticks[0]).toBe(data[0].date);
+      expect(ticks[3]).toBe(data[59].date);
+      // Roughly equal gaps (~20 days between anchors)
+      const toDay = (s: string) => new Date(`${s}T12:00:00`).getTime() / 86400000;
+      const gaps = [1, 2, 3].map((i) => toDay(ticks[i]) - toDay(ticks[i - 1]));
+      expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThanOrEqual(1);
+    });
+
+    it('should return all dates when data is shorter than tick count', () => {
+      const data = [{ date: '2026-06-01' }, { date: '2026-06-02' }];
+      expect(getEvenlySpacedTickDates(data, 4)).toEqual([
+        '2026-06-01',
+        '2026-06-02',
+      ]);
+    });
+  });
+
+  describe('getEdgeTickAnchor', () => {
+    it('should anchor first, middle, and last ticks correctly', () => {
+      expect(getEdgeTickAnchor(0, 4)).toBe('start');
+      expect(getEdgeTickAnchor(1, 4)).toBe('middle');
+      expect(getEdgeTickAnchor(3, 4)).toBe('end');
+    });
+  });
+
+  describe('buildFocusActivityChartData', () => {
+    it('should fill missing days with zero hours', () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const toKey = (d: Date) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      };
+
+      const data = buildFocusActivityChartData(
+        [{ date: toKey(today), hours: 2 }],
+        7
+      );
+
+      expect(data).toHaveLength(7);
+      expect(data[data.length - 1].hours).toBe(2);
+      expect(data[data.length - 2].hours).toBe(0);
+      expect(data.every((d) => d.date.length > 0)).toBe(true);
+    });
+  });
+
   describe('formatDuration', () => {
     it('should format seconds as minutes if under 1 hour', () => {
       expect(formatDuration(0)).toBe('0m');
@@ -94,11 +195,56 @@ describe('ReportsView and Helpers', () => {
       expect(screen.getByText('Special Task')).toBeDefined();
       const projectElements = screen.getAllByText('Test Project');
       expect(projectElements.length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByRole('button', { name: 'Log time' })).toBeDefined();
+    });
+
+    it('should offer Log time from empty Task Breakdown', () => {
+      const { hydrateReports } = useStatsStore.getState();
+      hydrateReports({
+        dailyStats: [],
+        projectDistribution: [],
+        totalFocusTime: 0,
+        totalSessions: 0,
+        taskBreakdown: [],
+        streak: 0,
+      });
+
+      render(<ReportsView onClose={() => {}} />);
+      expect(screen.getByRole('button', { name: 'Missing time? Log time' })).toBeDefined();
+      expect(screen.getByRole('button', { name: 'Log time' })).toBeDefined();
     });
 
     it('should call fetchReports on mount', () => {
       render(<ReportsView onClose={() => {}} />);
       expect(NativeBridge.db_getReports).toHaveBeenCalled();
+    });
+
+    it('should render focus activity range toggles', () => {
+      const { hydrateReports } = useStatsStore.getState();
+      const today = new Date();
+      const toKey = (d: Date) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      };
+
+      hydrateReports({
+        dailyStats: [{ date: toKey(today), hours: 1.5 }],
+        projectDistribution: [],
+        totalFocusTime: 5400,
+        totalSessions: 1,
+        taskBreakdown: [],
+        streak: 1,
+      });
+
+      render(<ReportsView onClose={() => {}} />);
+
+      expect(screen.getByRole('button', { name: '7D' })).toBeDefined();
+      expect(screen.getByRole('button', { name: '30D' })).toBeDefined();
+      expect(screen.getByRole('button', { name: '60D' })).toBeDefined();
+
+      fireEvent.click(screen.getByRole('button', { name: '30D' }));
     });
 
     it('should show empty state when no reports or logs exist', () => {
@@ -318,6 +464,76 @@ describe('ReportsView and Helpers', () => {
       // Should show 0m for time
       const timeElements = screen.getAllByText('0m');
       expect(timeElements.length).toBeGreaterThan(0);
+    });
+
+    it('should collapse Earlier tasks by default and expand on show more', () => {
+      const { hydrateReports } = useStatsStore.getState();
+      const earlierDate = new Date();
+      earlierDate.setDate(earlierDate.getDate() - 10);
+      const dateStr = earlierDate.toISOString().split('T')[0];
+
+      const taskBreakdown = Array.from({ length: 6 }, (_, i) => ({
+        title: `Older Task ${i + 1}`,
+        tag: 'Test Project',
+        duration: 1800,
+        estimatedPomos: 1,
+        avgSnapshotDuration: 1500,
+        date: dateStr,
+      }));
+
+      hydrateReports({
+        dailyStats: [],
+        projectDistribution: [],
+        totalFocusTime: 10800,
+        totalSessions: 6,
+        taskBreakdown,
+        streak: 1
+      });
+
+      render(<ReportsView onClose={() => {}} />);
+
+      expect(screen.getByText('Earlier')).toBeDefined();
+      expect(screen.getByText('Older Task 1')).toBeDefined();
+      expect(screen.getByText('Older Task 5')).toBeDefined();
+      expect(screen.queryByText('Older Task 6')).toBeNull();
+      expect(screen.getByText('Show 1 More Tasks')).toBeDefined();
+
+      fireEvent.click(screen.getByText('Show 1 More Tasks'));
+
+      expect(screen.getByText('Older Task 6')).toBeDefined();
+      expect(screen.getByText('Show Less')).toBeDefined();
+    });
+
+    it('should show all Earlier tasks when there are five or fewer', () => {
+      const { hydrateReports } = useStatsStore.getState();
+      const earlierDate = new Date();
+      earlierDate.setDate(earlierDate.getDate() - 10);
+      const dateStr = earlierDate.toISOString().split('T')[0];
+
+      const taskBreakdown = Array.from({ length: 3 }, (_, i) => ({
+        title: `Older Task ${i + 1}`,
+        tag: 'Test Project',
+        duration: 1800,
+        estimatedPomos: 1,
+        avgSnapshotDuration: 1500,
+        date: dateStr,
+      }));
+
+      hydrateReports({
+        dailyStats: [],
+        projectDistribution: [],
+        totalFocusTime: 5400,
+        totalSessions: 3,
+        taskBreakdown,
+        streak: 1
+      });
+
+      render(<ReportsView onClose={() => {}} />);
+
+      expect(screen.getByText('Older Task 1')).toBeDefined();
+      expect(screen.getByText('Older Task 2')).toBeDefined();
+      expect(screen.getByText('Older Task 3')).toBeDefined();
+      expect(screen.queryByText(/Show \d+ More Tasks/)).toBeNull();
     });
   });
 });

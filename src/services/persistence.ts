@@ -4,6 +4,31 @@ import { useStatsStore } from '../state/statsStore';
 import { NativeBridge } from './nativeBridge';
 
 let saveTimeout: any = null;
+let lastStateUpdatedAt: number | null = null;
+
+export const createPersistedState = (updatedAt: number = Date.now()) => {
+  const pomodoroState = usePomodoroStore.getState();
+  const taskState = useTaskStore.getState();
+  lastStateUpdatedAt = updatedAt;
+
+  return {
+    lastStateUpdatedAt: updatedAt,
+    pomodoro: {
+      timer: pomodoroState.timer,
+      session: pomodoroState.session,
+      config: pomodoroState.config,
+      dailyGoal: pomodoroState.dailyGoal,
+      taskName: pomodoroState.taskName,
+      lockedTaskContext: pomodoroState.lockedTaskContext,
+      lastLoggedSeconds: pomodoroState.lastLoggedSeconds,
+    },
+    task: {
+      activeTaskId: taskState.activeTaskId,
+    },
+  };
+};
+
+export const getLastStateUpdatedAt = () => lastStateUpdatedAt;
 
 /**
  * Service for local persistence.
@@ -20,21 +45,7 @@ export const PersistenceService = {
 
     saveTimeout = setTimeout(() => {
       try {
-        const pomodoroState = usePomodoroStore.getState();
-
-        // Only save transient timer/session state to UserDefaults
-        const combinedState = {
-          pomodoro: {
-            timer: pomodoroState.timer,
-            session: pomodoroState.session,
-            config: pomodoroState.config,
-            dailyGoal: pomodoroState.dailyGoal,
-            taskName: pomodoroState.taskName,
-            lockedTaskContext: pomodoroState.lockedTaskContext,
-          }
-        };
-
-        const stateString = JSON.stringify(combinedState);
+        const stateString = JSON.stringify(createPersistedState());
         NativeBridge.saveState(stateString);
       } catch (e) {
         console.error('PersistenceService: Failed to save state:', e);
@@ -70,6 +81,9 @@ export const initPersistence = () => {
     if (state) {
       try {
         const savedData = JSON.parse(state);
+        lastStateUpdatedAt = typeof savedData.lastStateUpdatedAt === 'number'
+          ? savedData.lastStateUpdatedAt
+          : null;
         
         // Handle legacy format (flat) vs new format (nested)
         if (savedData.pomodoro) {
@@ -77,6 +91,16 @@ export const initPersistence = () => {
         } else if (!savedData.tasks && !savedData.stats) {
           // Legacy flat format
           pomodoroStore.hydrate(savedData);
+        }
+
+        // activeTaskId was absent from older payloads. Accept the v2 shape and
+        // defensively recover the two historical shapes that carried it.
+        const activeTaskId =
+          savedData.task?.activeTaskId ??
+          (savedData.tasks && !Array.isArray(savedData.tasks) ? savedData.tasks.activeTaskId : undefined) ??
+          savedData.activeTaskId;
+        if (activeTaskId === null || typeof activeTaskId === 'string') {
+          taskStore.hydrate({ activeTaskId });
         }
       } catch (e) {
         console.error('PersistenceService: Failed to parse saved state:', e);
@@ -86,9 +110,12 @@ export const initPersistence = () => {
 
   // 2. Listen for Database Initial Data (SQLite)
   window.addEventListener('native:db_initialData', (event: any) => {
-    const { tasks } = event.detail;
-    if (tasks) {
-      taskStore.hydrate({ tasks });
+    const { tasks, projects } = event.detail;
+    const patch: { tasks?: typeof tasks; projects?: typeof projects } = {};
+    if (tasks) patch.tasks = tasks;
+    if (projects) patch.projects = projects;
+    if (patch.tasks || patch.projects) {
+      taskStore.hydrate(patch);
     }
   });
 
@@ -108,6 +135,11 @@ export const initPersistence = () => {
   // 4. Initial request for state
   PersistenceService.load();
 
-  // 4. Continuous synchronization for transient state
+  // 5. Continuous synchronization for transient timer and active-task state
   usePomodoroStore.subscribe(() => PersistenceService.save());
+  useTaskStore.subscribe((state, previousState) => {
+    if (state.activeTaskId !== previousState.activeTaskId) {
+      PersistenceService.save();
+    }
+  });
 };

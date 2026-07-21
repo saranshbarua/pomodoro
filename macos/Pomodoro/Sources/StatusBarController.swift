@@ -16,12 +16,32 @@ class StatusBarController {
 
     private func setupButton() {
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "timer", accessibilityDescription: "Flumen")
+            button.image = Self.flumenMenuBarImage()
+            button.imagePosition = .imageLeading
+            button.imageScaling = .scaleProportionallyDown
             button.action = #selector(handleAction(_:))
             button.target = self
             // Support both left and right clicks
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
+    }
+
+    /// Colored Flumen mark for the menu bar (not a template — keeps brand red).
+    private static func flumenMenuBarImage() -> NSImage {
+        let pointSize = NSSize(width: 24, height: 24)
+        // Use Bundle.main only — packaged apps copy icons into Contents/Resources.
+        // Do not touch Bundle.module: it fatal-errors when Flumen_Flumen.bundle
+        // is absent from the .app (SPM resource accessor assertion).
+        for name in ["MenuBarIcon@2x", "MenuBarIcon"] {
+            if let url = Bundle.main.url(forResource: name, withExtension: "png"),
+               let image = NSImage(contentsOf: url) {
+                image.size = pointSize
+                image.isTemplate = false
+                image.accessibilityDescription = "Flumen"
+                return image
+            }
+        }
+        return NSImage(systemSymbolName: "timer", accessibilityDescription: "Flumen")!
     }
 
     @objc func handleAction(_ sender: Any?) {

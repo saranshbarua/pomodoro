@@ -37,4 +37,5 @@ Package.resolved
 
 # --- Vite / TypeScript ---
 *.tsbuildinfo
+marketing/
 

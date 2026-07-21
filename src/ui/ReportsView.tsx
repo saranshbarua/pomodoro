@@ -14,6 +14,7 @@ import {
 } from '../state/statsStore';
 import { theme } from './theme';
 import { NativeBridge } from '../services/nativeBridge';
+import LogTimeView from './LogTimeView';
 
 interface ReportsViewProps {
   onClose: () => void;
@@ -26,12 +27,133 @@ export const formatDuration = (seconds: number) => {
   return `${(seconds / 3600).toFixed(2)}h`;
 };
 
+export type FocusActivityRange = 7 | 30 | 60;
+
+const parseActivityDate = (dateStr: string) => new Date(`${dateStr}T12:00:00`);
+
+export const formatActivityDate = (
+  dateStr: string,
+  style: 'tooltip' | 'axis' | 'axisCompact' = 'tooltip'
+) => {
+  const date = parseActivityDate(dateStr);
+  if (style === 'axisCompact') {
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+  if (style === 'axis') {
+    return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  return date.toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
+export const formatWeekdayShortLabel = (dateStr: string) => {
+  const date = parseActivityDate(dateStr);
+  return date.toLocaleDateString(undefined, { weekday: 'short' });
+};
+
+// Four evenly spaced anchors (start → end) so 30D/60D stay scannable
+// without crowding. Exact day detail lives in the tooltip on hover.
+export const getEvenlySpacedTickDates = (
+  data: { date: string }[],
+  tickCount = 4
+): string[] => {
+  if (data.length === 0) return [];
+  if (data.length <= tickCount) return data.map((d) => d.date);
+
+  const last = data.length - 1;
+  const indices: number[] = [];
+  for (let i = 0; i < tickCount; i++) {
+    const index = Math.round((i * last) / (tickCount - 1));
+    if (indices[indices.length - 1] !== index) {
+      indices.push(index);
+    }
+  }
+  return indices.map((i) => data[i].date);
+};
+
+export const getEdgeTickAnchor = (
+  index: number,
+  totalCount: number
+): 'start' | 'middle' | 'end' => {
+  if (index === 0) return 'start';
+  if (index === totalCount - 1) return 'end';
+  return 'middle';
+};
+
+export const buildFocusActivityChartData = (
+  dailyStats: { date: string; hours: number }[],
+  rangeDays: FocusActivityRange
+) => {
+  const hoursByDate = new Map(dailyStats.map((d) => [d.date, d.hours]));
+  const end = new Date();
+  end.setHours(0, 0, 0, 0);
+
+  const start = new Date(end);
+  start.setDate(start.getDate() - (rangeDays - 1));
+
+  const result: { date: string; hours: number }[] = [];
+  const current = new Date(start);
+  while (current <= end) {
+    const year = current.getFullYear();
+    const month = String(current.getMonth() + 1).padStart(2, '0');
+    const day = String(current.getDate()).padStart(2, '0');
+    const dateKey = `${year}-${month}-${day}`;
+    result.push({
+      date: dateKey,
+      hours: hoursByDate.get(dateKey) ?? 0,
+    });
+    current.setDate(current.getDate() + 1);
+  }
+  return result;
+};
+
+const axisTickTextStyle = {
+  fill: 'rgba(255, 255, 255, 0.4)',
+  fontSize: 9,
+  fontWeight: 600,
+  fontFamily: theme.fonts.display,
+} as const;
+
+const WeekdayAxisTick = ({ x, y, payload, index, visibleTicksCount }: any) => {
+  const totalCount = visibleTicksCount ?? 7;
+  const textAnchor = getEdgeTickAnchor(index, totalCount);
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text textAnchor={textAnchor} y={13} {...axisTickTextStyle}>
+        {formatWeekdayShortLabel(payload.value)}
+      </text>
+    </g>
+  );
+};
+
+// Sparse 30/60D anchors: always full "May 11" style, only 4 ticks so they
+// never collide. Edge-aware anchoring keeps first/last labels inside the card.
+const CompactAxisTick = ({ x, y, payload, index, visibleTicksCount }: any) => {
+  const textAnchor = getEdgeTickAnchor(index, visibleTicksCount ?? 4);
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text textAnchor={textAnchor} y={13} {...axisTickTextStyle}>
+        {formatActivityDate(payload.value, 'axisCompact')}
+      </text>
+    </g>
+  );
+};
+
 const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
   const fetchReports = useStatsStore(state => state.fetchReports);
   const stats = useStatsStore();
   const [exportStatus, setExportStatus] = useState<'idle' | 'exporting' | 'success'>('idle');
+  const [showLogTime, setShowLogTime] = useState(false);
   const [isProjectExpanded, setIsProjectExpanded] = useState(false);
+  const [isEarlierTasksExpanded, setIsEarlierTasksExpanded] = useState(false);
   const [projectFilter, setProjectFilter] = useState<'all' | 'tagged'>('all');
+  const [activityRange, setActivityRange] = useState<FocusActivityRange>(7);
+
+  const EARLIER_TASKS_PREVIEW_COUNT = 5;
   
   useEffect(() => {
     fetchReports();
@@ -65,7 +187,16 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
     }, 60000);
   };
 
-  const dailyData = selectDailyFocusStats(stats);
+  const dailyStats = selectDailyFocusStats(stats);
+  const dailyData = React.useMemo(
+    () => buildFocusActivityChartData(dailyStats, activityRange),
+    [dailyStats, activityRange]
+  );
+  const activityBarSize = activityRange === 7 ? 20 : activityRange === 30 ? 8 : 4;
+  const sparseTickDates = React.useMemo(
+    () => (activityRange === 7 ? [] : getEvenlySpacedTickDates(dailyData, 4)),
+    [dailyData, activityRange]
+  );
   const projectDataRaw = selectProjectDistribution(stats);
   
   const taskData = selectTaskBreakdown(stats);
@@ -251,30 +382,75 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
 
         {/* Focus Hours Chart */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', flexShrink: 0 }}>
-          <h4 style={sectionHeaderStyle}>Focus Activity</h4>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px' }}>
+            <h4 style={sectionHeaderStyle}>Focus Activity</h4>
+            <div style={{
+              display: 'flex',
+              background: 'rgba(255, 255, 255, 0.05)',
+              padding: '2px',
+              borderRadius: '8px',
+              border: '1px solid rgba(255, 255, 255, 0.05)',
+            }}>
+              {([7, 30, 60] as const).map((days) => (
+                <button
+                  key={days}
+                  type="button"
+                  onClick={() => setActivityRange(days)}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    fontSize: '9px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    background: activityRange === days ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
+                    color: activityRange === days ? 'white' : 'rgba(255, 255, 255, 0.4)',
+                    transition: 'all 0.2s ease',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  {days}D
+                </button>
+              ))}
+            </div>
+          </div>
           <div style={{ 
             height: '160px', 
             width: '100%', 
             background: 'rgba(255,255,255,0.02)', 
             borderRadius: '20px', 
-            padding: '16px 12px 8px 12px', 
+            padding: '16px 8px 8px 8px', 
             border: '1px solid rgba(255,255,255,0.05)',
             boxSizing: 'border-box' 
           }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dailyData}>
-                <XAxis dataKey="date" hide />
-                <Tooltip 
+              <BarChart data={dailyData} margin={{ top: 4, right: 8, left: 8, bottom: 2 }}>
+                <XAxis
+                  dataKey="date"
+                  axisLine={false}
+                  tickLine={false}
+                  interval={0}
+                  ticks={activityRange === 7 ? undefined : sparseTickDates}
+                  height={24}
+                  tick={activityRange === 7 ? WeekdayAxisTick : CompactAxisTick}
+                />
+                <Tooltip
                   contentStyle={{ background: '#141414', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', fontSize: '12px', fontFamily: theme.fonts.display }}
                   itemStyle={{ color: 'white' }}
+                  labelStyle={{ color: 'rgba(255, 255, 255, 0.6)', marginBottom: '4px' }}
                   cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
-                  formatter={(value: any) => [formatDuration(Number(value) * 3600), 'Focus Time']}
+                  labelFormatter={(_, payload) => {
+                    const date = payload?.[0]?.payload?.date as string | undefined;
+                    return date ? formatActivityDate(date, 'tooltip') : '';
+                  }}
+                  formatter={(value) => [formatDuration(Number(value ?? 0) * 3600), 'Focus Time']}
                 />
-                <Bar 
-                  dataKey="hours" 
-                  fill={theme.colors.focus.primary} 
-                  radius={[4, 4, 0, 0]} 
-                  barSize={20}
+                <Bar
+                  dataKey="hours"
+                  fill={theme.colors.focus.primary}
+                  radius={[4, 4, 0, 0]}
+                  barSize={activityBarSize}
                 />
               </BarChart>
             </ResponsiveContainer>
@@ -433,65 +609,80 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
 
         {/* Task Breakdown Table */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', flexShrink: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingRight: '4px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingRight: '4px', gap: 12 }}>
           <h4 style={sectionHeaderStyle}>Task Breakdown</h4>
-          <button 
-            onClick={handleExport}
-            disabled={exportStatus === 'exporting'}
-            style={{
-              background: exportStatus === 'success' ? 'rgba(40, 200, 64, 0.1)' : 'rgba(255, 255, 255, 0.05)',
-              border: `1px solid ${exportStatus === 'success' ? 'rgba(40, 200, 64, 0.2)' : 'rgba(255, 255, 255, 0.1)'}`,
-              color: exportStatus === 'success' ? '#28C840' : 'rgba(255, 255, 255, 0.5)',
-              cursor: exportStatus === 'exporting' ? 'default' : 'pointer',
-              padding: '4px 10px',
-              borderRadius: '8px',
-              fontSize: '10px',
-              fontWeight: '800',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              backdropFilter: 'blur(10px)',
-              outline: 'none'
-            }}
-            onMouseOver={(e) => {
-              if (exportStatus === 'idle') {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                e.currentTarget.style.color = 'white';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (exportStatus === 'idle') {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.5)';
-              }
-            }}
-          >
-            {exportStatus === 'exporting' ? (
-              <>
-                <div className="spinner" />
-                <span>Exporting...</span>
-              </>
-            ) : exportStatus === 'success' ? (
-              <>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                <span>Saved</span>
-              </>
-            ) : (
-              <>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"></path>
-                  <polyline points="7 10 12 15 17 10"></polyline>
-                  <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-                <span>CSV</span>
-              </>
-            )}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={() => setShowLogTime(true)}
+              style={logTimeActionStyle}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.85)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.45)';
+              }}
+            >
+              Log time
+            </button>
+            <button 
+              onClick={handleExport}
+              disabled={exportStatus === 'exporting'}
+              style={{
+                background: exportStatus === 'success' ? 'rgba(40, 200, 64, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                border: `1px solid ${exportStatus === 'success' ? 'rgba(40, 200, 64, 0.2)' : 'rgba(255, 255, 255, 0.1)'}`,
+                color: exportStatus === 'success' ? '#28C840' : 'rgba(255, 255, 255, 0.5)',
+                cursor: exportStatus === 'exporting' ? 'default' : 'pointer',
+                padding: '4px 10px',
+                borderRadius: '8px',
+                fontSize: '10px',
+                fontWeight: '800',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                backdropFilter: 'blur(10px)',
+                outline: 'none'
+              }}
+              onMouseOver={(e) => {
+                if (exportStatus === 'idle') {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                  e.currentTarget.style.color = 'white';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (exportStatus === 'idle') {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.5)';
+                }
+              }}
+            >
+              {exportStatus === 'exporting' ? (
+                <>
+                  <div className="spinner" />
+                  <span>Exporting...</span>
+                </>
+              ) : exportStatus === 'success' ? (
+                <>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  <span>Saved</span>
+                </>
+              ) : (
+                <>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  <span>CSV</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
         <div style={{ 
           background: 'rgba(255,255,255,0.02)', 
@@ -509,8 +700,16 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
             </thead>
             <tbody>
               {taskData.length > 0 ? (
-                Object.entries(groupedTasks).map(([groupName, tasks]) => (
-                  tasks.length > 0 && (
+                Object.entries(groupedTasks).map(([groupName, tasks]) => {
+                  const isEarlierGroup = groupName === 'Earlier';
+                  const visibleTasks = isEarlierGroup && !isEarlierTasksExpanded
+                    ? tasks.slice(0, EARLIER_TASKS_PREVIEW_COUNT)
+                    : tasks;
+                  const hiddenEarlierCount = isEarlierGroup
+                    ? Math.max(tasks.length - EARLIER_TASKS_PREVIEW_COUNT, 0)
+                    : 0;
+
+                  return tasks.length > 0 && (
                     <React.Fragment key={groupName}>
                       <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
                         <td colSpan={3} style={{ 
@@ -524,7 +723,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
                           {groupName}
                         </td>
                       </tr>
-                      {tasks.map((task, i) => {
+                      {visibleTasks.map((task, i) => {
                         const estimatedSeconds = task.estimatedPomos * task.avgSnapshotDuration;
                         const varianceSeconds = task.duration - estimatedSeconds;
                         
@@ -608,13 +807,67 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
                           </tr>
                         );
                       })}
+                      {isEarlierGroup && hiddenEarlierCount > 0 && (
+                        <tr>
+                          <td colSpan={3} style={{ padding: '4px 16px 12px' }}>
+                            <button
+                              onClick={() => setIsEarlierTasksExpanded(!isEarlierTasksExpanded)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: theme.colors.focus.primary,
+                                fontSize: '11px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                padding: '4px 0 0 0',
+                                textAlign: 'left',
+                                fontFamily: theme.fonts.brand,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                opacity: 0.8,
+                                transition: 'opacity 0.2s ease'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                              onMouseLeave={(e) => e.currentTarget.style.opacity = '0.8'}
+                            >
+                              {isEarlierTasksExpanded ? (
+                                <>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                                  Show Less
+                                </>
+                              ) : (
+                                <>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                  Show {hiddenEarlierCount} More Tasks
+                                </>
+                              )}
+                            </button>
+                          </td>
+                        </tr>
+                      )}
                     </React.Fragment>
-                  )
-                ))
+                  );
+                })
               ) : (
                   <tr>
-                    <td colSpan={3} style={{ ...tdStyle, textAlign: 'center', color: theme.colors.text.muted, padding: '24px' }}>
-                      No tasks logged yet
+                    <td colSpan={3} style={{ ...tdStyle, textAlign: 'center', color: theme.colors.text.muted, padding: '28px 24px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                        <span>No tasks logged yet</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowLogTime(true)}
+                          style={emptyLogTimeHintStyle}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color = 'rgba(255, 255, 255, 0.35)';
+                          }}
+                        >
+                          Missing time? Log time
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )}
@@ -624,6 +877,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
         </div>
 
       </div>
+      {showLogTime && <LogTimeView onClose={() => setShowLogTime(false)} />}
     </div>
   );
 };
@@ -652,6 +906,34 @@ const sectionHeaderStyle: React.CSSProperties = {
   letterSpacing: '0.12em',
   margin: 0,
   paddingLeft: '4px'
+};
+
+/** Quiet section CTA — readable, not competing with charts or Export utility. */
+const logTimeActionStyle: React.CSSProperties = {
+  background: 'transparent',
+  border: 'none',
+  padding: '2px 0',
+  color: 'rgba(255, 255, 255, 0.45)',
+  fontSize: '11px',
+  fontWeight: 600,
+  letterSpacing: '-0.01em',
+  cursor: 'pointer',
+  transition: 'color 0.15s ease',
+  fontFamily: theme.fonts.display,
+  outline: 'none',
+};
+
+const emptyLogTimeHintStyle: React.CSSProperties = {
+  background: 'transparent',
+  border: 'none',
+  padding: 0,
+  color: 'rgba(255, 255, 255, 0.35)',
+  fontSize: '11px',
+  fontWeight: 500,
+  cursor: 'pointer',
+  transition: 'color 0.15s ease',
+  fontFamily: theme.fonts.display,
+  outline: 'none',
 };
 
 const thStyle: React.CSSProperties = {

@@ -1,5 +1,44 @@
 # Changelog
 
+# [2.4.0](https://github.com/saranshbarua/flumen/compare/v2.3.0...v2.4.0) (2026-07-09)
+
+
+### Features
+
+* **reports:** add new date formatting and tick generation functions ([#42](https://github.com/saranshbarua/flumen/issues/42)) ([feb4960](https://github.com/saranshbarua/flumen/commit/feb496042660c15d48d8cd3dabdd2c692d90924d))
+* **reports:** add show more collapsible for Earlier task breakdown ([#40](https://github.com/saranshbarua/flumen/issues/40)) ([e235af0](https://github.com/saranshbarua/flumen/commit/e235af051397a76b7635aa2fb28ed75b440a1d81))
+* **reports:** format Focus Activity dates and add range toggle ([#38](https://github.com/saranshbarua/flumen/issues/38)) ([09e466e](https://github.com/saranshbarua/flumen/commit/09e466e53af9d23b229cff9818c69956ed67bf12))
+* **taskStore:** enhance project management with tag resolution and suggestion filtering ([#43](https://github.com/saranshbarua/flumen/issues/43)) ([49a2d11](https://github.com/saranshbarua/flumen/commit/49a2d11a41897ac562937f9e302d4fd51ed9474f))
+
+# [2.3.0](https://github.com/saranshbarua/flumen/compare/v2.2.0...v2.3.0) (2026-05-26)
+
+
+### Features
+
+* **pinned-window:** implement drag functionality for pinned windows ([#35](https://github.com/saranshbarua/flumen/issues/35)) ([73812fe](https://github.com/saranshbarua/flumen/commit/73812fe331e755a1b4c997028b74d7c6c7d07435)), closes [#34](https://github.com/saranshbarua/flumen/issues/34)
+
+# [2.2.0](https://github.com/saranshbarua/flumen/compare/v2.1.0...v2.2.0) (2026-05-22)
+
+
+### Features
+
+* **settings:** add check for updates in footer ([#33](https://github.com/saranshbarua/flumen/issues/33)) ([e0e61be](https://github.com/saranshbarua/flumen/commit/e0e61be54c714f4a33512ef8167f80182ebfe5a4))
+* **tasks:** add Clear done button to remove completed tasks at once ([#31](https://github.com/saranshbarua/flumen/issues/31)) ([19f2220](https://github.com/saranshbarua/flumen/commit/19f2220fc30a7a16d2003366b17183af0914b8e9))
+
+# [2.1.0](https://github.com/saranshbarua/flumen/compare/v2.0.0...v2.1.0) (2026-02-16)
+
+
+### Features
+
+* improve distinction between short and long breaks ([#27](https://github.com/saranshbarua/flumen/issues/27)) ([58fb414](https://github.com/saranshbarua/flumen/commit/58fb41458b827f29cbef75154dae19bd4f283138))
+
+# [2.0.0](https://github.com/saranshbarua/pomodoro/compare/v1.6.2...v2.0.0) (2026-02-05)
+
+
+### Features
+
+* Flumen Rebranding ([eacd620](https://github.com/saranshbarua/pomodoro/commit/eacd620654c0bd0282a28d9329ba3f105f611ae1))
+
 # [2.0.0-staging.4](https://github.com/saranshbarua/pomodoro/compare/v2.0.0-staging.3...v2.0.0-staging.4) (2026-02-05)
 
 

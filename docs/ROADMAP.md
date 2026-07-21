@@ -35,5 +35,5 @@ This document outlines the vision and feature set required to transform this foc
 ## 🎨 Design Philosophy
 *   **Minimalist but Playful**: High-end typography (Inter/SF Pro) combined with organic, fluid animations.
 *   **Non-Intrusive**: The app should feel like a part of the OS, not a separate layer.
-*   **High Performance**: Zero CPU usage when idle; optimized 60fps animations using `requestAnimationFrame`.
+*   **High Performance**: Zero CPU usage when idle; smooth animations using `requestAnimationFrame`.
 

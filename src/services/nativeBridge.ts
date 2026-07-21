@@ -1,6 +1,27 @@
 /**
  * Encapsulates communication with the native Swift layer.
  */
+export interface ActivityProvenance {
+  origin?: 'timer' | 'manual' | 'agent';
+  durationSource?: 'observed' | 'user_supplied' | 'inferred';
+  createdAt?: number;
+  startedAt?: number;
+  endedAt?: number;
+  proposalId?: string;
+}
+
+export interface AgentAccessSettings {
+  enabled: boolean;
+  readFocusData: boolean;
+  allowProposals: boolean;
+  /** Privacy step completed at least once for this consent generation. */
+  privacyAcknowledged?: boolean;
+  /** Bumped when consent copy materially changes and must be re-shown. */
+  consentVersion?: number;
+  /** When true, skip the enable consent sheet on later turn-ons. */
+  skipConsentPrompt?: boolean;
+}
+
 export const NativeBridge = {
   /**
    * Sends a message to the native Swift layer.
@@ -71,6 +92,10 @@ export const NativeBridge = {
     this.postMessage('db_deleteTask', { id });
   },
 
+  db_clearCompletedTasks() {
+    this.postMessage('db_clearCompletedTasks');
+  },
+
   db_updateTask(id: string, title: string, estimatedPomos: number, tag?: string, projectId?: string) {
     this.postMessage('db_updateTask', { id, title, estimatedPomos, tag, projectId });
   },
@@ -79,8 +104,18 @@ export const NativeBridge = {
     this.postMessage('db_incrementPomos', { id });
   },
 
-  db_logActivity(duration: number, taskId: string | null, taskTitle: string | null, tag: string | null, isCompletion: boolean, projectId?: string | null, estimatedPomos: number = 1, snapshotFocusDuration: number = 1500) {
-    this.postMessage('db_logActivity', { duration, taskId, taskTitle, tag, isCompletion, projectId, estimatedPomos, snapshotFocusDuration });
+  db_logActivity(duration: number, taskId: string | null, taskTitle: string | null, tag: string | null, isCompletion: boolean, projectId?: string | null, estimatedPomos: number = 1, snapshotFocusDuration: number = 1500, provenance?: ActivityProvenance) {
+    this.postMessage('db_logActivity', {
+      duration,
+      taskId,
+      taskTitle,
+      tag,
+      isCompletion,
+      projectId,
+      estimatedPomos,
+      snapshotFocusDuration,
+      provenance
+    });
   },
 
   db_getReports() {
@@ -97,6 +132,68 @@ export const NativeBridge = {
 
   db_exportCSV() {
     this.postMessage('db_exportCSV');
+  },
+
+  /**
+   * --- Agent Access ---
+   *
+   * Native may answer these requests through the corresponding
+   * native:agentAccessSettings / native:agentConnectionStatus events.
+   */
+  getAgentAccessSettings() {
+    this.postMessage('getAgentAccessSettings');
+  },
+
+  setAgentAccessSettings(settings: Partial<AgentAccessSettings>) {
+    this.postMessage('setAgentAccessSettings', { settings });
+  },
+
+  getAgentConnectionStatus() {
+    this.postMessage('getAgentConnectionStatus');
+  },
+
+  addToCursor() {
+    this.postMessage('agentAddToCursor');
+  },
+
+  copyAgentConfiguration() {
+    this.postMessage('agentCopyConfiguration');
+  },
+
+  copyAgentServerCommand() {
+    this.postMessage('agentCopyServerCommand');
+  },
+
+  openAgentSetupGuide() {
+    this.postMessage('agentOpenSetupGuide');
+  },
+
+  testAgentConnection() {
+    this.postMessage('agentTestConnection');
+  },
+
+  disconnectAgentSessions() {
+    this.postMessage('agentDisconnectSessions');
+  },
+
+  getAgentConnectionDetails() {
+    this.postMessage('getAgentConnectionDetails');
+  },
+
+  retryAgentAccess() {
+    this.postMessage('retryAgentAccess');
+  },
+
+  getPendingAgentProposals() {
+    this.postMessage('getPendingAgentProposals');
+  },
+
+  agentProposalResult(requestId: string, approved: boolean, reason?: 'user_declined' | 'expired') {
+    this.postMessage('agentProposalResult', { requestId, approved, reason });
+  },
+
+  agentCommandResult(requestId: string, result: unknown) {
+    this.postMessage('agentCommandResult', { requestId, result });
   },
 
   /**
@@ -121,6 +218,13 @@ export const NativeBridge = {
   },
 
   /**
+   * Triggers the Sparkle check-for-updates flow (same as the menu bar item).
+   */
+  checkForUpdates() {
+    this.postMessage('checkForUpdates');
+  },
+
+  /**
    * Sets the window pinned state.
    * When pinned, the window stays visible even when clicking outside.
    */
@@ -140,6 +244,13 @@ export const NativeBridge = {
    */
   getPinnedState() {
     this.postMessage('getPinnedState');
+  },
+
+  /**
+   * Begins dragging the pinned window (native global mouse tracking).
+   */
+  beginWindowDrag() {
+    this.postMessage('beginWindowDrag');
   },
 
   /**

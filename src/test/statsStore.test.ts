@@ -53,7 +53,8 @@ describe('StatsStore', () => {
     expect(state.logs[0].projectId).toBe('project-1');
     
     expect(NativeBridge.db_logActivity).toHaveBeenCalledWith(
-      300, 'task-1', 'Test Task', 'Work', false, 'project-1', 3, 1500
+      300, 'task-1', 'Test Task', 'Work', false, 'project-1', 3, 1500,
+      expect.objectContaining({ origin: expect.any(String) })
     );
   });
 

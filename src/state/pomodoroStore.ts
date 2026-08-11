@@ -4,6 +4,7 @@ import { SessionManager, SessionState, SessionConfig } from '../core/sessionMana
 import { NativeBridge } from '../services/nativeBridge';
 import { useTaskStore } from './taskStore';
 import { useStatsStore } from './statsStore';
+import { StopwatchEngine, StopwatchState } from '../core/stopwatchEngine';
 
 const LOG_INTERVAL_SECONDS = 60; 
 
@@ -44,6 +45,8 @@ const getRandomMessage = (type: keyof typeof MESSAGES) => {
 interface PomodoroStore {
   // Timer State
   timer: TimerState;
+  timerMode: 'countdown' | 'stopwatch';
+  stopwatch: StopwatchState;
   
   // Session State
   session: SessionState;
@@ -63,6 +66,8 @@ interface PomodoroStore {
   setTaskName: (name: string) => void;
   completeSession: (overflowMs?: number) => void;
   skipTimer: () => void;
+  toggleTimerMode: () => void;
+  finishStopwatch: () => void;
   updateConfig: (config: Partial<SessionConfig>) => void;
   
   // Recovery Action
@@ -75,6 +80,8 @@ interface PomodoroStore {
  */
 export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
   timer: TimerEngine.reset(DEFAULT_CONFIG.focusDuration),
+  timerMode: 'countdown',
+  stopwatch: StopwatchEngine.reset(),
   session: {
     type: 'focus',
     focusInCycleCount: 0,
@@ -88,6 +95,28 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
   lastLoggedSeconds: DEFAULT_CONFIG.focusDuration,
 
   startTimer: (startTime: number = Date.now()) => {
+    if (get().timerMode === 'stopwatch') {
+      const { stopwatch, lockedTaskContext, config } = get();
+      if (!lockedTaskContext) {
+        const { tasks, activeTaskId } = useTaskStore.getState();
+        const activeTask = tasks.find(task => task.id === activeTaskId);
+        if (activeTask) {
+          set({ lockedTaskContext: {
+            id: activeTask.id,
+            title: activeTask.title,
+            tag: activeTask.tag,
+            projectId: activeTask.projectId,
+            estimatedPomos: activeTask.estimatedPomos,
+            snapshotFocusDuration: config.focusDuration,
+          }});
+        }
+      }
+      set({ stopwatch: StopwatchEngine.start(stopwatch, startTime) });
+      NativeBridge.stopNativeTimer();
+      NativeBridge.updateMenuBar('', 1);
+      return;
+    }
+
     const { session } = get();
     
     // Expert Fix: Lock in the current task metadata when a focus session starts
@@ -115,10 +144,15 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     // Start native countdown hand-off
     const { timer } = get();
     const endTime = startTime + (timer.remainingSeconds * 1000);
-    NativeBridge.startNativeTimer(endTime);
+    NativeBridge.startNativeTimer(endTime, timer.totalDuration, get().config.soundEnabled);
   },
 
   pauseTimer: () => {
+    if (get().timerMode === 'stopwatch') {
+      set(state => ({ stopwatch: StopwatchEngine.pause(state.stopwatch, Date.now()) }));
+      return;
+    }
+
     const { timer, lastLoggedSeconds, session } = get();
     const now = Date.now();
     const nextTimer = TimerEngine.pause(timer, now);
@@ -167,6 +201,12 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
   },
 
   resetTimer: () => {
+    if (get().timerMode === 'stopwatch') {
+      set({ stopwatch: StopwatchEngine.reset(), lockedTaskContext: null });
+      NativeBridge.updateMenuBar('', 1);
+      return;
+    }
+
     const { session, config } = get();
     let duration = config.focusDuration;
     if (session.type === 'shortBreak') duration = config.shortBreakDuration;
@@ -181,6 +221,13 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
   },
 
   tick: () => {
+    if (get().timerMode === 'stopwatch') {
+      const { stopwatch } = get();
+      const nextStopwatch = StopwatchEngine.tick(stopwatch, Date.now());
+      if (nextStopwatch !== stopwatch) set({ stopwatch: nextStopwatch });
+      return;
+    }
+
     const { timer, lastLoggedSeconds, session } = get();
     if (timer.status !== 'running') return;
 
@@ -228,6 +275,7 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     }
 
     if (nextTimer.status === 'completed') {
+      NativeBridge.timerDidComplete(get().config.soundEnabled);
       get().completeSession(overflowMs);
     } else {
       set({ timer: nextTimer });
@@ -240,7 +288,57 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
    * Manually skips the current timer and moves to the next session.
    */
   skipTimer: () => {
+    if (get().timerMode === 'stopwatch') {
+      get().finishStopwatch();
+      return;
+    }
     get().completeSession();
+  },
+
+  toggleTimerMode: () => {
+    const { timerMode, timer, stopwatch } = get();
+    if ((timerMode === 'countdown' && timer.status === 'running')
+      || (timerMode === 'stopwatch' && stopwatch.status === 'running')) {
+      get().pauseTimer();
+    }
+    const nextMode = timerMode === 'countdown' ? 'stopwatch' : 'countdown';
+    set({ timerMode: nextMode, lockedTaskContext: null });
+    NativeBridge.stopNativeTimer();
+    if (nextMode === 'stopwatch') NativeBridge.updateMenuBar('', 1);
+  },
+
+  finishStopwatch: () => {
+    if (get().timerMode !== 'stopwatch') return;
+    const finished = StopwatchEngine.pause(get().stopwatch, Date.now());
+    let context = get().lockedTaskContext;
+    if (!context) {
+      const { tasks, activeTaskId } = useTaskStore.getState();
+      const activeTask = tasks.find(task => task.id === activeTaskId);
+      if (activeTask) {
+        context = {
+          id: activeTask.id,
+          title: activeTask.title,
+          tag: activeTask.tag,
+          projectId: activeTask.projectId,
+          estimatedPomos: activeTask.estimatedPomos,
+          snapshotFocusDuration: get().config.focusDuration,
+        };
+      }
+    }
+    if (finished.elapsedSeconds > 0) {
+      useStatsStore.getState().logActivity(
+        finished.elapsedSeconds,
+        context?.id || null,
+        context?.title || null,
+        context?.tag || null,
+        false,
+        context?.projectId,
+        context?.estimatedPomos,
+        context?.snapshotFocusDuration
+      );
+    }
+    set({ stopwatch: StopwatchEngine.reset(), lockedTaskContext: null });
+    NativeBridge.updateMenuBar('', 1);
   },
 
   updateConfig: (newConfig: Partial<SessionConfig>) => {
@@ -249,7 +347,13 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     }));
     const current = get();
     if (current.timer.status === 'idle') {
-      current.resetTimer();
+      const { session, config } = current;
+      const duration = session.type === 'focus'
+        ? config.focusDuration
+        : session.type === 'shortBreak'
+          ? config.shortBreakDuration
+          : config.longBreakDuration;
+      set({ timer: TimerEngine.reset(duration), lastLoggedSeconds: duration });
     }
   },
 
@@ -347,15 +451,29 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
     
     set((state) => {
       let timer = saved.timer ? { ...saved.timer } : state.timer;
+      let stopwatch = saved.stopwatch ? { ...saved.stopwatch } : state.stopwatch;
+      const timerMode = saved.timerMode ?? state.timerMode;
       
       if (timer.status === 'running') {
         timer = TimerEngine.tick(timer, Date.now());
+      }
+      if (stopwatch.status === 'running') {
+        stopwatch = StopwatchEngine.tick(stopwatch, Date.now());
+      }
+
+      // Only the selected mode may remain active after recovery.
+      if (timerMode === 'stopwatch' && timer.status === 'running') {
+        timer = TimerEngine.pause(timer, Date.now());
+      } else if (timerMode === 'countdown' && stopwatch.status === 'running') {
+        stopwatch = StopwatchEngine.pause(stopwatch, Date.now());
       }
 
       return {
         ...state,
         ...saved,
         timer,
+        timerMode,
+        stopwatch,
         lastLoggedSeconds: saved.lastLoggedSeconds ?? timer.remainingSeconds,
       };
     });
@@ -366,7 +484,7 @@ export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
       set({ lastLoggedSeconds: current.timer.totalDuration });
     }
 
-    if (current.timer.status === 'completed') {
+    if (current.timerMode === 'countdown' && current.timer.status === 'completed') {
       get().completeSession();
     }
 

@@ -1,7 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import App from '../ui/App';
 import React from 'react';
+import { usePomodoroStore } from '../state/pomodoroStore';
+import { StopwatchEngine } from '../core/stopwatchEngine';
 
 // Mocking recharts as it is not needed for integration logic testing
 vi.mock('recharts', () => ({
@@ -17,6 +19,10 @@ vi.mock('recharts', () => ({
 }));
 
 describe('App Integration', () => {
+  beforeEach(() => {
+    usePomodoroStore.setState({ timerMode: 'countdown', stopwatch: StopwatchEngine.reset() });
+  });
+
   it('should toggle settings view', async () => {
     render(<App />);
     
@@ -42,5 +48,13 @@ describe('App Integration', () => {
     
     expect(screen.getByText('Tasks')).toBeInTheDocument();
   });
-});
 
+  it('switches quickly into stopwatch mode', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Quick Stopwatch' }));
+
+    expect(screen.getByText('STOPWATCH')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Finish stopwatch' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Switch to Pomodoro' })).toBeInTheDocument();
+  });
+});

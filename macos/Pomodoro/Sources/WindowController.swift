@@ -309,9 +309,7 @@ class WindowController: NSWindowController {
         // Expert Fix: If a timer is running, we don't want to fully 'orderOut' 
         // as macOS may aggressively throttle the WKWebView process.
         // Instead, we make it invisible but technically 'on-screen'.
-        if let appDelegate = NSApp.delegate as? AppDelegate, 
-           let pomodoroStore = UserDefaults.standard.string(forKey: "pomodoroState"),
-           pomodoroStore.contains("\"status\":\"running\"") {
+        if isCountdownRunning {
             panel.alphaValue = 0.0
             // We still want to stop monitoring clicks to avoid accidental triggers
             stopMonitoring()
@@ -326,9 +324,7 @@ class WindowController: NSWindowController {
     
     /// Force hide the window even if pinned (for explicit close actions)
     func forceHide() {
-        if let appDelegate = NSApp.delegate as? AppDelegate, 
-           let pomodoroStore = UserDefaults.standard.string(forKey: "pomodoroState"),
-           pomodoroStore.contains("\"status\":\"running\"") {
+        if isCountdownRunning {
             panel.alphaValue = 0.0
             print("WindowController: Force hiding via alphaValue to maintain WebView vitality")
         } else {
@@ -337,6 +333,17 @@ class WindowController: NSWindowController {
         }
         stopMonitoring()
         bridge.sendToJS(action: "windowHidden", data: [:])
+    }
+
+    private var isCountdownRunning: Bool {
+        guard let stateString = UserDefaults.standard.string(forKey: "pomodoroState"),
+              let data = stateString.data(using: .utf8),
+              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let pomodoro = root["pomodoro"] as? [String: Any],
+              let timer = pomodoro["timer"] as? [String: Any] else {
+            return false
+        }
+        return timer["status"] as? String == "running"
     }
     
     func toggle(relativeTo rect: NSRect) {

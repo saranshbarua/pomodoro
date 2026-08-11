@@ -31,7 +31,8 @@ class Bridge: NSObject, WKScriptMessageHandler {
         switch action {
         case "updateMenuBar":
             if let title = body["title"] as? String {
-                windowController?.statusBarController?.updateTitle(title)
+                let progress = body["progress"] as? Double
+                windowController?.statusBarController?.update(title: title, progress: progress)
             }
             
         case "showNotification":
@@ -110,6 +111,10 @@ class Bridge: NSObject, WKScriptMessageHandler {
             }
         case "db_getReports":
             getReports()
+        case "db_addManualActivity":
+            addManualActivity(body: body)
+        case "db_updateActivityMetadata":
+            updateActivityMetadata(body: body)
         case "db_exportCSV":
             exportTaskBreakdownToCSV()
             
@@ -153,12 +158,21 @@ class Bridge: NSObject, WKScriptMessageHandler {
                 appDelegate.endTimerActivity()
             }
         case "startNativeTimer":
-            if let endTimeMs = body["endTime"] as? Double {
+            if let endTimeMs = body["endTime"] as? Double,
+               let totalDuration = body["totalDuration"] as? Double {
                 let endTime = Date(timeIntervalSince1970: endTimeMs / 1000.0)
-                windowController?.statusBarController?.startCountdown(endTime: endTime)
+                let soundEnabled = body["soundEnabled"] as? Bool ?? true
+                windowController?.statusBarController?.startCountdown(
+                    endTime: endTime,
+                    totalDuration: totalDuration,
+                    soundEnabled: soundEnabled
+                )
             }
         case "stopNativeTimer":
             windowController?.statusBarController?.stopCountdown()
+        case "timerDidComplete":
+            let soundEnabled = body["soundEnabled"] as? Bool ?? true
+            windowController?.statusBarController?.signalCompletion(soundEnabled: soundEnabled)
         default:
             print("Bridge: Unknown action: \(action)")
         }
@@ -333,6 +347,114 @@ class Bridge: NSObject, WKScriptMessageHandler {
             print("Bridge: db_logActivity failed: \(error)")
         }
     }
+
+    private func addManualActivity(body: [String: Any]) {
+        guard let title = (body["title"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !title.isEmpty,
+              let startTimestamp = body["startTimestamp"] as? Double,
+              let endTimestamp = body["endTimestamp"] as? Double,
+              endTimestamp > startTimestamp else {
+            sendToJS(action: "db_activityMutationResult", data: ["success": false, "error": "Invalid activity details"])
+            return
+        }
+
+        let duration = Int((endTimestamp - startTimestamp) / 1000)
+        guard duration > 0 && duration <= 7 * 24 * 60 * 60 else {
+            sendToJS(action: "db_activityMutationResult", data: ["success": false, "error": "Duration must be between 1 second and 7 days"])
+            return
+        }
+
+        let projectId = body["projectId"] as? String
+        let projectName = (body["projectName"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let timezoneOffset = body["timezoneOffset"] as? Int ?? TimeZone.current.secondsFromGMT() / 60
+
+        do {
+            try DatabaseManager.shared.dbPool.write { db in
+                if let projectId, let projectName, !projectName.isEmpty {
+                    try db.execute(sql: """
+                        INSERT OR IGNORE INTO projects (id, name, color_hex, is_archived, created_at)
+                        VALUES (?, ?, NULL, 0, ?)
+                        """, arguments: [projectId, projectName, Date()])
+                }
+                try db.execute(sql: """
+                    INSERT INTO session_logs (
+                        id, task_id, task_title, tag, project_id,
+                        estimated_pomos, snapshot_focus_duration,
+                        duration_seconds, is_completion, timestamp, timezone_offset
+                    ) VALUES (?, NULL, ?, ?, ?, 1, ?, ?, 0, ?, ?)
+                    """, arguments: [
+                        UUID().uuidString,
+                        title,
+                        projectName,
+                        projectId,
+                        duration,
+                        duration,
+                        Date(timeIntervalSince1970: endTimestamp / 1000),
+                        timezoneOffset
+                    ])
+            }
+            sendToJS(action: "db_activityMutationResult", data: ["success": true])
+        } catch {
+            print("Bridge: db_addManualActivity failed: \(error)")
+            sendToJS(action: "db_activityMutationResult", data: ["success": false, "error": error.localizedDescription])
+        }
+    }
+
+    private func updateActivityMetadata(body: [String: Any]) {
+        let logIds = body["logIds"] as? [String] ?? []
+        let matchTitle = body["matchTitle"] as? String
+        let matchProject = body["matchProject"] as? String
+        let hasValidSelection = (!logIds.isEmpty && logIds.count <= 1000)
+            || (matchTitle?.isEmpty == false && matchProject?.isEmpty == false)
+
+        guard hasValidSelection,
+              let title = (body["title"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !title.isEmpty else {
+            sendToJS(action: "db_activityMutationResult", data: ["success": false, "error": "Invalid activity details"])
+            return
+        }
+
+        let projectId = body["projectId"] as? String
+        let projectName = (body["projectName"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        do {
+            try DatabaseManager.shared.dbPool.write { db in
+                if let projectId, let projectName, !projectName.isEmpty {
+                    try db.execute(sql: """
+                        INSERT OR IGNORE INTO projects (id, name, color_hex, is_archived, created_at)
+                        VALUES (?, ?, NULL, 0, ?)
+                        """, arguments: [projectId, projectName, Date()])
+                }
+                if !logIds.isEmpty {
+                    for id in logIds {
+                        try db.execute(
+                            sql: "UPDATE session_logs SET task_title = ?, tag = ?, project_id = ? WHERE id = ?",
+                            arguments: [title, projectName, projectId, id]
+                        )
+                    }
+                } else if let matchTitle, let matchProject {
+                    try db.execute(sql: """
+                        UPDATE session_logs
+                        SET task_title = ?, tag = ?, project_id = ?
+                        WHERE COALESCE(
+                            task_title,
+                            (SELECT title FROM tasks WHERE tasks.id = session_logs.task_id),
+                            'Unselected Activity'
+                        ) = ?
+                        AND COALESCE(
+                            (SELECT name FROM projects WHERE projects.id = session_logs.project_id),
+                            tag,
+                            'Untagged'
+                        ) = ?
+                        """, arguments: [title, projectName, projectId, matchTitle, matchProject])
+                }
+            }
+            sendToJS(action: "db_activityMutationResult", data: ["success": true])
+        } catch {
+            print("Bridge: db_updateActivityMetadata failed: \(error)")
+            sendToJS(action: "db_activityMutationResult", data: ["success": false, "error": error.localizedDescription])
+        }
+    }
     
     private func getProjects() {
         do {
@@ -402,6 +524,22 @@ class Bridge: NSObject, WKScriptMessageHandler {
                     ORDER BY MAX(l.timestamp) DESC
                     """)
 
+                // Recent raw chunks are merged into sessions in the UI. Keeping
+                // this bounded avoids loading an unbounded history into WebKit.
+                let activityRows = try Row.fetchAll(db, sql: """
+                    SELECT l.id,
+                           COALESCE(l.task_title, t.title, 'Unselected Activity') as title,
+                           COALESCE(p.name, l.tag, 'Untagged') as project,
+                           l.project_id,
+                           l.duration_seconds,
+                           l.timestamp
+                    FROM session_logs l
+                    LEFT JOIN tasks t ON l.task_id = t.id
+                    LEFT JOIN projects p ON l.project_id = p.id
+                    ORDER BY l.timestamp DESC
+                    LIMIT 10000
+                    """)
+
                 let dailyStats: [[String: Any]] = dailyRows.map { row in
                     return ["date": row["date"] as String, "hours": row["hours"] as Double]
                 }
@@ -425,7 +563,21 @@ class Bridge: NSObject, WKScriptMessageHandler {
                         "duration": row["duration"] as Int,
                         "estimatedPomos": row["estimated_pomos"] as Int,
                         "avgSnapshotDuration": row["avg_snapshot_duration"] as Double,
-                        "date": row["last_active"] as String
+                        "date": row["last_active"] as String,
+                        "matchTitle": row["title"] as String,
+                        "matchProject": row["tag"] as String
+                    ]
+                }
+
+                let activityLogs: [[String: Any]] = activityRows.map { row in
+                    let timestamp = row["timestamp"] as Date
+                    return [
+                        "id": row["id"] as String,
+                        "title": row["title"] as String,
+                        "project": row["project"] as String,
+                        "projectId": (row["project_id"] as String?) as Any,
+                        "durationSeconds": row["duration_seconds"] as Int,
+                        "endTimestamp": timestamp.timeIntervalSince1970 * 1000
                     ]
                 }
                 
@@ -439,6 +591,7 @@ class Bridge: NSObject, WKScriptMessageHandler {
                 reportsData["totalFocusTime"] = totalTime
                 reportsData["totalSessions"] = totalSessions
                 reportsData["taskBreakdown"] = taskBreakdown
+                reportsData["activityLogs"] = activityLogs
                 reportsData["streak"] = calculateStreak(uniqueDates)
                 
                 sendToJS(action: "db_reportsData", data: reportsData)
@@ -557,4 +710,3 @@ class Bridge: NSObject, WKScriptMessageHandler {
         }
     }
 }
-

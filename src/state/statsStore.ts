@@ -14,12 +14,34 @@ export interface SessionLog {
   snapshotFocusDuration?: number;
 }
 
+export interface ReportActivityLog {
+  id: string;
+  title: string;
+  project: string;
+  projectId: string | null;
+  durationSeconds: number;
+  endTimestamp: number;
+}
+
+export interface TaskBreakdownEntry {
+  title: string;
+  tag: string;
+  duration: number;
+  estimatedPomos: number;
+  avgSnapshotDuration: number;
+  date: string;
+  logIds?: string[];
+  matchTitle?: string;
+  matchProject?: string;
+}
+
 export interface ReportsData {
   dailyStats: { date: string; hours: number }[];
   projectDistribution: { name: string; value: number }[];
   totalFocusTime: number;
   totalSessions: number;
-  taskBreakdown: { title: string; tag: string; duration: number; estimatedPomos: number; avgSnapshotDuration: number; date: string }[];
+  taskBreakdown: TaskBreakdownEntry[];
+  activityLogs?: ReportActivityLog[];
   streak: number;
 }
 
@@ -103,7 +125,7 @@ export const selectTotalSessions = (state: StatsStore) => {
   return state.logs.filter(log => log.isCompletion).length;
 };
 
-export const selectTaskBreakdown = (state: StatsStore) => {
+export const selectTaskBreakdown = (state: StatsStore): TaskBreakdownEntry[] => {
   if (state.reports) return state.reports.taskBreakdown;
 
   const taskMap: Record<string, { title: string; tag: string; duration: number; estimatedPomos: number; avgSnapshotDuration: number; date: string }> = {};
@@ -146,4 +168,3 @@ export const selectStreak = (state: StatsStore) => {
   }
   return streak;
 };
-

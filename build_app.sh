@@ -97,6 +97,7 @@ echo "📂 Copying React bundle and audio..."
 mkdir -p "$RESOURCES_DIR/dist"
 cp -R dist/* "$RESOURCES_DIR/dist/"
 cp src/assets/click.mp3 "$RESOURCES_DIR/"
+cp src/assets/notification.mp3 "$RESOURCES_DIR/"
 
 # 7. Ad-hoc Sign the bundle (Required for notifications/haptics on modern macOS)
 echo "🔐 Ad-hoc signing the app components..."

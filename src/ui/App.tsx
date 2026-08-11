@@ -96,10 +96,14 @@ const App: React.FC = () => {
   const pauseTimer = usePomodoroStore((state) => state.pauseTimer);
   const skipTimer = usePomodoroStore((state) => state.skipTimer);
   const resetTimer = usePomodoroStore((state) => state.resetTimer);
-  const timerStatus = usePomodoroStore((state) => state.timer.status);
+  const countdownStatus = usePomodoroStore((state) => state.timer.status);
+  const timerMode = usePomodoroStore((state) => state.timerMode);
+  const stopwatchStatus = usePomodoroStore((state) => state.stopwatch.status);
+  const toggleTimerMode = usePomodoroStore((state) => state.toggleTimerMode);
   const config = usePomodoroStore((state) => state.config);
   const focusInCycleCount = usePomodoroStore((state) => state.session.focusInCycleCount);
   const sessionType = usePomodoroStore((state) => state.session.type);
+  const timerStatus = timerMode === 'stopwatch' ? stopwatchStatus : countdownStatus;
 
   const { tasks, activeTaskId } = useTaskStore();
   const activeTask = tasks.find(t => t.id === activeTaskId);
@@ -122,7 +126,9 @@ const App: React.FC = () => {
 
   useEffect(() => {
     initPersistence();
-    const interval = setInterval(() => tick(), 100);
+    // TimerEngine is timestamp-based, so a 500ms poll stays accurate while
+    // avoiding ten wake-ups per second when the window is hidden.
+    const interval = setInterval(() => tick(), 500);
     
     // Request initial pinned state from native
     NativeBridge.getPinnedState();
@@ -266,6 +272,7 @@ const App: React.FC = () => {
 
   const getThemeColor = () => {
     if (isCelebrating) return '#FFD700'; // Gold celebration glow
+    if (timerMode === 'stopwatch') return theme.colors.focus.primary;
     switch (sessionType) {
       case 'focus': return theme.colors.focus.primary;
       case 'shortBreak': return theme.colors.shortBreak.primary;
@@ -321,7 +328,7 @@ const App: React.FC = () => {
       </style>
       <BlobBackground 
         color={getThemeColor()} 
-        isBreak={sessionType !== 'focus'} 
+        isBreak={timerMode === 'countdown' && sessionType !== 'focus'}
       />
 
       {isPinned && (
@@ -366,6 +373,27 @@ const App: React.FC = () => {
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+        </button>
+      </Tooltip>
+
+      <Tooltip
+        label={timerMode === 'stopwatch' ? 'Switch to Pomodoro' : 'Quick Stopwatch'}
+        placement="bottom"
+        wrapperStyle={stopwatchButtonAnchorStyle}
+      >
+        <button
+          onClick={toggleTimerMode}
+          aria-label={timerMode === 'stopwatch' ? 'Switch to Pomodoro' : 'Quick Stopwatch'}
+          style={{
+            ...iconButtonStyle,
+            opacity: timerMode === 'stopwatch' ? 1 : 0.3,
+            background: timerMode === 'stopwatch' ? 'rgba(255,255,255,0.12)' : iconButtonStyle.backgroundColor,
+          }}
+        >
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <circle cx="12" cy="13" r="8" />
+            <path d="M12 9v4l2.5 1.5M9 2h6M12 2v3" />
           </svg>
         </button>
       </Tooltip>
@@ -609,7 +637,7 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      <Tooltip
+      {timerMode === 'countdown' && <Tooltip
         label={
           sessionType === 'longBreak'
             ? `Long break – ${config.sessionsUntilLongBreak} focus sessions until next long break`
@@ -645,7 +673,7 @@ const App: React.FC = () => {
           />
         ))}
         </div>
-      </Tooltip>
+      </Tooltip>}
 
       <TaskShelf isOpen={showTasks} onClose={handleCloseTasks} />
       {showSettings && <SettingsView onClose={() => setShowSettings(false)} />}
@@ -682,6 +710,13 @@ const reportsButtonAnchorStyle: React.CSSProperties = {
   position: 'absolute',
   top: '24px',
   left: '24px',
+  zIndex: 10,
+};
+
+const stopwatchButtonAnchorStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '24px',
+  left: '64px',
   zIndex: 10,
 };
 

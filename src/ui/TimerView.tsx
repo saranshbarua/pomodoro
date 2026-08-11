@@ -1,47 +1,56 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePomodoroStore } from '../state/pomodoroStore';
 import { theme } from './theme';
 import CircularProgress from './CircularProgress';
 import { NativeBridge } from '../services/nativeBridge';
 
 /**
- * Award-Winning TimerView with 60fps smooth progress animation.
+ * Timer display with a low-frequency, timestamp-based progress animation.
  * Using "Inter" with tabular-nums for a rock-solid, high-fidelity aesthetic.
  */
 const TimerView: React.FC = () => {
   const timer = usePomodoroStore((state) => state.timer);
+  const timerMode = usePomodoroStore((state) => state.timerMode);
+  const stopwatch = usePomodoroStore((state) => state.stopwatch);
   const session = usePomodoroStore((state) => state.session);
-  const config = usePomodoroStore((state) => state.config);
-
   const [smoothProgress, setSmoothProgress] = useState(timer.remainingSeconds / timer.totalDuration);
-  const requestRef = useRef<number | null>(null);
-
-  const animate = () => {
-    if (timer.status === 'running' && timer.lastStartedAt !== null) {
-      const now = Date.now();
-      const elapsedSinceTick = (now - timer.lastStartedAt) / 1000;
-      const exactRemaining = Math.max(0, timer.remainingSeconds - elapsedSinceTick);
-      setSmoothProgress(exactRemaining / timer.totalDuration);
-    } else {
-      setSmoothProgress(timer.remainingSeconds / timer.totalDuration);
-    }
-    requestRef.current = requestAnimationFrame(animate);
-  };
 
   useEffect(() => {
-    requestRef.current = requestAnimationFrame(animate);
-    return () => {
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+    if (timerMode === 'stopwatch') {
+      setSmoothProgress(1);
+      return;
+    }
+    const updateProgress = () => {
+      if (timer.status === 'running' && timer.lastStartedAt !== null) {
+        const elapsedSinceTick = (Date.now() - timer.lastStartedAt) / 1000;
+        const exactRemaining = Math.max(0, timer.remainingSeconds - elapsedSinceTick);
+        setSmoothProgress(exactRemaining / timer.totalDuration);
+      } else {
+        setSmoothProgress(timer.remainingSeconds / timer.totalDuration);
+      }
     };
-  }, [timer.status, timer.remainingSeconds, timer.lastStartedAt]);
+
+    updateProgress();
+    if (timer.status !== 'running') return;
+
+    const interval = window.setInterval(updateProgress, 250);
+    return () => window.clearInterval(interval);
+  }, [timerMode, timer.status, timer.remainingSeconds, timer.lastStartedAt, timer.totalDuration]);
 
   // Update native menu bar title (Only when not running to avoid fighting the native timer)
   useEffect(() => {
+    if (timerMode === 'stopwatch') {
+      NativeBridge.updateMenuBar('', 1);
+      return;
+    }
     if (timer.status !== 'running') {
       const timeStr = formatTime(timer.remainingSeconds);
-      NativeBridge.updateMenuBar(timeStr);
+      const progress = timer.totalDuration > 0
+        ? timer.remainingSeconds / timer.totalDuration
+        : 0;
+      NativeBridge.updateMenuBar(timeStr, progress);
     }
-  }, [timer.remainingSeconds, timer.status]);
+  }, [timerMode, timer.remainingSeconds, timer.status, timer.totalDuration]);
 
   const formatTime = (seconds: number) => {
     const totalSeconds = Math.ceil(seconds);
@@ -51,6 +60,7 @@ const TimerView: React.FC = () => {
   };
 
   const getThemeColor = () => {
+    if (timerMode === 'stopwatch') return theme.colors.focus.primary;
     switch (session.type) {
       case 'focus': return theme.colors.focus.primary;
       case 'shortBreak': return theme.colors.shortBreak.primary;
@@ -60,6 +70,12 @@ const TimerView: React.FC = () => {
 
   const getIcon = () => {
     const strokeWidth = 1.2;
+    if (timerMode === 'stopwatch') return (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="13" r="8" />
+        <path d="M12 9v4l2.5 1.5M9 2h6M12 2v3" />
+      </svg>
+    );
     switch (session.type) {
       case 'focus': return (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
@@ -115,7 +131,7 @@ const TimerView: React.FC = () => {
         </div>
         
         <div style={{ 
-          fontSize: '4.8rem', // Increased from 4.2rem
+          fontSize: timerMode === 'stopwatch' && stopwatch.elapsedSeconds >= 3600 ? '3.5rem' : '4.8rem',
           fontWeight: '600', 
           fontFamily: theme.fonts.display,
           fontVariantNumeric: 'tabular-nums', 
@@ -127,7 +143,7 @@ const TimerView: React.FC = () => {
           justifyContent: 'center',
           width: '100%',
         }}>
-          {formatTime(timer.remainingSeconds)}
+          {timerMode === 'stopwatch' ? formatStopwatchTime(stopwatch.elapsedSeconds) : formatTime(timer.remainingSeconds)}
         </div>
 
         <div style={{ 
@@ -139,7 +155,9 @@ const TimerView: React.FC = () => {
           textTransform: 'uppercase',
           opacity: 0.6
         }}>
-          {session.type === 'focus' ? 'FOCUS' : session.type === 'shortBreak' ? 'SHORT BREAK' : 'LONG BREAK'}
+          {timerMode === 'stopwatch'
+            ? 'STOPWATCH'
+            : session.type === 'focus' ? 'FOCUS' : session.type === 'shortBreak' ? 'SHORT BREAK' : 'LONG BREAK'}
         </div>
       </div>
     </div>
@@ -147,3 +165,11 @@ const TimerView: React.FC = () => {
 };
 
 export default TimerView;
+
+export const formatStopwatchTime = (seconds: number) => {
+  const totalSeconds = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(totalSeconds / 3600);
+  const mins = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+  const secs = (totalSeconds % 60).toString().padStart(2, '0');
+  return hours > 0 ? `${hours.toString().padStart(2, '0')}:${mins}:${secs}` : `${mins}:${secs}`;
+};

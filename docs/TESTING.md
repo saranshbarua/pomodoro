@@ -10,6 +10,7 @@ This document outlines the testing strategy for the Flumen macOS app, covering f
 | T-1.3 | Reset | Reset timer during a running session. | Timer returns to full duration and status changes to 'idle'. |
 | T-1.4 | Completion | Allow timer to reach 00:00. | Notification triggers, completion sound plays, session transitions. |
 | T-1.5 | Transition | Complete Focus #4. | App transitions to 'Long Break' instead of 'Short Break'. |
+| T-1.6 | Stopwatch | Start, pause, resume, and finish an open-ended session. | Elapsed time remains timestamp-accurate and is logged to the active task/project. |
 
 ## 2. Task Management & Shelf
 | Case ID | Feature | Description | Expected Result |
@@ -29,6 +30,9 @@ This document outlines the testing strategy for the Flumen macOS app, covering f
 | R-3.3 | Multi-Day Streak | Log focus time at 11:59 PM and 12:01 AM. | Streak increments correctly; Daily chart shows bars for both dates. |
 | R-3.4 | Deleted Tag | Log time for task with tag "Work", then delete task. | Historical report still shows "Work" project in the Mix chart. |
 | R-3.5 | Large Log Vol. | Simulate 1,000 session logs. | ReportsView remains performant; scroll is smooth. |
+| R-3.6 | History Editing | Edit a historical record's task or project. | Reports and persisted activity reflect the updated metadata. |
+| R-3.7 | Manual Record | Add an activity with local start/end times. | The record is stored with the current timezone offset and appears on the timeline. |
+| R-3.8 | Timeline Boundary | Add activity that crosses 03:00. | The Gantt view splits it across the appropriate local-time day rows. |
 
 ## 4. Native macOS UX
 | Case ID | Feature | Description | Expected Result |
@@ -38,6 +42,7 @@ This document outlines the testing strategy for the Flumen macOS app, covering f
 | N-4.3 | Right-Click | Right-click tray icon during running focus. | Menu shows "Skip", "Reset", etc. Action works without opening window. |
 | N-4.4 | Notification | Let timer finish while another app is fullscreen. | Notification appears on top of the fullscreen app. |
 | N-4.5 | Sound Muting | Toggle "Sound Effects" in Settings. | No sound plays on timer start or task completion. |
+| N-4.6 | Menu Bar Progress | Run a session from start to finish. | The red-to-green color bar shrinks over time and flashes for five seconds at completion. |
 
 ## 5. Visual Regression & Glitches
 | Case ID | Feature | Description | Expected Result |
@@ -58,7 +63,14 @@ npm test -- --run
 
 ### Test Coverage
 - **`timerEngine.test.ts`**: Verifies accuracy of the core timestamp-based countdown.
+- **`stopwatchEngine.test.ts`**: Verifies timestamp-based count-up, pause/resume, and reset behavior.
 - **`sessionManager.test.ts`**: Validates focus cycle transitions (Focus -> Break -> Long Break).
 - **`taskStore.test.ts`**: Ensures tasks can be added, completed, and auto-selected.
-- **`statsStore.test.ts`**: Checks activity logging, streak calculation, and report data generation.
-- **`app.test.tsx`**: Integration tests for UI interactions like opening Settings and Task Shelf.
+- **`statsStore.test.ts`**: Checks activity logging, editing, timezone metadata, streak calculation, and report data generation.
+- **`ReportsView.test.tsx`**: Covers manual records, project selection, editing, and the local-time Gantt timeline.
+- **`timerViewFormatting.test.ts`**: Checks 24-hour display and elapsed-time formatting helpers.
+- **`app.test.tsx`**: Integration tests for settings, task shelf, and stopwatch interactions.
+
+### Native Build Matrix
+
+The current feature branch has been compiled and tested on Apple Silicon. The release script retains the project's Universal (`arm64` + `x86_64`) output contract, but its Intel slice and final Universal app bundle require CI or maintainer validation on an environment with the necessary Xcode components.

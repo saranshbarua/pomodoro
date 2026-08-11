@@ -7,9 +7,14 @@ import ReportsView, {
   formatWeekdayShortLabel,
   getEvenlySpacedTickDates,
   getEdgeTickAnchor,
+  buildTimelineEntries,
+  buildGanttDays,
+  formatGanttDateLabel,
+  formatTimelineRange,
 } from '../ui/ReportsView';
 import { useStatsStore } from '../state/statsStore';
 import { NativeBridge } from '../services/nativeBridge';
+import { useTaskStore } from '../state/taskStore';
 import React from 'react';
 
 // Mock Recharts to avoid JSDOM compatibility issues
@@ -43,18 +48,22 @@ vi.mock('../services/nativeBridge', () => ({
     db_getProjects: vi.fn(),
     db_upsertProject: vi.fn(),
     db_exportCSV: vi.fn(),
+    db_addManualActivity: vi.fn(),
+    db_updateActivityMetadata: vi.fn(),
     hideWindow: vi.fn(),
     quitApp: vi.fn(),
     startTimerActivity: vi.fn(),
     endTimerActivity: vi.fn(),
     startNativeTimer: vi.fn(),
     stopNativeTimer: vi.fn(),
+    timerDidComplete: vi.fn(),
   },
 }));
 
 describe('ReportsView and Helpers', () => {
   beforeEach(() => {
     useStatsStore.setState({ logs: [], reports: null });
+    useTaskStore.setState({ tasks: [], projects: [], activeTaskId: null });
     vi.clearAllMocks();
   });
 
@@ -166,6 +175,60 @@ describe('ReportsView and Helpers', () => {
     });
   });
 
+  describe('timeline helpers', () => {
+    it('merges adjacent persistence chunks from the same activity', () => {
+      const entries = buildTimelineEntries([
+        { id: '2', title: 'Deep Work', project: 'Work', projectId: 'p1', durationSeconds: 60, endTimestamp: 120000 },
+        { id: '1', title: 'Deep Work', project: 'Work', projectId: 'p1', durationSeconds: 60, endTimestamp: 60000 },
+        { id: '3', title: 'Breakout', project: 'Work', projectId: 'p1', durationSeconds: 60, endTimestamp: 240000 },
+      ]);
+
+      expect(entries).toHaveLength(2);
+      expect(entries[1].ids).toEqual(['1', '2']);
+      expect(entries[1].durationSeconds).toBe(120);
+    });
+
+    it('formats timeline ranges with a 24-hour clock', () => {
+      const start = new Date(2026, 0, 10, 8, 14).getTime();
+      const end = new Date(2026, 0, 10, 9, 14).getTime();
+      const result = formatTimelineRange(start, end);
+      expect(result).toMatch(/08:14.*09:14/);
+      expect(result).not.toMatch(/AM|PM/i);
+    });
+
+    it('splits gantt records at the local 03:00 day boundary', () => {
+      const start = new Date(2026, 0, 10, 2, 30).getTime();
+      const end = new Date(2026, 0, 10, 3, 30).getTime();
+      const days = buildGanttDays([{
+        ids: ['x'], title: 'Night Work', project: 'Work', projectId: 'p1',
+        startTimestamp: start, endTimestamp: end, durationSeconds: 3600,
+      }]);
+
+      expect(days).toHaveLength(2);
+      expect(days.every(day => day.segments.length === 1)).toBe(true);
+      expect(days.map(day => day.segments[0].segmentEnd - day.segments[0].segmentStart))
+        .toEqual([30 * 60 * 1000, 30 * 60 * 1000]);
+    });
+
+    it('places overlapping gantt records on separate lanes', () => {
+      const base = new Date(2026, 0, 10, 8, 0).getTime();
+      const entries = [0, 1].map((index) => ({
+        ids: [String(index)], title: `Task ${index}`, project: 'Work', projectId: 'p1',
+        startTimestamp: base + index * 15 * 60000,
+        endTimestamp: base + (index * 15 + 60) * 60000,
+        durationSeconds: 3600,
+      }));
+      expect(buildGanttDays(entries)[0].laneCount).toBe(2);
+    });
+
+    it('formats compact gantt dates with fixed weekday abbreviations', () => {
+      expect(formatGanttDateLabel(new Date(2026, 7, 10, 3).getTime())).toEqual({
+        weekday: 'M',
+        date: '0810',
+      });
+    });
+  });
+
   describe('ReportsView Component', () => {
     it('should render correct stats from store reports data', () => {
       const { hydrateReports } = useStatsStore.getState();
@@ -200,6 +263,74 @@ describe('ReportsView and Helpers', () => {
     it('should call fetchReports on mount', () => {
       render(<ReportsView onClose={() => {}} />);
       expect(NativeBridge.db_getReports).toHaveBeenCalled();
+    });
+
+    it('renders local 24-hour timeline entries', () => {
+      const start = new Date(2026, 0, 10, 8, 14).getTime();
+      const end = new Date(2026, 0, 10, 9, 14).getTime();
+      useStatsStore.getState().hydrateReports({
+        dailyStats: [], projectDistribution: [], totalFocusTime: 3600, totalSessions: 0,
+        taskBreakdown: [], streak: 0,
+        activityLogs: [{ id: 'log-1', title: 'Timeline Task', project: 'Work', projectId: 'p1', durationSeconds: 3600, endTimestamp: end }],
+      });
+
+      render(<ReportsView onClose={() => {}} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Timeline' }));
+
+      const bar = screen.getByRole('button', { name: 'Edit Timeline Task' });
+      expect(bar.getAttribute('title')).toContain(formatTimelineRange(start, end));
+    });
+
+    it('can manually add a timestamped record', () => {
+      render(<ReportsView onClose={() => {}} />);
+      fireEvent.click(screen.getByRole('button', { name: '+ Add' }));
+      fireEvent.change(screen.getByLabelText('Task'), { target: { value: 'Manual Task' } });
+      fireEvent.change(screen.getByLabelText('Start'), { target: { value: '2026-01-10T08:14' } });
+      fireEvent.change(screen.getByLabelText('End'), { target: { value: '2026-01-10T09:14' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+      const start = new Date('2026-01-10T08:14').getTime();
+      const end = new Date('2026-01-10T09:14').getTime();
+      expect(NativeBridge.db_addManualActivity).toHaveBeenCalledWith(
+        'Manual Task', null, null, start, end, -new Date(start).getTimezoneOffset()
+      );
+    });
+
+    it('keeps the project menu open until an outside click', () => {
+      useTaskStore.setState({ projects: [{ id: 'p1', name: 'Work' }] });
+      render(<ReportsView onClose={() => {}} />);
+      fireEvent.click(screen.getByRole('button', { name: '+ Add' }));
+      const projectInput = screen.getByRole('combobox', { name: 'Project' });
+
+      fireEvent.focus(projectInput);
+      expect(screen.getByRole('listbox')).toBeDefined();
+      fireEvent.blur(projectInput);
+      expect(screen.getByRole('listbox')).toBeDefined();
+
+      fireEvent.pointerDown(screen.getByLabelText('Task'));
+      expect(screen.queryByRole('listbox')).toBeNull();
+    });
+
+    it('can edit historical task and project metadata', () => {
+      useTaskStore.setState({ projects: [{ id: 'p1', name: 'Work' }] });
+      useStatsStore.getState().hydrateReports({
+        dailyStats: [], projectDistribution: [], totalFocusTime: 600, totalSessions: 0,
+        taskBreakdown: [{
+          title: 'Old Task', tag: 'Work', duration: 600, estimatedPomos: 1,
+          avgSnapshotDuration: 1500, date: '2026-01-10',
+          matchTitle: 'Old Task', matchProject: 'Work',
+        }],
+        activityLogs: [], streak: 0,
+      });
+
+      render(<ReportsView onClose={() => {}} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Edit Old Task' }));
+      fireEvent.change(screen.getByLabelText('Task'), { target: { value: 'Updated Task' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+      expect(NativeBridge.db_updateActivityMetadata).toHaveBeenCalledWith(
+        [], 'Updated Task', 'p1', 'Work', 'Old Task', 'Work'
+      );
     });
 
     it('should render focus activity range toggles', () => {

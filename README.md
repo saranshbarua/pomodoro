@@ -32,7 +32,8 @@ To install and run the app:
 ## Features
 
 ### Native macOS Presence
-- **Menu Bar Companion**: Mirror your remaining time directly in the macOS menu bar for glanceable tracking.
+- **Menu Bar Progress**: A compact red-to-green progress bar shrinks as the session advances without exposing an exact time.
+- **Completion Feedback**: A dedicated sound and a five-second menu bar flash make completed sessions easy to notice.
 - **Floating Popup**: Popover-style interface that stays on top when you need it without stealing focus.
 - **Global Shortcuts**: Toggle visibility from anywhere with `⌥⇧P` (Option+Shift+P).
 - **Space-Aware**: The timer follows you across Mission Control spaces automatically.
@@ -40,6 +41,9 @@ To install and run the app:
 ### Integrated Analytics & Tasks
 - **Task Focused**: A slide-up "Task Shelf" to manage your session goals without distraction.
 - **Project Tagging**: Categorize your focus sessions with project-level tags to see where your time goes.
+- **Flexible Tracking**: Use the countdown for planned sessions or start the lightweight stopwatch for open-ended work.
+- **Editable Activity History**: Add records manually and correct the task or project attached to an existing record.
+- **Timeline View**: Review work on a local-time Gantt timeline where each day runs from 03:00 to the following 03:00.
 - **Deep Insights**: Detailed bar charts, project distribution lists, and streak tracking.
 - **CSV Export**: Export your focus data to CSV for external analysis.
 - **Native Persistence**: Your logs and tasks are saved to a native SQLite database, surviving updates and restarts.

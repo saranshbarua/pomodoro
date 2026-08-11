@@ -27,6 +27,7 @@ vi.mock('../services/nativeBridge', () => ({
     quitApp: vi.fn(),
     startNativeTimer: vi.fn(),
     stopNativeTimer: vi.fn(),
+    timerDidComplete: vi.fn(),
   },
 }));
 
@@ -142,7 +143,7 @@ describe('Background Recovery Tests', () => {
     startTimer();
     
     const expectedEndTime = startTime + (1500 * 1000); // 25m in ms
-    expect(NativeBridge.startNativeTimer).toHaveBeenCalledWith(expectedEndTime);
+    expect(NativeBridge.startNativeTimer).toHaveBeenCalledWith(expectedEndTime, 1500, true);
   });
 
   it('should stop native timer when pausing', () => {
@@ -165,6 +166,7 @@ describe('Background Recovery Tests', () => {
     vi.spyOn(Date, 'now').mockReturnValue(startTime + (1501 * 1000));
     tick();
     
+    expect(NativeBridge.timerDidComplete).toHaveBeenCalledWith(true);
     expect(NativeBridge.stopNativeTimer).toHaveBeenCalled();
   });
 });

@@ -20,8 +20,8 @@ export const NativeBridge = {
   /**
    * Updates the native menu bar title.
    */
-  updateMenuBar(title: string) {
-    this.postMessage('updateMenuBar', { title });
+  updateMenuBar(title: string, progress?: number) {
+    this.postMessage('updateMenuBar', { title, progress });
   },
 
   /**
@@ -103,6 +103,37 @@ export const NativeBridge = {
     this.postMessage('db_exportCSV');
   },
 
+  db_addManualActivity(
+    title: string,
+    projectId: string | null,
+    projectName: string | null,
+    startTimestamp: number,
+    endTimestamp: number,
+    timezoneOffset: number
+  ) {
+    this.postMessage('db_addManualActivity', {
+      title,
+      projectId,
+      projectName,
+      startTimestamp,
+      endTimestamp,
+      timezoneOffset,
+    });
+  },
+
+  db_updateActivityMetadata(
+    logIds: string[],
+    title: string,
+    projectId: string | null,
+    projectName: string | null,
+    matchTitle?: string,
+    matchProject?: string
+  ) {
+    this.postMessage('db_updateActivityMetadata', {
+      logIds, title, projectId, projectName, matchTitle, matchProject,
+    });
+  },
+
   /**
    * Hides the native popup window.
    */
@@ -178,8 +209,13 @@ export const NativeBridge = {
    * Starts a native countdown timer in the menu bar.
    * @param endTime - The target completion timestamp in milliseconds.
    */
-  startNativeTimer(endTime: number) {
-    this.postMessage('startNativeTimer', { endTime });
+  startNativeTimer(endTime: number, totalDuration: number, soundEnabled: boolean) {
+    this.postMessage('startNativeTimer', { endTime, totalDuration, soundEnabled });
+  },
+
+  /** Signals a naturally elapsed timer so native feedback cannot be missed. */
+  timerDidComplete(soundEnabled: boolean) {
+    this.postMessage('timerDidComplete', { soundEnabled });
   },
 
   /**
@@ -201,4 +237,3 @@ export const NativeBridge = {
     console.error(`NativeBridge: Error processing message ${payload.action}:`, error);
   }
 };
-

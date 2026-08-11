@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { usePomodoroStore } from '../state/pomodoroStore';
 import { theme } from './theme';
 import { NativeBridge } from '../services/nativeBridge';
@@ -11,11 +11,27 @@ interface SettingsViewProps {
 const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
   const config = usePomodoroStore((state) => state.config);
   const updateConfig = usePomodoroStore((state) => state.updateConfig);
+  const [editingDuration, setEditingDuration] = useState<keyof typeof config | null>(null);
+  const [durationMinutes, setDurationMinutes] = useState('');
 
   const adjustDuration = (key: keyof typeof config, delta: number) => {
     const currentValue = config[key] as number;
     const newValue = Math.max(60, currentValue + delta);
     updateConfig({ [key]: newValue });
+  };
+
+  const beginDurationEdit = (key: keyof typeof config, value: number) => {
+    setEditingDuration(key);
+    setDurationMinutes(String(Math.floor(value / 60)));
+  };
+
+  const commitDurationEdit = (key: keyof typeof config) => {
+    const parsedMinutes = Number.parseInt(durationMinutes, 10);
+    if (Number.isFinite(parsedMinutes)) {
+      const clampedMinutes = Math.max(1, Math.min(1440, parsedMinutes));
+      updateConfig({ [key]: clampedMinutes * 60 });
+    }
+    setEditingDuration(null);
   };
 
   const toggleAutoPilot = (key: 'autoStartFocus' | 'autoStartBreaks' | 'soundEnabled' | 'globalHotKeyEnabled') => {
@@ -123,17 +139,34 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
                   </svg>
                 </button>
                 
-                <span style={{ 
-                  fontSize: '1rem', 
-                  fontWeight: '700', 
-                  color: 'white', 
-                  minWidth: '40px', 
-                  textAlign: 'center',
-                  fontVariantNumeric: 'tabular-nums',
-                  fontFamily: theme.fonts.display
-                }}>
-                  {Math.floor(item.value / 60)}m
-                </span>
+                {editingDuration === item.key ? (
+                  <input
+                    autoFocus
+                    type="number"
+                    min="1"
+                    max="1440"
+                    step="1"
+                    value={durationMinutes}
+                    aria-label={`${item.label} duration in minutes`}
+                    onChange={(event) => setDurationMinutes(event.target.value)}
+                    onBlur={() => commitDurationEdit(item.key)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') event.currentTarget.blur();
+                      if (event.key === 'Escape') setEditingDuration(null);
+                    }}
+                    style={durationInputStyle}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => beginDurationEdit(item.key, item.value)}
+                    aria-label={`Edit ${item.label} duration`}
+                    title="Click to edit"
+                    style={durationValueButtonStyle}
+                  >
+                    {Math.floor(item.value / 60)}m
+                  </button>
+                )}
 
                 <button 
                   onClick={() => adjustDuration(item.key, 60)}
@@ -209,7 +242,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose }) => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               <span style={{ fontSize: '0.85rem', fontWeight: '500', color: 'white' }}>Sound Effects</span>
-              <span style={{ fontSize: '0.7rem', color: theme.colors.text.muted }}>Play sound on start</span>
+              <span style={{ fontSize: '0.7rem', color: theme.colors.text.muted }}>Play sounds on start and completion</span>
             </div>
             <button 
               onClick={() => toggleAutoPilot('soundEnabled')}
@@ -358,6 +391,39 @@ const miniAdjustButtonStyle: React.CSSProperties = {
   justifyContent: 'center',
   transition: 'all 0.2s ease',
   padding: 0,
+};
+
+const durationValueButtonStyle: React.CSSProperties = {
+  minWidth: '48px',
+  height: '32px',
+  padding: '0 4px',
+  border: '1px solid transparent',
+  borderRadius: '8px',
+  background: 'transparent',
+  color: 'white',
+  cursor: 'text',
+  fontSize: '1rem',
+  fontWeight: '700',
+  textAlign: 'center',
+  fontVariantNumeric: 'tabular-nums',
+  fontFamily: theme.fonts.display,
+};
+
+const durationInputStyle: React.CSSProperties = {
+  width: '48px',
+  height: '32px',
+  boxSizing: 'border-box',
+  padding: '0 3px',
+  border: `1px solid ${theme.colors.focus.primary}`,
+  borderRadius: '8px',
+  outline: 'none',
+  background: 'rgba(255, 255, 255, 0.08)',
+  color: 'white',
+  fontSize: '1rem',
+  fontWeight: '700',
+  textAlign: 'center',
+  fontVariantNumeric: 'tabular-nums',
+  fontFamily: theme.fonts.display,
 };
 
 const toggleButtonStyle = (enabled: boolean): React.CSSProperties => ({

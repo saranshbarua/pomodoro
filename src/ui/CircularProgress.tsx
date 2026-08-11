@@ -8,8 +8,7 @@ interface CircularProgressProps {
 }
 
 /**
- * Highly optimized CircularProgress for high-frequency (60fps) updates.
- * Removed transitions from stroke-dashoffset to allow for sub-second smoothness.
+ * Circular progress designed for low-frequency updates with a short CSS tween.
  */
 const CircularProgress: React.FC<CircularProgressProps> = ({ 
   progress, 
@@ -53,7 +52,7 @@ const CircularProgress: React.FC<CircularProgressProps> = ({
           style={{ 
             filter: 'blur(4px)',
             opacity: 0.3,
-            // Removed transitions for real-time 60fps tracking
+            transition: 'stroke-dashoffset 250ms linear',
           }}
         />
 
@@ -69,7 +68,7 @@ const CircularProgress: React.FC<CircularProgressProps> = ({
           strokeDashoffset={offset}
           strokeLinecap="round"
           style={{ 
-            // Removed transitions for real-time 60fps tracking
+            transition: 'stroke-dashoffset 250ms linear',
           }}
         />
       </svg>

@@ -11,12 +11,12 @@ let saveTimeout: any = null;
  */
 export const PersistenceService = {
   /**
-   * Saves relevant parts of the state to native storage with debouncing.
+   * Saves relevant parts of the state to native storage with low-frequency throttling.
    */
   save() {
-    if (saveTimeout) {
-      clearTimeout(saveTimeout);
-    }
+    // Keep one trailing save scheduled. Reading the latest store state inside
+    // the callback avoids timer-tick write amplification and debounce starvation.
+    if (saveTimeout) return;
 
     saveTimeout = setTimeout(() => {
       try {
@@ -26,6 +26,8 @@ export const PersistenceService = {
         const combinedState = {
           pomodoro: {
             timer: pomodoroState.timer,
+            timerMode: pomodoroState.timerMode,
+            stopwatch: pomodoroState.stopwatch,
             session: pomodoroState.session,
             config: pomodoroState.config,
             dailyGoal: pomodoroState.dailyGoal,
@@ -40,7 +42,7 @@ export const PersistenceService = {
         console.error('PersistenceService: Failed to save state:', e);
       }
       saveTimeout = null;
-    }, 1000);
+    }, 2000);
   },
 
   /**
@@ -97,13 +99,14 @@ export const initPersistence = () => {
 
   // 3. Listen for Database Reports Data (SQLite)
   window.addEventListener('native:db_reportsData', (event: any) => {
-    const { dailyStats, projectDistribution, totalFocusTime, totalSessions, taskBreakdown, streak } = event.detail;
+    const { dailyStats, projectDistribution, totalFocusTime, totalSessions, taskBreakdown, activityLogs, streak } = event.detail;
     useStatsStore.getState().hydrateReports({
       dailyStats,
       projectDistribution,
       totalFocusTime,
       totalSessions,
       taskBreakdown,
+      activityLogs: activityLogs ?? [],
       streak
     });
   });

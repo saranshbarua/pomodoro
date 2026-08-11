@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { usePomodoroStore } from '../state/pomodoroStore';
 import { useTaskStore } from '../state/taskStore';
 import { useStatsStore } from '../state/statsStore';
+import { NativeBridge } from '../services/nativeBridge';
+import { StopwatchEngine } from '../core/stopwatchEngine';
 
 // Mock NativeBridge
 vi.mock('../services/nativeBridge', () => ({
@@ -27,6 +29,7 @@ vi.mock('../services/nativeBridge', () => ({
     quitApp: vi.fn(),
     startNativeTimer: vi.fn(),
     stopNativeTimer: vi.fn(),
+    timerDidComplete: vi.fn(),
   },
 }));
 
@@ -40,6 +43,8 @@ describe('PomodoroStore - Task Locking & Sync', () => {
         status: 'idle',
         lastStartedAt: null,
       },
+      timerMode: 'countdown',
+      stopwatch: StopwatchEngine.reset(),
       session: {
         type: 'focus',
         focusInCycleCount: 0,
@@ -133,5 +138,47 @@ describe('PomodoroStore - Task Locking & Sync', () => {
     expect(completionLog).toBeDefined();
     expect(completionLog?.taskId).toBe(taskId); // Still attributed via locked context
     expect(completionLog?.taskTitle).toBe('Completion Task');
+  });
+
+  it('runs stopwatch from timestamps without native countdown activity', () => {
+    const store = usePomodoroStore.getState();
+    store.toggleTimerMode();
+    store.startTimer(1000);
+    vi.spyOn(Date, 'now').mockReturnValue(6500);
+    store.tick();
+
+    const state = usePomodoroStore.getState();
+    expect(state.timerMode).toBe('stopwatch');
+    expect(state.stopwatch.status).toBe('running');
+    expect(state.stopwatch.elapsedSeconds).toBe(5);
+    expect(NativeBridge.startTimerActivity).not.toHaveBeenCalled();
+    expect(NativeBridge.startNativeTimer).not.toHaveBeenCalled();
+  });
+
+  it('finishes stopwatch into the active task history and resets it', () => {
+    const taskId = useTaskStore.getState().addTask('Open-ended Work', 1, 'Research');
+    useTaskStore.setState({ activeTaskId: taskId });
+    usePomodoroStore.setState({
+      timerMode: 'stopwatch',
+      stopwatch: { status: 'paused', elapsedSeconds: 90, lastStartedAt: null },
+    });
+
+    usePomodoroStore.getState().finishStopwatch();
+
+    const log = useStatsStore.getState().logs.at(-1);
+    expect(log?.durationSeconds).toBe(90);
+    expect(log?.taskId).toBe(taskId);
+    expect(usePomodoroStore.getState().stopwatch).toEqual(StopwatchEngine.reset());
+  });
+
+  it('pauses the active mode before switching', () => {
+    usePomodoroStore.getState().startTimer(1000);
+    vi.spyOn(Date, 'now').mockReturnValue(2000);
+    usePomodoroStore.getState().toggleTimerMode();
+
+    const state = usePomodoroStore.getState();
+    expect(state.timerMode).toBe('stopwatch');
+    expect(state.timer.status).toBe('paused');
+    expect(NativeBridge.stopNativeTimer).toHaveBeenCalled();
   });
 });

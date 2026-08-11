@@ -14,6 +14,8 @@ import {
 } from '../state/statsStore';
 import { theme } from './theme';
 import { NativeBridge } from '../services/nativeBridge';
+import { useTaskStore } from '../state/taskStore';
+import type { ReportActivityLog } from '../state/statsStore';
 
 interface ReportsViewProps {
   onClose: () => void;
@@ -25,6 +27,168 @@ export const formatDuration = (seconds: number) => {
   }
   return `${(seconds / 3600).toFixed(2)}h`;
 };
+
+export interface TimelineEntry {
+  ids: string[];
+  title: string;
+  project: string;
+  projectId: string | null;
+  startTimestamp: number;
+  endTimestamp: number;
+  durationSeconds: number;
+}
+
+export interface GanttSegment extends TimelineEntry {
+  segmentStart: number;
+  segmentEnd: number;
+  leftPercent: number;
+  widthPercent: number;
+  lane: number;
+}
+
+export interface GanttDay {
+  key: string;
+  dayStart: number;
+  dayEnd: number;
+  segments: GanttSegment[];
+  laneCount: number;
+}
+
+/** Merge adjacent persistence chunks from the same focus session. */
+export const buildTimelineEntries = (logs: ReportActivityLog[]): TimelineEntry[] => {
+  const chronological = [...logs]
+    .filter((log) => log.durationSeconds > 0)
+    .sort((a, b) => a.endTimestamp - b.endTimestamp);
+  const merged: TimelineEntry[] = [];
+
+  chronological.forEach((log) => {
+    const startTimestamp = log.endTimestamp - log.durationSeconds * 1000;
+    const previous = merged[merged.length - 1];
+    const sameContext = previous
+      && previous.title === log.title
+      && previous.project === log.project
+      && previous.projectId === log.projectId;
+    const gap = previous ? startTimestamp - previous.endTimestamp : Number.POSITIVE_INFINITY;
+
+    if (sameContext && gap >= -1000 && gap <= 5000) {
+      previous.ids.push(log.id);
+      previous.endTimestamp = Math.max(previous.endTimestamp, log.endTimestamp);
+      previous.durationSeconds = Math.round((previous.endTimestamp - previous.startTimestamp) / 1000);
+    } else {
+      merged.push({
+        ids: [log.id],
+        title: log.title,
+        project: log.project,
+        projectId: log.projectId,
+        startTimestamp,
+        endTimestamp: log.endTimestamp,
+        durationSeconds: log.durationSeconds,
+      });
+    }
+  });
+
+  return merged.reverse();
+};
+
+const formatTimelineClock = (timestamp: number) => new Intl.DateTimeFormat(undefined, {
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+  hourCycle: 'h23',
+}).format(new Date(timestamp));
+
+export const formatTimelineRange = (startTimestamp: number, endTimestamp: number) =>
+  `${formatTimelineClock(startTimestamp)}–${formatTimelineClock(endTimestamp)}`;
+
+const getGanttDayStart = (timestamp: number) => {
+  const date = new Date(timestamp);
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 3, 0, 0, 0);
+  if (timestamp < start.getTime()) start.setDate(start.getDate() - 1);
+  return start;
+};
+
+/** Split records at local 03:00 boundaries and assign overlap lanes. */
+export const buildGanttDays = (entries: TimelineEntry[]): GanttDay[] => {
+  const days = new Map<number, Omit<GanttDay, 'segments' | 'laneCount'> & { raw: GanttSegment[] }>();
+
+  entries.forEach((entry) => {
+    let cursor = entry.startTimestamp;
+    while (cursor < entry.endTimestamp) {
+      const dayStartDate = getGanttDayStart(cursor);
+      const dayEndDate = new Date(dayStartDate);
+      dayEndDate.setDate(dayEndDate.getDate() + 1);
+      const dayStart = dayStartDate.getTime();
+      const dayEnd = dayEndDate.getTime();
+      const segmentEnd = Math.min(entry.endTimestamp, dayEnd);
+      const dayDuration = dayEnd - dayStart;
+      const segment: GanttSegment = {
+        ...entry,
+        segmentStart: cursor,
+        segmentEnd,
+        leftPercent: ((cursor - dayStart) / dayDuration) * 100,
+        widthPercent: Math.max(((segmentEnd - cursor) / dayDuration) * 100, 0.35),
+        lane: 0,
+      };
+      const existing = days.get(dayStart);
+      if (existing) existing.raw.push(segment);
+      else days.set(dayStart, { key: String(dayStart), dayStart, dayEnd, raw: [segment] });
+      cursor = segmentEnd;
+    }
+  });
+
+  return [...days.values()]
+    .sort((a, b) => b.dayStart - a.dayStart)
+    .map((day) => {
+      const laneEnds: number[] = [];
+      const segments = day.raw
+        .sort((a, b) => a.segmentStart - b.segmentStart)
+        .map((segment) => {
+          let lane = laneEnds.findIndex(end => end <= segment.segmentStart);
+          if (lane === -1) lane = laneEnds.length;
+          laneEnds[lane] = segment.segmentEnd;
+          return { ...segment, lane };
+        });
+      return { key: day.key, dayStart: day.dayStart, dayEnd: day.dayEnd, segments, laneCount: Math.max(1, laneEnds.length) };
+    });
+};
+
+const ganttMarkerPercent = (dayStart: number, dayEnd: number, hour: number) => {
+  const start = new Date(dayStart);
+  const marker = new Date(start.getFullYear(), start.getMonth(), start.getDate(), hour, 0, 0, 0);
+  return ((marker.getTime() - dayStart) / (dayEnd - dayStart)) * 100;
+};
+
+const ganttWeekdays = ['Su', 'M', 'Tu', 'W', 'Th', 'F', 'Sa'] as const;
+export const formatGanttDateLabel = (timestamp: number) => {
+  const date = new Date(timestamp);
+  return {
+    weekday: ganttWeekdays[date.getDay()],
+    date: `${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`,
+  };
+};
+
+const timelineBarColors = ['#FF5F57', '#FF9F0A', '#FFD60A', '#30D158', '#64D2FF', '#0A84FF', '#BF5AF2'];
+const getTimelineBarColor = (project: string) => {
+  let hash = 0;
+  for (let i = 0; i < project.length; i++) hash = ((hash << 5) - hash + project.charCodeAt(i)) | 0;
+  return timelineBarColors[Math.abs(hash) % timelineBarColors.length];
+};
+
+const toLocalDateTimeInputValue = (date: Date) => {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+};
+
+type HistoryEditor =
+  | { mode: 'add'; title: string; project: string; start: string; end: string }
+  | {
+      mode: 'edit';
+      ids: string[];
+      matchTitle?: string;
+      matchProject?: string;
+      title: string;
+      project: string;
+    };
 
 export type FocusActivityRange = 7 | 30 | 60;
 
@@ -150,12 +314,34 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
   const [isEarlierTasksExpanded, setIsEarlierTasksExpanded] = useState(false);
   const [projectFilter, setProjectFilter] = useState<'all' | 'tagged'>('all');
   const [activityRange, setActivityRange] = useState<FocusActivityRange>(7);
+  const [historyMode, setHistoryMode] = useState<'breakdown' | 'timeline'>('breakdown');
+  const [historyEditor, setHistoryEditor] = useState<HistoryEditor | null>(null);
+  const [historyError, setHistoryError] = useState('');
+  const [isSavingHistory, setIsSavingHistory] = useState(false);
+  const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
+  const projectDropdownRef = React.useRef<HTMLDivElement>(null);
+  const projects = useTaskStore(state => state.projects);
 
   const EARLIER_TASKS_PREVIEW_COUNT = 5;
   
   useEffect(() => {
     fetchReports();
   }, [fetchReports]);
+
+  useEffect(() => {
+    if (!isProjectDropdownOpen) return;
+    const handleOutsidePointer = (event: PointerEvent) => {
+      if (!projectDropdownRef.current?.contains(event.target as Node)) {
+        setIsProjectDropdownOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', handleOutsidePointer);
+    return () => document.removeEventListener('pointerdown', handleOutsidePointer);
+  }, [isProjectDropdownOpen]);
+
+  useEffect(() => {
+    if (!historyEditor) setIsProjectDropdownOpen(false);
+  }, [historyEditor]);
 
   useEffect(() => {
     const handleExportResult = (e: any) => {
@@ -174,6 +360,21 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
     window.addEventListener('native:db_csvExportResult' as any, handleExportResult);
     return () => window.removeEventListener('native:db_csvExportResult' as any, handleExportResult);
   }, []);
+
+  useEffect(() => {
+    const handleMutationResult = (event: CustomEvent<{ success: boolean; error?: string }>) => {
+      setIsSavingHistory(false);
+      if (event.detail.success) {
+        setHistoryEditor(null);
+        setHistoryError('');
+        fetchReports();
+      } else {
+        setHistoryError(event.detail.error || 'Could not save this record.');
+      }
+    };
+    window.addEventListener('native:db_activityMutationResult' as any, handleMutationResult as EventListener);
+    return () => window.removeEventListener('native:db_activityMutationResult' as any, handleMutationResult as EventListener);
+  }, [fetchReports]);
 
   const handleExport = () => {
     if (exportStatus !== 'idle') return;
@@ -198,11 +399,107 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
   const projectDataRaw = selectProjectDistribution(stats);
   
   const taskData = selectTaskBreakdown(stats);
+  const timelineEntries = React.useMemo(
+    () => buildTimelineEntries(stats.reports?.activityLogs ?? []),
+    [stats.reports?.activityLogs]
+  );
+  const ganttDays = React.useMemo(() => buildGanttDays(timelineEntries), [timelineEntries]);
+  const projectSuggestions = React.useMemo(() => {
+    const query = historyEditor?.project.trim().toLowerCase() ?? '';
+    return projects
+      .filter(project => !query || project.name.toLowerCase().includes(query))
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+      .slice(0, 8);
+  }, [historyEditor?.project, projects]);
   const streak = selectStreak(stats);
   const totalFocusSeconds = selectTotalFocusTime(stats);
   const totalSessions = selectTotalSessions(stats);
 
   const totalTimeDisplay = formatDuration(totalFocusSeconds);
+
+  const beginAddRecord = () => {
+    const end = new Date();
+    end.setSeconds(0, 0);
+    const start = new Date(end.getTime() - 60 * 60 * 1000);
+    setHistoryError('');
+    setIsProjectDropdownOpen(false);
+    setHistoryEditor({
+      mode: 'add',
+      title: '',
+      project: '',
+      start: toLocalDateTimeInputValue(start),
+      end: toLocalDateTimeInputValue(end),
+    });
+  };
+
+  const beginEditRecord = (
+    ids: string[],
+    title: string,
+    project: string,
+    matchTitle?: string,
+    matchProject?: string
+  ) => {
+    if (ids.length === 0 && (!matchTitle || !matchProject)) return;
+    setHistoryError('');
+    setIsProjectDropdownOpen(false);
+    setHistoryEditor({
+      mode: 'edit', ids, matchTitle, matchProject, title,
+      project: project === 'Untagged' ? '' : project,
+    });
+  };
+
+  const resolveProject = (rawName: string) => {
+    const name = rawName.trim();
+    if (!name) return { id: null, name: null };
+    const existing = projects.find(project => project.name.toLowerCase() === name.toLowerCase());
+    if (existing) return { id: existing.id, name: existing.name };
+
+    const id = crypto.randomUUID();
+    useTaskStore.setState(state => ({ projects: [...state.projects, { id, name }] }));
+    return { id, name };
+  };
+
+  const saveHistoryEditor = () => {
+    if (!historyEditor || isSavingHistory) return;
+    const title = historyEditor.title.trim();
+    if (!title) {
+      setHistoryError('Task name is required.');
+      return;
+    }
+    if (historyEditor.mode === 'edit') {
+      const project = resolveProject(historyEditor.project);
+      setHistoryError('');
+      setIsSavingHistory(true);
+      NativeBridge.db_updateActivityMetadata(
+        historyEditor.ids,
+        title,
+        project.id,
+        project.name,
+        historyEditor.matchTitle,
+        historyEditor.matchProject
+      );
+      return;
+    }
+
+    const start = new Date(historyEditor.start);
+    const end = new Date(historyEditor.end);
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) {
+      setIsSavingHistory(false);
+      setHistoryError('End time must be later than start time.');
+      return;
+    }
+    const project = resolveProject(historyEditor.project);
+    setHistoryError('');
+    setIsSavingHistory(true);
+    NativeBridge.db_addManualActivity(
+      title,
+      project.id,
+      project.name,
+      start.getTime(),
+      end.getTime(),
+      -start.getTimezoneOffset()
+    );
+  };
 
   // Date Grouping Logic
   const groupedTasks = React.useMemo(() => {
@@ -605,10 +902,24 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
           </div>
         </div>
 
-        {/* Task Breakdown Table */}
+        {/* Editable History */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', flexShrink: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingRight: '4px' }}>
-          <h4 style={sectionHeaderStyle}>Task Breakdown</h4>
+          <h4 style={sectionHeaderStyle}>History</h4>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <button
+              type="button"
+              aria-label="Task Breakdown"
+              onClick={() => setHistoryMode('breakdown')}
+              style={historyModeButtonStyle(historyMode === 'breakdown')}
+            >List</button>
+            <button
+              type="button"
+              aria-label="Timeline"
+              onClick={() => setHistoryMode('timeline')}
+              style={historyModeButtonStyle(historyMode === 'timeline')}
+            >Timeline</button>
+            <button type="button" onClick={beginAddRecord} style={smallActionButtonStyle}>+ Add</button>
           <button 
             onClick={handleExport}
             disabled={exportStatus === 'exporting'}
@@ -666,7 +977,80 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
               </>
             )}
           </button>
+          </div>
         </div>
+        {historyMode === 'timeline' ? (
+          <div style={historyCardStyle}>
+            <div style={{ padding: '9px 12px 7px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '9px', color: theme.colors.text.muted, fontWeight: '700' }}>DAY · 03:00–03:00</span>
+                <span style={{ fontSize: '9px', color: theme.colors.text.muted }}>{Intl.DateTimeFormat().resolvedOptions().timeZone}</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '48px 1fr', gap: '6px', alignItems: 'end' }}>
+                <span style={{ fontSize: '8px', color: theme.colors.text.muted }}>DATE</span>
+                <div style={{ position: 'relative', height: '12px', color: theme.colors.text.muted, fontSize: '8px', fontVariantNumeric: 'tabular-nums' }}>
+                  {[
+                    { label: '03', left: 0 },
+                    { label: '08', left: (5 / 24) * 100 },
+                    { label: '14', left: (11 / 24) * 100 },
+                    { label: '20', left: (17 / 24) * 100 },
+                    { label: '03', left: 100 },
+                  ].map((marker, index) => (
+                    <span key={`${marker.label}-${index}`} style={{ position: 'absolute', left: `${marker.left}%`, transform: index === 0 ? 'none' : index === 4 ? 'translateX(-100%)' : 'translateX(-50%)' }}>{marker.label}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+            {ganttDays.length > 0 ? ganttDays.map((day) => (
+              <div key={day.key} style={ganttDayRowStyle}>
+                <div style={{ paddingTop: '5px', minWidth: 0, display: 'flex', alignItems: 'baseline', gap: '3px', whiteSpace: 'nowrap' }}>
+                  <span style={{ color: theme.colors.text.muted, fontSize: '7px', fontWeight: '700', opacity: 0.55 }}>
+                    {formatGanttDateLabel(day.dayStart).weekday}
+                  </span>
+                  <span style={{ color: 'rgba(255,255,255,0.72)', fontSize: '9px', fontWeight: '700', fontVariantNumeric: 'tabular-nums' }}>
+                    {formatGanttDateLabel(day.dayStart).date}
+                  </span>
+                </div>
+                <div style={{ position: 'relative', height: `${day.laneCount * 20 + 8}px`, minWidth: 0 }}>
+                  {[8, 14, 20].map(hour => (
+                    <div
+                      key={hour}
+                      aria-hidden="true"
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        bottom: 0,
+                        left: `${ganttMarkerPercent(day.dayStart, day.dayEnd, hour)}%`,
+                        borderLeft: '1px dashed rgba(255,255,255,0.14)',
+                        pointerEvents: 'none',
+                      }}
+                    />
+                  ))}
+                  {day.segments.map((segment, index) => (
+                    <button
+                      type="button"
+                      key={`${segment.ids.join(':')}-${segment.segmentStart}-${index}`}
+                      onClick={() => beginEditRecord(segment.ids, segment.title, segment.project)}
+                      aria-label={`Edit ${segment.title}`}
+                      title={`${segment.title} · ${segment.project === 'Untagged' ? 'General Focus' : segment.project}\n${formatTimelineRange(segment.startTimestamp, segment.endTimestamp)}`}
+                      style={{
+                        ...ganttBarStyle,
+                        left: `${segment.leftPercent}%`,
+                        width: `${Math.min(segment.widthPercent, 100 - segment.leftPercent)}%`,
+                        top: `${segment.lane * 20 + 4}px`,
+                        background: getTimelineBarColor(segment.project),
+                      }}
+                    >
+                      {segment.widthPercent >= 12 && <span style={ganttBarLabelStyle}>{segment.title}</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )) : (
+              <div style={{ color: theme.colors.text.muted, fontSize: '13px', textAlign: 'center', padding: '24px' }}>No timeline records yet</div>
+            )}
+          </div>
+        ) : (
         <div style={{ 
           background: 'rgba(255,255,255,0.02)', 
           borderRadius: '20px', 
@@ -725,9 +1109,19 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
                         return (
                           <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
                             <td style={{ ...tdStyle, paddingRight: '8px' }}>
-                              <span 
+                              <button
+                                type="button"
+                                onClick={() => beginEditRecord([], task.title, task.tag, task.matchTitle, task.matchProject)}
+                                disabled={!task.matchTitle || !task.matchProject}
+                                aria-label={`Edit ${task.title}`}
                                 title={task.title}
                                 style={{ 
+                                  width: '100%',
+                                  padding: 0,
+                                  border: 'none',
+                                  background: 'transparent',
+                                  cursor: task.matchTitle && task.matchProject ? 'pointer' : 'default',
+                                  textAlign: 'left',
                                   display: '-webkit-box',
                                   WebkitLineClamp: 2,
                                   WebkitBoxOrient: 'vertical',
@@ -739,7 +1133,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
                                 }}
                               >
                                 {task.title}
-                              </span>
+                              </button>
                             </td>
                             <td style={{ ...tdStyle, padding: '12px 0' }}>
                               <div 
@@ -842,9 +1236,106 @@ const ReportsView: React.FC<ReportsViewProps> = ({ onClose }) => {
               </tbody>
             </table>
           </div>
+        )}
         </div>
 
       </div>
+      {historyEditor && (
+        <div style={editorBackdropStyle} onMouseDown={(event) => {
+          if (event.target === event.currentTarget && !isSavingHistory) setHistoryEditor(null);
+        }}>
+          <div role="dialog" aria-modal="true" aria-label={historyEditor.mode === 'add' ? 'Add history record' : 'Edit history record'} style={editorCardStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h4 style={{ margin: 0, color: 'white', fontSize: '16px' }}>{historyEditor.mode === 'add' ? 'Add Record' : 'Edit Record'}</h4>
+              <button type="button" aria-label="Close history editor" onClick={() => setHistoryEditor(null)} style={editorCloseButtonStyle}>×</button>
+            </div>
+            <label style={editorLabelStyle}>
+              Task
+              <input
+                autoFocus
+                value={historyEditor.title}
+                onChange={(event) => setHistoryEditor({ ...historyEditor, title: event.target.value })}
+                style={editorInputStyle}
+                placeholder="What did you work on?"
+              />
+            </label>
+            <div ref={projectDropdownRef} style={{ ...editorLabelStyle, position: 'relative' }}>
+              <label htmlFor="history-project">Project</label>
+              <input
+                id="history-project"
+                role="combobox"
+                aria-expanded={isProjectDropdownOpen}
+                aria-controls="history-project-options"
+                aria-autocomplete="list"
+                value={historyEditor.project}
+                onFocus={() => setIsProjectDropdownOpen(true)}
+                onClick={() => setIsProjectDropdownOpen(true)}
+                onChange={(event) => {
+                  setHistoryEditor({ ...historyEditor, project: event.target.value });
+                  setIsProjectDropdownOpen(true);
+                }}
+                style={editorInputStyle}
+                placeholder="General Focus"
+              />
+              {isProjectDropdownOpen && (
+                <div id="history-project-options" role="listbox" style={projectDropdownStyle}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={!historyEditor.project}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      setHistoryEditor({ ...historyEditor, project: '' });
+                      setIsProjectDropdownOpen(false);
+                    }}
+                    style={projectOptionStyle(!historyEditor.project)}
+                  >
+                    General Focus
+                  </button>
+                  {projectSuggestions.map(project => (
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={historyEditor.project.toLowerCase() === project.name.toLowerCase()}
+                      key={project.id}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        setHistoryEditor({ ...historyEditor, project: project.name });
+                        setIsProjectDropdownOpen(false);
+                      }}
+                      style={projectOptionStyle(historyEditor.project.toLowerCase() === project.name.toLowerCase())}
+                    >
+                      {project.name}
+                    </button>
+                  ))}
+                  {projectSuggestions.length === 0 && historyEditor.project.trim() && (
+                    <div style={{ padding: '8px 10px', color: theme.colors.text.muted, fontSize: '10px', textTransform: 'none', letterSpacing: 0 }}>
+                      “{historyEditor.project.trim()}” will be created on save
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            {historyEditor.mode === 'add' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <label style={editorLabelStyle}>
+                  Start
+                  <input type="datetime-local" value={historyEditor.start} onChange={(event) => setHistoryEditor({ ...historyEditor, start: event.target.value })} style={editorInputStyle} />
+                </label>
+                <label style={editorLabelStyle}>
+                  End
+                  <input type="datetime-local" value={historyEditor.end} onChange={(event) => setHistoryEditor({ ...historyEditor, end: event.target.value })} style={editorInputStyle} />
+                </label>
+              </div>
+            )}
+            {historyError && <div role="alert" style={{ color: '#FF6B6B', fontSize: '11px' }}>{historyError}</div>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button type="button" onClick={() => setHistoryEditor(null)} disabled={isSavingHistory} style={editorSecondaryButtonStyle}>Cancel</button>
+              <button type="button" onClick={saveHistoryEditor} disabled={isSavingHistory} style={editorPrimaryButtonStyle}>{isSavingHistory ? 'Saving…' : 'Save'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -888,6 +1379,171 @@ const thStyle: React.CSSProperties = {
 const tdStyle: React.CSSProperties = {
   padding: '12px 16px',
   color: 'rgba(255,255,255,0.8)',
+};
+
+const historyModeButtonStyle = (active: boolean): React.CSSProperties => ({
+  border: '1px solid rgba(255,255,255,0.08)',
+  borderRadius: '7px',
+  padding: '4px 7px',
+  background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
+  color: active ? 'white' : theme.colors.text.muted,
+  cursor: 'pointer',
+  fontSize: '9px',
+  fontWeight: '800',
+});
+
+const smallActionButtonStyle: React.CSSProperties = {
+  ...historyModeButtonStyle(false),
+  color: theme.colors.focus.primary,
+};
+
+const historyCardStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.02)',
+  borderRadius: '20px',
+  border: '1px solid rgba(255,255,255,0.05)',
+  overflow: 'hidden',
+};
+
+const ganttDayRowStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '48px 1fr',
+  gap: '6px',
+  padding: '8px 12px',
+  borderBottom: '1px solid rgba(255,255,255,0.04)',
+};
+
+const ganttBarStyle: React.CSSProperties = {
+  position: 'absolute',
+  height: '14px',
+  minWidth: '2px',
+  border: 'none',
+  borderRadius: '4px',
+  padding: '0 4px',
+  color: 'white',
+  cursor: 'pointer',
+  overflow: 'hidden',
+  boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+  opacity: 0.88,
+};
+
+const ganttBarLabelStyle: React.CSSProperties = {
+  display: 'block',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  fontSize: '8px',
+  fontWeight: '800',
+  lineHeight: '14px',
+  textAlign: 'left',
+  fontFamily: theme.fonts.brand,
+};
+
+const editorBackdropStyle: React.CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  zIndex: 300,
+  background: 'rgba(0,0,0,0.72)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '24px',
+  boxSizing: 'border-box',
+};
+
+const editorCardStyle: React.CSSProperties = {
+  width: '100%',
+  maxWidth: '360px',
+  background: '#151515',
+  border: '1px solid rgba(255,255,255,0.1)',
+  borderRadius: '18px',
+  padding: '18px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '14px',
+  boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+};
+
+const editorLabelStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '6px',
+  color: theme.colors.text.muted,
+  fontSize: '10px',
+  fontWeight: '800',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+};
+
+const editorInputStyle: React.CSSProperties = {
+  width: '100%',
+  minWidth: 0,
+  boxSizing: 'border-box',
+  border: '1px solid rgba(255,255,255,0.1)',
+  borderRadius: '9px',
+  background: 'rgba(255,255,255,0.06)',
+  color: 'white',
+  padding: '9px 10px',
+  outline: 'none',
+  fontFamily: theme.fonts.display,
+  fontSize: '12px',
+  colorScheme: 'dark',
+};
+
+const projectDropdownStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '100%',
+  left: 0,
+  right: 0,
+  zIndex: 20,
+  marginTop: '4px',
+  maxHeight: '150px',
+  overflowY: 'auto',
+  padding: '4px',
+  border: '1px solid rgba(255,255,255,0.12)',
+  borderRadius: '10px',
+  background: '#202020',
+  boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
+};
+
+const projectOptionStyle = (selected: boolean): React.CSSProperties => ({
+  width: '100%',
+  border: 'none',
+  borderRadius: '7px',
+  padding: '7px 8px',
+  background: selected ? 'rgba(255,255,255,0.1)' : 'transparent',
+  color: selected ? 'white' : theme.colors.text.secondary,
+  cursor: 'pointer',
+  textAlign: 'left',
+  fontSize: '11px',
+  fontFamily: theme.fonts.brand,
+});
+
+const editorCloseButtonStyle: React.CSSProperties = {
+  width: '28px',
+  height: '28px',
+  border: 'none',
+  borderRadius: '50%',
+  background: 'rgba(255,255,255,0.07)',
+  color: 'white',
+  cursor: 'pointer',
+  fontSize: '18px',
+};
+
+const editorSecondaryButtonStyle: React.CSSProperties = {
+  border: '1px solid rgba(255,255,255,0.1)',
+  borderRadius: '9px',
+  padding: '8px 14px',
+  background: 'transparent',
+  color: theme.colors.text.secondary,
+  cursor: 'pointer',
+  fontWeight: '700',
+};
+
+const editorPrimaryButtonStyle: React.CSSProperties = {
+  ...editorSecondaryButtonStyle,
+  border: 'none',
+  background: theme.colors.focus.primary,
+  color: 'white',
 };
 
 export default ReportsView;

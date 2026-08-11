@@ -10,13 +10,16 @@ interface ControlsProps {}
  */
 const Controls: React.FC<ControlsProps> = () => {
   const status = usePomodoroStore((state) => state.timer.status);
+  const timerMode = usePomodoroStore((state) => state.timerMode);
+  const stopwatchStatus = usePomodoroStore((state) => state.stopwatch.status);
   const config = usePomodoroStore((state) => state.config);
   const start = usePomodoroStore((state) => state.startTimer);
   const pause = usePomodoroStore((state) => state.pauseTimer);
   const reset = usePomodoroStore((state) => state.resetTimer);
   const skip = usePomodoroStore((state) => state.skipTimer);
 
-  const isRunning = status === 'running';
+  const isStopwatch = timerMode === 'stopwatch';
+  const isRunning = (isStopwatch ? stopwatchStatus : status) === 'running';
   const iconStrokeWidth = 1.5;
 
   const handleAction = (action: () => void, shouldSound: boolean = false) => {
@@ -65,16 +68,22 @@ const Controls: React.FC<ControlsProps> = () => {
         )}
       </button>
 
-      {/* Skip Button */}
+      {/* Skip / Finish Button */}
       <button 
         onClick={() => handleAction(skip)}
         style={secondaryButtonStyle}
-        aria-label="Skip session"
+        aria-label={isStopwatch ? 'Finish stopwatch' : 'Skip session'}
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={iconStrokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M5 4l10 8L5 20V4z" />
-          <line x1="19" y1="5" x2="19" y2="19" />
-        </svg>
+        {isStopwatch ? (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={iconStrokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <rect x="6" y="6" width="12" height="12" rx="1" />
+          </svg>
+        ) : (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={iconStrokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M5 4l10 8L5 20V4z" />
+            <line x1="19" y1="5" x2="19" y2="19" />
+          </svg>
+        )}
       </button>
     </div>
   );

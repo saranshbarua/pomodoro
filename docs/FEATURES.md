@@ -6,7 +6,8 @@ A premium, award-winning focus timer built for macOS, focusing on deep work, hig
 - **Focus Cycles**: Built-in logic for Focus (25m), Short Break (5m), and Long Break (15m).
 - **Session Transitions**: Automatic advancement through focus cycles (default: 4 sessions before a long break).
 - **Accurate Timekeeping**: Uses a timestamp-based engine to prevent drift, ensuring sub-second accuracy even if the app is backgrounded.
-- **Smooth Animation**: The circular progress ring updates smoothly using `requestAnimationFrame`, mimicking a sweep-second hand.
+- **Efficient Animation**: The circular progress ring is frame-limited to remain smooth while avoiding unnecessary background work.
+- **Quick Stopwatch**: Start an open-ended, timestamp-based count-up session and log it to the active task and project when finished.
 - **Layout Shift Prevention**: Uses the Inter typeface with native `tabular-nums` support to ensure timer digits never flicker or shift horizontally.
 
 ## 2. Task Management (Single-Task Focus)
@@ -28,14 +29,17 @@ A premium, award-winning focus timer built for macOS, focusing on deep work, hig
 - **Focus Activity**: Bar charts visualizing your productivity across days.
 - **Project Mix**: A boutique breakdown showing exactly which project tags consumed your time, with filtering for tagged vs. general focus.
 - **Granular Table**: A high-fidelity breakdown of every task, its project, and the exact time spent focusing, grouped by date (Today, Yesterday, etc.).
+- **Editable History**: Correct historical task/project metadata or add a bounded manual activity record with local timezone information.
+- **Gantt Timeline**: Visualize records as horizontal activity bars on local days running from 03:00 to the following 03:00, with precise times shown on hover.
 - **Performance Variance**: Real-time tracking of whether you are "ahead" or "over" your estimated sessions for each task.
 - **CSV Export**: One-click export of all historical data to a CSV file.
 - **Consistency Tracking**: Real-time streak calculation and "Total Sessions" stats.
 
 ## 5. System Integration & Settings
 - **Native Notifications**: Engaging macOS system notifications with custom messages for each session type.
-- **Menu Bar Progress**: The remaining time is mirrored directly in your macOS menu bar for "glanceable" tracking.
+- **Menu Bar Progress**: A compact red-to-green progress bar shrinks with the remaining session instead of displaying the exact time.
+- **Completion Feedback**: Natural timer completion plays a notification sound and flashes the menu bar icon for five seconds.
 - **One-Click Tray Control**: Right-click the tray icon for quick actions (Start/Pause, Skip, Reset, Quit) without opening the window.
 - **Auto-Pilot Mode**: Configurable settings to auto-start focus sessions and breaks for a hands-off experience.
-- **Customizable Durations**: Fine-tune Focus, Short Break, and Long Break lengths down to the minute.
+- **Customizable Durations**: Fine-tune Focus, Short Break, and Long Break lengths with step buttons or by clicking the center value and typing directly.
 - **Native macOS Logic**: Built as a hybrid Swift + React app to ensure genuine Apple-style window management and performance.
